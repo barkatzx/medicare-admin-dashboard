@@ -44,7 +44,7 @@ export default function DashboardPage() {
     Promise.all([
       dispatch(fetchProducts({ page: 1, limit: 20 })).unwrap(),
       dispatch(fetchUsers({ page: 1, limit: 20 })).unwrap(),
-      dispatch(fetchOrders({ page: 1, limit: 20 })).unwrap(),
+      dispatch(fetchOrders({ page: 1, limit: 10 })).unwrap(),
     ]).catch((err) => console.error("Background fetch error:", err));
   }, [dispatch]);
 
