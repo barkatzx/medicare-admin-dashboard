@@ -31,7 +31,7 @@ export default function PendingUsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    dispatch(fetchUsers());
+    dispatch(fetchUsers({ page: 1, limit: 20 }));
   }, [dispatch]);
 
   const handleApprove = async (userId: string) => {
@@ -106,7 +106,7 @@ export default function PendingUsersPage() {
           />
         </div>
         <button
-          onClick={() => dispatch(fetchUsers())}
+          onClick={() => dispatch(fetchUsers({ page: 1, limit: 20 }))}
           className="px-5 py-2.5 bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2"
         >
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
