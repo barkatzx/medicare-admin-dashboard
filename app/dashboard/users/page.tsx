@@ -16,21 +16,25 @@ import {
   UserCheck,
   Trash2,
   AlertTriangle,
-  TrendingUp,
-  Shield,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export default function UsersPage() {
   const dispatch = useAppDispatch();
-  const { users, loading } = useAppSelector((state) => state.users);
+  const { users, loading, pagination } = useAppSelector((state) => state.users);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    dispatch(fetchUsers());
+    dispatch(fetchUsers({ page: 1, limit: 20 }));
   }, [dispatch]);
+
+  const handlePageChange = (newPage: number) => {
+    dispatch(fetchUsers({ page: newPage, limit: pagination.limit }));
+  };
 
   const handleDeleteClick = (user: any) => {
     setUserToDelete(user);
@@ -45,7 +49,6 @@ export default function UsersPage() {
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
     } catch (error: any) {
-      // Error handled by slice
     } finally {
       setDeletingId(null);
     }
@@ -59,10 +62,6 @@ export default function UsersPage() {
       user.phone_number.includes(searchTerm);
     return isActive && matchesSearch;
   });
-
-  const totalActive = users.filter(
-    (u) => u.isApproved && u.role === "customer",
-  ).length;
 
   if (loading && users.length === 0) {
     return (
@@ -93,7 +92,11 @@ export default function UsersPage() {
           />
         </div>
         <button
-          onClick={() => dispatch(fetchUsers())}
+          onClick={() =>
+            dispatch(
+              fetchUsers({ page: pagination.page, limit: pagination.limit }),
+            )
+          }
           className="px-5 py-2.5 bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2"
         >
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -112,7 +115,7 @@ export default function UsersPage() {
               Active Customers
             </h2>
             <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full ml-2">
-              {activeUsers.length}
+              {pagination.total}
             </span>
           </div>
         </div>
@@ -224,6 +227,82 @@ export default function UsersPage() {
             </table>
           </div>
         )}
+
+        {/* ── Pagination Controls ── */}
+        {pagination.pages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              Showing{" "}
+              <span className="font-medium text-gray-700">
+                {(pagination.page - 1) * pagination.limit + 1}–
+                {Math.min(pagination.page * pagination.limit, pagination.total)}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium text-gray-700">
+                {pagination.total}
+              </span>{" "}
+              users
+            </p>
+
+            <div className="flex items-center gap-1">
+              {/* Prev */}
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPrevPage || loading}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              {/* Page numbers */}
+              {Array.from({ length: pagination.pages }, (_, i) => i + 1)
+                .filter(
+                  (p) =>
+                    p === 1 ||
+                    p === pagination.pages ||
+                    Math.abs(p - pagination.page) <= 1,
+                )
+                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1)
+                    acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "..." ? (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="px-2 text-gray-400 text-sm"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p as number)}
+                      disabled={loading}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        pagination.page === p
+                          ? "bg-emerald-500 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
+
+              {/* Next */}
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNextPage || loading}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -239,15 +318,14 @@ export default function UsersPage() {
             </div>
             <div>
               <p className="text-sm text-gray-700">
-                Are you sure you want to delete the user{" "}
+                Are you sure you want to delete{" "}
                 <strong className="text-gray-900">
                   "{userToDelete?.name || userToDelete?.email}"
                 </strong>
                 ?
               </p>
               <p className="text-xs text-red-600 mt-1">
-                This action cannot be undone. All user data will be permanently
-                removed.
+                This action cannot be undone.
               </p>
             </div>
           </div>

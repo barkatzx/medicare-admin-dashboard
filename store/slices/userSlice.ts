@@ -2,22 +2,43 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api, User } from "@/config/api";
 import toast from "react-hot-toast";
 
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
 interface UserState {
   users: User[];
   loading: boolean;
   error: string | null;
+  pagination: Pagination;
 }
 
 const initialState: UserState = {
   users: [],
   loading: false,
   error: null,
+  pagination: {
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  },
 };
 
-export const fetchUsers = createAsyncThunk("users/fetchAll", async () => {
-  const response = await api.getUsers();
-  return response;
-});
+export const fetchUsers = createAsyncThunk(
+  "users/fetchAll",
+  async ({ page = 1, limit = 20 }: { page?: number; limit?: number } = {}) => {
+    const response = await api.getUsers(page, limit);
+    return response; // { users, pagination }
+  },
+);
 
 export const approveUser = createAsyncThunk(
   "users/approve",
@@ -51,7 +72,8 @@ const userSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.loading = false;
-        state.users = action.payload;
+        state.users = action.payload.users;
+        state.pagination = action.payload.pagination;
       })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.loading = false;
@@ -66,9 +88,7 @@ const userSlice = createSlice({
       .addCase(approveUser.fulfilled, (state, action) => {
         state.loading = false;
         const index = state.users.findIndex((u) => u.id === action.payload.id);
-        if (index !== -1) {
-          state.users[index] = action.payload;
-        }
+        if (index !== -1) state.users[index] = action.payload;
         toast.success("User approved successfully");
       })
       .addCase(approveUser.rejected, (state, action) => {
@@ -84,7 +104,7 @@ const userSlice = createSlice({
       .addCase(deleteUser.fulfilled, (state, action) => {
         state.loading = false;
         state.users = state.users.filter((u) => u.id !== action.payload);
-        // ✅ Toast shown here in slice — NOT in the page handler
+        state.pagination.total -= 1;
         toast.success("User deleted successfully");
       })
       .addCase(deleteUser.rejected, (state, action) => {

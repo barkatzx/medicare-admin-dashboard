@@ -414,16 +414,32 @@ class API {
   }
 
   // ==================== USER MANAGEMENT ====================
-  async getUsers(): Promise<User[]> {
-    const response = await this.request("/users/all");
-    // Handle the response structure: { message, data: { users, pagination } }
+  async getUsers(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<{ users: User[]; pagination: any }> {
+    const response = await this.request(
+      `/users/all?page=${page}&limit=${limit}`,
+    );
+
     if (response && response.data && Array.isArray(response.data.users)) {
-      return response.data.users;
+      return {
+        users: response.data.users,
+        pagination: response.data.pagination,
+      };
     }
-    if (Array.isArray(response)) {
-      return response;
-    }
-    return [];
+    // fallback
+    return {
+      users: Array.isArray(response) ? response : [],
+      pagination: {
+        page,
+        limit,
+        total: 0,
+        pages: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
   }
 
   async approveUser(userId: string): Promise<User> {

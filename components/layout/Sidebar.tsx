@@ -253,9 +253,10 @@ export default function Sidebar() {
   useEffect(() => {
     const fetchPendingCustomersCount = async () => {
       try {
-        const users = await api.getUsers();
-        const count = users.filter((u: any) => !u.isApproved && u.role !== "admin").length;
-        setPendingCustomersCount(count);
+        const { users } = await api.getUsers(1, 100);
+        const count = users.filter(
+          (u: any) => !u.isApproved && u.role !== "admin",
+        ).length;
       } catch (error) {
         console.error("Failed to fetch pending customers count:", error);
       }
@@ -441,11 +442,12 @@ export default function Sidebar() {
                             <span className="text-sm font-medium whitespace-nowrap">
                               {sub.name}
                             </span>
-                            {sub.name === "Pending" && pendingCustomersCount > 0 && (
-                              <span className="ml-auto bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                {pendingCustomersCount}
-                              </span>
-                            )}
+                            {sub.name === "Pending" &&
+                              pendingCustomersCount > 0 && (
+                                <span className="ml-auto bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                                  {pendingCustomersCount}
+                                </span>
+                              )}
                           </Link>
                         );
                       })}
@@ -595,11 +597,12 @@ export default function Sidebar() {
                             <span className="text-sm font-medium whitespace-nowrap">
                               {sub.name}
                             </span>
-                            {sub.name === "Pending" && pendingOrdersCount > 0 && (
-                              <span className="ml-auto bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                {pendingOrdersCount}
-                              </span>
-                            )}
+                            {sub.name === "Pending" &&
+                              pendingOrdersCount > 0 && (
+                                <span className="ml-auto bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                                  {pendingOrdersCount}
+                                </span>
+                              )}
                           </Link>
                         );
                       })}
