@@ -39,7 +39,9 @@ export default function PendingOrdersPage() {
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(
     null,
   );
-  const [dashboardStats, setDashboardStats] = useState<DashboardData | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<DashboardData | null>(
+    null,
+  );
 
   useEffect(() => {
     dispatch(
@@ -131,7 +133,7 @@ export default function PendingOrdersPage() {
   const filteredOrders = orders.filter((order) => {
     const status = order.status.toLowerCase();
     if (status === "delivered" || status === "cancelled") return false;
-    
+
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
@@ -159,13 +161,25 @@ export default function PendingOrdersPage() {
         <div className="rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Today's Orders</p>
+              <p className="text-sm text-gray-500 font-medium">
+                Today's Orders
+              </p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {dashboardStats?.today.orders ?? 0}
               </p>
               <div className="flex items-center gap-1 mt-1">
-                <TrendingUp size={12} className={dashboardStats?.growth.daily && dashboardStats.growth.daily > 0 ? "text-green-500" : "text-gray-400"} />
-                <p className="text-[10px] text-gray-400">Daily growth: {dashboardStats?.growth.daily.toFixed(1) ?? 0}%</p>
+                <TrendingUp
+                  size={12}
+                  className={
+                    dashboardStats?.growth.daily &&
+                    dashboardStats.growth.daily > 0
+                      ? "text-green-500"
+                      : "text-gray-400"
+                  }
+                />
+                <p className="text-[10px] text-gray-400">
+                  Daily growth: {dashboardStats?.growth.daily.toFixed(1) ?? 0}%
+                </p>
               </div>
             </div>
             <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -177,7 +191,9 @@ export default function PendingOrdersPage() {
         <div className="rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Today's Revenue</p>
+              <p className="text-sm text-gray-500 font-medium">
+                Today's Revenue
+              </p>
               <p className="text-2xl font-bold text-emerald-600 mt-1">
                 ৳{(dashboardStats?.today.sales ?? 0).toLocaleString()}
               </p>
@@ -205,11 +221,15 @@ export default function PendingOrdersPage() {
         <div className="rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Action Required</p>
+              <p className="text-sm text-gray-500 font-medium">
+                Action Required
+              </p>
               <p className="text-2xl font-bold text-rose-600 mt-1">
                 {filteredOrders.length}
               </p>
-              <p className="text-[10px] text-gray-400 mt-1">Pending processing</p>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Pending processing
+              </p>
             </div>
             <div className="w-10 h-10 bg-rose-50 rounded-lg flex items-center justify-center">
               <Clock size={20} className="text-rose-600" />
@@ -234,28 +254,24 @@ export default function PendingOrdersPage() {
           />
         </div>
         <div className="flex gap-2 flex-wrap">
-          {[
-            "all",
-            "pending",
-            "confirmed",
-            "processing",
-            "shipped",
-          ].map((status) => (
-            <button
-              key={status}
-              onClick={() => {
-                setStatusFilter(status);
-                setCurrentPage(1);
-              }}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
-                statusFilter === status
-                  ? "bg-blue-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
+          {["all", "pending", "confirmed", "processing", "shipped"].map(
+            (status) => (
+              <button
+                key={status}
+                onClick={() => {
+                  setStatusFilter(status);
+                  setCurrentPage(1);
+                }}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
+                  statusFilter === status
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
+                }`}
+              >
+                {status}
+              </button>
+            ),
+          )}
         </div>
       </div>
 
