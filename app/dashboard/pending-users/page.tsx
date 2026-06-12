@@ -17,13 +17,13 @@ import {
   UserCheck,
   Trash2,
   AlertTriangle,
-  TrendingUp,
-  Shield,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export default function PendingUsersPage() {
   const dispatch = useAppDispatch();
-  const { users, loading } = useAppSelector((state) => state.users);
+  const { users, loading, pagination } = useAppSelector((state) => state.users);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<any>(null);
@@ -33,6 +33,10 @@ export default function PendingUsersPage() {
   useEffect(() => {
     dispatch(fetchUsers({ page: 1, limit: 20 }));
   }, [dispatch]);
+
+  const handlePageChange = (newPage: number) => {
+    dispatch(fetchUsers({ page: newPage, limit: pagination.limit }));
+  };
 
   const handleApprove = async (userId: string) => {
     setApprovingId(userId);
@@ -55,7 +59,6 @@ export default function PendingUsersPage() {
       setUserToDelete(null);
       window.dispatchEvent(new Event("usersUpdated"));
     } catch (error: any) {
-      // Error handled by slice
     } finally {
       setDeletingId(null);
     }
@@ -64,18 +67,12 @@ export default function PendingUsersPage() {
   const filteredUsers = users.filter((user) => {
     const isPending = !user.isApproved && user.role !== "admin";
     if (!isPending) return false;
-
-    const matchesSearch =
+    return (
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone_number.includes(searchTerm);
-
-    return matchesSearch;
+      user.phone_number.includes(searchTerm)
+    );
   });
-
-  const totalPending = users.filter(
-    (u) => !u.isApproved && u.role !== "admin",
-  ).length;
 
   if (loading && users.length === 0) {
     return (
@@ -106,7 +103,11 @@ export default function PendingUsersPage() {
           />
         </div>
         <button
-          onClick={() => dispatch(fetchUsers({ page: 1, limit: 20 }))}
+          onClick={() =>
+            dispatch(
+              fetchUsers({ page: pagination.page, limit: pagination.limit }),
+            )
+          }
           className="px-5 py-2.5 bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2"
         >
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
@@ -125,7 +126,7 @@ export default function PendingUsersPage() {
               Pending Approvals
             </h2>
             <span className="px-2.5 py-0.5 bg-amber-200 text-amber-800 text-xs font-medium rounded-full ml-2">
-              {filteredUsers.length}
+              {pagination.total}
             </span>
           </div>
         </div>
@@ -137,7 +138,9 @@ export default function PendingUsersPage() {
             </div>
             <p className="text-gray-500 font-medium">No pending approvals</p>
             <p className="text-sm text-gray-400 mt-1">
-              All user requests have been processed
+              {searchTerm
+                ? "Try adjusting your search"
+                : "All user requests have been processed"}
             </p>
           </div>
         ) : (
@@ -222,6 +225,82 @@ export default function PendingUsersPage() {
             </table>
           </div>
         )}
+
+        {/* ── Pagination Controls ── */}
+        {pagination.pages > 1 && (
+          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+            <p className="text-sm text-gray-500">
+              Showing{" "}
+              <span className="font-medium text-gray-700">
+                {(pagination.page - 1) * pagination.limit + 1}–
+                {Math.min(pagination.page * pagination.limit, pagination.total)}
+              </span>{" "}
+              of{" "}
+              <span className="font-medium text-gray-700">
+                {pagination.total}
+              </span>{" "}
+              users
+            </p>
+
+            <div className="flex items-center gap-1">
+              {/* Prev */}
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPrevPage || loading}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              {/* Page numbers with ellipsis */}
+              {Array.from({ length: pagination.pages }, (_, i) => i + 1)
+                .filter(
+                  (p) =>
+                    p === 1 ||
+                    p === pagination.pages ||
+                    Math.abs(p - pagination.page) <= 1,
+                )
+                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && p - (arr[idx - 1] as number) > 1)
+                    acc.push("...");
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === "..." ? (
+                    <span
+                      key={`ellipsis-${idx}`}
+                      className="px-2 text-gray-400 text-sm"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => handlePageChange(p as number)}
+                      disabled={loading}
+                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
+                        pagination.page === p
+                          ? "bg-amber-500 text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
+
+              {/* Next */}
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNextPage || loading}
+                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -237,15 +316,14 @@ export default function PendingUsersPage() {
             </div>
             <div>
               <p className="text-sm text-gray-700">
-                Are you sure you want to delete the user{" "}
+                Are you sure you want to delete{" "}
                 <strong className="text-gray-900">
                   "{userToDelete?.name || userToDelete?.email}"
                 </strong>
                 ?
               </p>
               <p className="text-xs text-red-600 mt-1">
-                This action cannot be undone. All user data will be permanently
-                removed.
+                This action cannot be undone.
               </p>
             </div>
           </div>
