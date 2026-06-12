@@ -116,10 +116,8 @@ export default function InvoicePDF({ order }: InvoicePDFProps) {
             font-weight: 400;
           }
           .total-section {
-            margin-top: 15px;
+            margin-top: 5px;
             text-align: right;
-            padding-top: 10px;
-            border-top: 1px solid #e5e7eb;
           }
           .total-row {
             font-size: 14px;
@@ -159,40 +157,18 @@ export default function InvoicePDF({ order }: InvoicePDFProps) {
           </div>
           
           <div class="invoice-title">INVOICE</div>
-          
-          <!-- Order Information and Customer together -->
-          <div class="info-section">
+          <!-- Customer Information and Shipping Address together -->
+          <div class="section">
             <div class="info-grid">
               <div>
                 <div class="info-label">Invoice Number</div>
                 <div class="info-value">INV-${order.id.slice(-8).toUpperCase()}</div>
-              </div>
-              <div>
-                <div class="info-label">Order Date</div>
-                <div class="info-value">${new Date(order.createdAt).toLocaleDateString()}</div>
-              </div>
-              <div>
-                <div class="info-label">Order Status</div>
-                <div class="info-value">
-                  <span class="status-badge status-${order.status}">${order.status.toUpperCase()}</span>
-                </div>
-              </div>
-              <div>
-                <div class="info-label">Payment Method</div>
-                <div class="info-value">${order.payment?.method?.toUpperCase() || "N/A"}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Customer Information and Shipping Address together -->
-          <div class="section">
-            <div class="section-title">Customer & Shipping Details</div>
-            <div class="info-grid">
-              <div>
-                <div class="info-label">Customer Name</div>
+                <div class="info-label" style="margin-top: 8px;">Customer Name</div>
                 <div class="info-value">${order.user.name}</div>
                 <div class="info-label" style="margin-top: 8px;">Phone</div>
                 <div class="info-value">${order.user.phone_number}</div>
+                <div class="info-label" style="margin-top: 8px;">Invoice Date</div>
+                <div class="info-value">${new Date(order.createdAt).toLocaleDateString()}</div>
               </div>
               <div>
 
@@ -243,7 +219,6 @@ export default function InvoicePDF({ order }: InvoicePDFProps) {
             </table>
             <div class="total-section">
               <div class="total-row">Total Amount: ${parseFloat(order.totalAmount).toLocaleString()} ৳</div>
-              ${order.payment?.method === "cod" ? '<div style="font-size: 10px; color: #6b7280; margin-top: 5px;">Cash on Delivery</div>' : ""}
             </div>
           </div>
 
