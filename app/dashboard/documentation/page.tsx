@@ -1,47 +1,29 @@
 // src/app/dashboard/documentation/page.tsx
 "use client";
 
-import { useState } from "react";
 import {
+  BarChart3,
   BookOpen,
+  Check,
   Code,
   Copy,
-  Check,
-  ExternalLink,
-  Lock,
-  Shield,
-  Users,
-  Package,
-  ShoppingCart,
-  BarChart3,
-  FolderTree,
-  Truck,
-  CreditCard,
-  Bell,
-  MapPin,
-  Heart,
-  Search,
-  Filter,
-  Download,
-  Eye,
-  ChevronRight,
-  Server,
   Database,
-  Key,
-  Mail,
-  Phone,
-  User,
-  Settings,
-  TrendingUp,
-  Activity,
-  Calendar,
-  Clock,
-  Zap,
-  Sparkles,
-  Linkedin,
-  Twitter,
+  ExternalLink,
   Github,
+  Key,
+  Linkedin,
+  Lock,
+  Mail,
+  Package,
+  Search,
+  Server,
+  Shield,
+  ShoppingCart,
+  Twitter,
+  User,
+  Users,
 } from "lucide-react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 
 interface ApiEndpoint {
@@ -443,7 +425,7 @@ const adminRoutes: ApiEndpoint[] = [
   },
 ];
 
-const baseUrl = "https://api.barkatulla.com/api";
+const baseUrl = "https://medicare-server-9je0.onrender.com/v1";
 
 export default function DocumentationPage() {
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
