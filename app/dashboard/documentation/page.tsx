@@ -557,8 +557,8 @@ export default function DocumentationPage() {
           <div className="mt-3 flex items-center gap-2 text-xs text-amber-700">
             <Shield size={12} />
             <span>
-              Tokens expire after 7 days. Use the login endpoint to obtain a new
-              token.
+              Tokens expire after 365 days. Use the login endpoint to obtain a
+              new token.
             </span>
           </div>
         </div>

@@ -1,32 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Button from "@/components/ui/Button";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchDashboardStats } from "@/store/slices/dashboardSlice";
 import {
-  DollarSign,
-  ShoppingCart,
-  Users,
-  Package,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  Clock,
-  Zap,
-  Target,
-  Award,
-  ArrowUpRight,
-  ArrowDownRight,
   AlertCircle,
+  Award,
+  DollarSign,
+  Package,
   RefreshCw,
-  TrendingUp as TrendingUpIcon,
   ShoppingBag,
+  ShoppingCart,
+  Target,
+  TrendingUp as TrendingUpIcon,
   UserCheck,
-  BarChart3,
-  LineChart,
-  Activity,
 } from "lucide-react";
-import Button from "@/components/ui/Button";
+import { useEffect } from "react";
 
 // Skeleton Loader Component
 const StatsSkeleton = () => (
@@ -105,58 +94,6 @@ export default function DashboardStats() {
     return null;
   }
 
-  // Period Stats with Growth
-  const periodStats = [
-    {
-      title: "Today",
-      revenue: statsData?.today?.sales || 0,
-      orders: statsData?.today?.orders || 0,
-      items: statsData?.today?.items || 0,
-      growth: statsData?.growth?.daily || 0,
-      icon: Zap,
-      gradient: "from-orange-500 to-red-500",
-      bgGradient: "from-orange-50 to-red-50",
-      borderGradient: "from-orange-200 to-red-200",
-      period: "Today",
-    },
-    {
-      title: "This Week",
-      revenue: statsData?.this_week?.sales || 0,
-      orders: statsData?.this_week?.orders || 0,
-      items: statsData?.this_week?.items || 0,
-      growth: statsData?.growth?.weekly || 0,
-      icon: Calendar,
-      gradient: "from-blue-500 to-cyan-500",
-      bgGradient: "from-blue-50 to-cyan-50",
-      borderGradient: "from-blue-200 to-cyan-200",
-      period: "This Week",
-    },
-    {
-      title: "This Month",
-      revenue: statsData?.this_month?.sales || 0,
-      orders: statsData?.this_month?.orders || 0,
-      items: statsData?.this_month?.items || 0,
-      growth: statsData?.growth?.monthly || 0,
-      icon: BarChart3,
-      gradient: "from-purple-500 to-pink-500",
-      bgGradient: "from-purple-50 to-pink-50",
-      borderGradient: "from-purple-200 to-pink-200",
-      period: "This Month",
-    },
-    {
-      title: "This Year",
-      revenue: statsData?.this_year?.sales || 0,
-      orders: statsData?.this_year?.orders || 0,
-      items: statsData?.this_year?.items || 0,
-      growth: statsData?.growth?.yearly || 0,
-      icon: Activity,
-      gradient: "from-emerald-500 to-teal-500",
-      bgGradient: "from-emerald-50 to-teal-50",
-      borderGradient: "from-emerald-200 to-teal-200",
-      period: "This Year",
-    },
-  ];
-
   const lifetimeStats = [
     {
       label: "Total Revenue",
@@ -196,17 +133,6 @@ export default function DashboardStats() {
     },
   ];
 
-  const getMaxRevenue = () => {
-    return Math.max(
-      statsData?.today?.sales || 0,
-      statsData?.this_week?.sales || 0,
-      statsData?.this_month?.sales || 0,
-      statsData?.this_year?.sales || 0,
-    );
-  };
-
-  const maxRevenue = getMaxRevenue();
-
   // Find best performing period
   const periods = [
     { name: "Today", revenue: statsData?.today?.sales || 0 },
@@ -227,110 +153,6 @@ export default function DashboardStats() {
 
   return (
     <div className="space-y-8">
-      {/* Period Statistics Section - Modern Cards */}
-      <div>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-500">
-              <Clock size={20} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Period Overview
-              </h2>
-              <p className="text-sm text-gray-500">
-                Real-time revenue and order statistics
-              </p>
-            </div>
-          </div>
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs text-gray-500">Live updates</span>
-          </div>
-        </div>
-        {/* Daily, weekly, monthly, and yearly performance metrics with growth indicators */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {periodStats.map((stat) => {
-            const Icon = stat.icon;
-            const isPositive = stat.growth >= 0;
-            const formattedRevenue = stat.revenue.toLocaleString();
-            const formattedGrowth = Math.abs(stat.growth).toFixed(1);
-            const progressPercent =
-              maxRevenue > 0 ? (stat.revenue / maxRevenue) * 100 : 0;
-
-            return (
-              <div
-                key={stat.title}
-                className="group relative overflow-hidden rounded-2xl bg-white border border-gray-100"
-              >
-                <div className="relative z-10 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div
-                      className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient}`}
-                    >
-                      <Icon size={20} className="text-white" />
-                    </div>
-                    <div
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        isPositive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {isPositive ? (
-                        <ArrowUpRight size={12} />
-                      ) : (
-                        <ArrowDownRight size={12} />
-                      )}
-                      <span>{formattedGrowth}%</span>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <p className="text-sm text-gray-500 mb-1 font-medium">
-                      {stat.title}
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900 tracking-tight">
-                      {currencySymbol}
-                      {formattedRevenue}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm mb-4">
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <ShoppingCart size={12} />
-                      <span className="font-semibold text-gray-700">
-                        {stat.orders}
-                      </span>
-                      <span className="text-xs">orders</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <Package size={12} />
-                      <span className="font-semibold text-gray-700">
-                        {stat.items}
-                      </span>
-                      <span className="text-xs">items</span>
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full bg-gradient-to-r ${stat.gradient} transition-all duration-1000`}
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
-                    <div className="absolute -top-6 right-0 text-xs text-gray-400">
-                      {progressPercent.toFixed(0)}% of max
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Lifetime Statistics Section - Premium Cards */}
       <div>
         <div className="flex items-center gap-3 mb-6">

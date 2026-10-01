@@ -1,32 +1,28 @@
 // src/components/dashboard/SalesByStatus.tsx
 "use client";
 
-import { useEffect, useState } from "react";
 import { api } from "@/config/api";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
-import {
-  Package,
-  TrendingUp,
-  Loader2,
   CheckCircle,
   Clock,
+  CreditCard,
+  Package,
   Truck,
   XCircle,
-  CreditCard,
-  Eye,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface StatusData {
   status: string;

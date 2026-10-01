@@ -1,37 +1,34 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  Users,
-  Package,
-  ShoppingBag,
-  BarChart3,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Bell,
-  Settings,
-  HelpCircle,
-  Sparkles,
-  Leaf,
-  Layers2,
-  AreaChart,
-  Heart,
-  TrendingUp,
-  Grid3X3,
-  Star,
-  Clock,
-  UserCheck,
-  Truck,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { api } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { logout } from "@/store/slices/authSlice";
-import { api } from "@/config/api";
+import {
+  AreaChart,
+  Bell,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Grid3X3,
+  HelpCircle,
+  Layers2,
+  LayoutDashboard,
+  Leaf,
+  LogOut,
+  Package,
+  Settings,
+  ShoppingBag,
+  Sparkles,
+  Star,
+  TrendingUp,
+  UserCheck,
+  Users,
+  XCircle,
+} from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 // Products submenu items
 const productSubItems = [
@@ -312,11 +309,14 @@ export default function Sidebar() {
               </div>
               {showText && (
                 <div className="transition-opacity duration-200 whitespace-nowrap">
-                  <h1 className="text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  <h1 className="text-sm font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                     MediCarePLC
                   </h1>
                   <p className="text-[10px] text-gray-400 -mt-0.5">
-                    Administration Portal
+                    {user?.name || "Admin User"} (Logged in)
+                  </p>
+                  <p className="text-[10px] text-gray-400 -mt-0.5">
+                    Version 1.0.4
                   </p>
                 </div>
               )}
