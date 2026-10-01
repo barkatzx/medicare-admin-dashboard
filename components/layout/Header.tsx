@@ -210,8 +210,8 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-6 py-4">
+      <header>
+        <div className="flex items-center justify-between px-6 py-3">
           {/* Left Section - Welcome Message */}
           <div className="flex-1">
             <div>
@@ -347,46 +347,7 @@ export default function Header() {
                     {user?.role || "Administrator"}
                   </p>
                 </div>
-
-                <ChevronDown
-                  size={16}
-                  className={`text-gray-400 transition-transform duration-200 hidden md:block ${
-                    isProfileOpen ? "rotate-180" : ""
-                  }`}
-                />
               </button>
-
-              {/* Profile Dropdown */}
-              {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 animate-fade-in">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {user?.name || "Admin User"}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {user?.email || "admin@example.com"}
-                    </p>
-                  </div>
-                  <div className="py-1">
-                    <Link
-                      href="/dashboard/settings"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <Settings size={14} />
-                      <span>Settings</span>
-                    </Link>
-                    <Link
-                      href="/dashboard/help"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={() => setIsProfileOpen(false)}
-                    >
-                      <HelpCircle size={14} />
-                      <span>Help & Support</span>
-                    </Link>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

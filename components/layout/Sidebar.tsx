@@ -26,6 +26,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -302,8 +303,8 @@ export default function Sidebar() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="relative flex-shrink-0">
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                  <Sparkles size={18} className="text-white" />
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center">
+                  <Image src="/logo.png" alt="Logo" width={36} height={36} />
                 </div>
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full ring-2 ring-white" />
               </div>
@@ -316,7 +317,7 @@ export default function Sidebar() {
                     {user?.name || "Admin User"} (Logged in)
                   </p>
                   <p className="text-[10px] text-gray-400 -mt-0.5">
-                    Version 1.0.4
+                    Version 2.0.0
                   </p>
                 </div>
               )}
