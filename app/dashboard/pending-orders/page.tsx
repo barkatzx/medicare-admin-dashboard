@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { api } from "@/config/api";
 import {
   fetchOrders,
   updateOrderStatus,
@@ -22,25 +23,82 @@ import {
 import toast from "react-hot-toast";
 import InvoicePDF from "../../../components/orders/InvoicePDF";
 import InvoiceView from "../../../components/orders/InvoiceView";
+import { isFullOrderId } from "@/components/orders/orderSearch";
 
 export default function PendingOrdersPage() {
   const dispatch = useAppDispatch();
-  const { orders, pagination, loading } = useAppSelector(
+  const { orders, pagination, fetching, query } = useAppSelector(
     (state) => state.orders,
   );
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [activeOrderTotal, setActiveOrderTotal] = useState<number | null>(null);
+  const [countRefresh, setCountRefresh] = useState(0);
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(
     null,
   );
+  const searchingById = isFullOrderId(searchTerm);
 
   useEffect(() => {
+    let isCurrent = true;
+
+    const loadActiveOrderTotal = async () => {
+      try {
+        const statusCounts = await Promise.all(
+          ["pending", "confirmed", "processing", "shipped"].map((status) =>
+            api.getAllOrders(1, 1, status),
+          ),
+        );
+
+        if (isCurrent) {
+          setActiveOrderTotal(
+            statusCounts.reduce(
+              (total, response) => total + response.pagination.total,
+              0,
+            ),
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load active order counts:", error);
+        if (isCurrent) {
+          toast.error("Unable to load the total active order count.");
+        }
+      }
+    };
+
+    void loadActiveOrderTotal();
+    return () => {
+      isCurrent = false;
+    };
+  }, [countRefresh]);
+
+  useEffect(() => {
+    if (searchingById) return;
     dispatch(
       fetchOrders({ page: currentPage, limit: 10, status: statusFilter }),
     );
-  }, [dispatch, currentPage, statusFilter]);
+  }, [dispatch, currentPage, searchingById, statusFilter]);
+
+  useEffect(() => {
+    if (!searchingById) return;
+    dispatch(
+      fetchOrders({
+        page: 1,
+        limit: 10,
+        status: statusFilter,
+        search: searchTerm,
+        orderId: searchTerm,
+      }),
+    );
+  }, [dispatch, searchingById, searchTerm, statusFilter]);
+
+  useEffect(() => {
+    if (pagination && currentPage > pagination.totalPages) {
+      setCurrentPage(Math.max(1, pagination.totalPages));
+    }
+  }, [currentPage, pagination]);
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(orderId);
@@ -49,6 +107,16 @@ export default function PendingOrdersPage() {
         updateOrderStatus({ orderId, status: newStatus }),
       ).unwrap();
       toast.success(`Order status updated to ${newStatus}`);
+      setCountRefresh((count) => count + 1);
+      dispatch(
+        fetchOrders({
+          page: currentPage,
+          limit: 10,
+          status: statusFilter,
+          search: searchTerm,
+          orderId: isFullOrderId(searchTerm) ? searchTerm : undefined,
+        }),
+      );
       window.dispatchEvent(new Event("ordersUpdated"));
     } catch {
       toast.error("Failed to update order status");
@@ -73,17 +141,17 @@ export default function PendingOrdersPage() {
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return <Package size={16} className="text-yellow-600" />;
+        return <Package size={14} className="text-amber-600" />;
       case "confirmed":
-        return <CheckCircle size={16} className="text-blue-600" />;
+        return <CheckCircle size={14} className="text-blue-600" />;
       case "processing":
-        return <Truck size={16} className="text-purple-600" />;
+        return <Truck size={14} className="text-violet-600" />;
       case "shipped":
-        return <Truck size={16} className="text-indigo-600" />;
+        return <Truck size={14} className="text-cyan-600" />;
       case "delivered":
-        return <CheckCircle size={16} className="text-green-600" />;
+        return <CheckCircle size={14} className="text-emerald-600" />;
       case "cancelled":
-        return <XCircle size={16} className="text-red-600" />;
+        return <XCircle size={14} className="text-rose-600" />;
       default:
         return null;
     }
@@ -92,26 +160,33 @@ export default function PendingOrdersPage() {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return "bg-yellow-100 text-yellow-700";
+        return "bg-amber-50 text-amber-700 ring-amber-200/60";
       case "confirmed":
-        return "bg-blue-100 text-blue-700";
+        return "bg-blue-50 text-blue-700 ring-blue-200/60";
       case "processing":
-        return "bg-purple-100 text-purple-700";
+        return "bg-violet-50 text-violet-700 ring-violet-200/60";
       case "shipped":
-        return "bg-indigo-100 text-indigo-700";
+        return "bg-cyan-50 text-cyan-700 ring-cyan-200/60";
       case "delivered":
-        return "bg-green-100 text-green-700";
+        return "bg-emerald-50 text-emerald-700 ring-emerald-200/60";
       case "cancelled":
-        return "bg-red-100 text-red-700";
+        return "bg-rose-50 text-rose-700 ring-rose-200/60";
       default:
-        return "bg-gray-100 text-gray-700";
+        return "bg-gray-50 text-gray-700 ring-gray-200/60";
     }
   };
 
   const filteredOrders = orders.filter((order) => {
-    const status = order.status.toLowerCase();
-    if (status === "delivered" || status === "cancelled") return false;
-
+    const orderStatus = order.status.toLowerCase();
+    if (
+      statusFilter === "all"
+        ? !["pending", "confirmed", "processing", "shipped"].includes(
+            orderStatus,
+          )
+        : orderStatus !== statusFilter
+    ) {
+      return false;
+    }
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
@@ -121,216 +196,223 @@ export default function PendingOrdersPage() {
     );
   });
 
-  if (loading && orders.length === 0) {
+  const queryMatches =
+    query?.page === currentPage &&
+    query.status === statusFilter &&
+    (searchingById
+      ? query.search === searchTerm && query.orderId === searchTerm
+      : !query.orderId);
+
+  if (fetching || !queryMatches) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex h-96 items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-500">Loading pending orders...</p>
+          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-blue-500 border-t-transparent" />
+          <p className="text-sm font-medium text-gray-500">
+            Loading pending orders…
+          </p>
         </div>
       </div>
     );
   }
 
+  const statusTabs = ["all", "pending", "confirmed", "processing", "shipped"];
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards - Showing Today's Analytics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
+      {/* ─── Orders Table ────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <Package size={15} strokeWidth={2.25} />
+            </span>
             <div>
-              <p className="text-sm text-gray-500 font-medium">
-                Action Required
+              <h2 className="text-sm font-semibold text-gray-900">
+                Pending orders
+              </h2>
+              <p className="text-[11px] text-gray-500">
+                {activeOrderTotal === null
+                  ? "Total orders unavailable"
+                  : `${activeOrderTotal} ${
+                      activeOrderTotal === 1 ? "order" : "orders"
+                    }`}
               </p>
-              <p className="text-2xl font-bold text-rose-600 mt-1">
-                {filteredOrders.length}
-              </p>
-              <p className="text-[10px] text-gray-400 mt-1">
-                Pending processing
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-rose-50 rounded-lg flex items-center justify-center">
-              <Clock size={20} className="text-rose-600" />
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Search pending orders..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {["all", "pending", "confirmed", "processing", "shipped"].map(
-            (status) => (
-              <button
-                key={status}
-                onClick={() => {
-                  setStatusFilter(status);
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-64">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                size={16}
+              />
+              <input
+                type="text"
+                placeholder="Search by order ID, name, or email…"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize ${
-                  statusFilter === status
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
-                }`}
-              >
-                {status}
-              </button>
-            ),
-          )}
-        </div>
-      </div>
-
-      {/* Orders Table */}
-      <div className="rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Package size={20} className="text-blue-600" />
-            Active Order List ({filteredOrders.length})
-          </h2>
+                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
+              />
+            </div>
+            <div
+              role="tablist"
+              aria-label="Filter by status"
+              className="inline-flex w-fit items-center gap-1 self-start rounded-xl border border-gray-100 bg-gray-50/80 p-1 sm:self-auto"
+            >
+              {statusTabs.map((status) => {
+                const isActive = statusFilter === status;
+                return (
+                  <button
+                    key={status}
+                    role="tab"
+                    type="button"
+                    aria-selected={isActive}
+                    onClick={() => {
+                      setStatusFilter(status);
+                      setCurrentPage(1);
+                    }}
+                    className={`rounded-lg px-3.5 py-2 text-xs font-semibold capitalize transition-all duration-200 ${
+                      isActive
+                        ? "bg-white text-gray-900 shadow-[0_1px_2px_rgba(16,24,40,0.06)] ring-1 ring-inset ring-gray-100"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {status}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {filteredOrders.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Package size={24} className="text-gray-400" />
+          <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+              <Package size={22} className="text-gray-300" />
             </div>
-            <p className="text-gray-500">No pending orders found</p>
+            <p className="mt-4 text-sm font-medium text-gray-500">
+              No pending orders found
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
+              Try adjusting your filters or search
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[900px] text-left">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600">
-                    Order ID
-                  </th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600">
-                    Customer
-                  </th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600">
-                    Amount
-                  </th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600">
-                    Status
-                  </th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600">
-                    Payment
-                  </th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600">
-                    Date
-                  </th>
-                  <th className="text-left py-3 px-6 text-sm font-semibold text-gray-600">
-                    Actions
-                  </th>
+                <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                  <th className="px-6 py-3">Order ID</th>
+                  <th className="px-6 py-3">Customer</th>
+                  <th className="px-6 py-3 text-right">Amount</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Payment</th>
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {filteredOrders.map((order) => (
                   <tr
                     key={order.id}
-                    className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                    className="group transition-colors hover:bg-gray-50/80"
                   >
-                    <td className="py-3 px-6">
-                      <code className="text-sm font-mono text-gray-900 bg-gray-100 px-2 py-1 rounded">
+                    <td className="px-6 py-4">
+                      <code className="rounded-lg bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700 transition-colors group-hover:bg-white">
                         #{order.id.slice(-8)}
                       </code>
                     </td>
-                    <td className="py-3 px-6">
-                      <p className="font-medium text-gray-900">
-                        {order.user.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {order.user.phone_number}
-                      </p>
+
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
+                          {order.user.name?.charAt(0) ?? "?"}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-gray-900">
+                            {order.user.name}
+                          </p>
+                          <p className="truncate text-xs text-gray-500">
+                            {order.user.phone_number}
+                          </p>
+                        </div>
+                      </div>
                     </td>
-                    <td className="py-3 px-6">
-                      <span className="font-bold text-gray-900">
+
+                    <td className="px-6 py-4 text-right">
+                      <span className="text-sm font-bold tabular-nums text-gray-900">
                         {parseFloat(order.totalAmount).toLocaleString()} ৳
                       </span>
                     </td>
-                    <td className="py-3 px-6">
-                      <div className="flex items-center gap-2">
+
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize ring-1 ring-inset ${getStatusColor(order.status)}`}
+                      >
                         {getStatusIcon(order.status)}
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}
-                        >
-                          {order.status}
-                        </span>
-                      </div>
+                        {order.status}
+                      </span>
                     </td>
-                    <td className="py-3 px-6">
+
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
                             order.payment?.status === "paid"
-                              ? "bg-green-100 text-green-700 ring-1 ring-green-200"
+                              ? "bg-emerald-50 text-emerald-700 ring-emerald-200/60"
                               : order.payment?.status === "pending"
-                                ? "bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200"
-                                : "bg-red-100 text-red-700 ring-1 ring-red-200"
+                                ? "bg-amber-50 text-amber-700 ring-amber-200/60"
+                                : "bg-rose-50 text-rose-700 ring-rose-200/60"
                           }`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${
+                            className={`h-1.5 w-1.5 rounded-full ${
                               order.payment?.status === "paid"
-                                ? "bg-green-500"
+                                ? "bg-emerald-500"
                                 : order.payment?.status === "pending"
-                                  ? "bg-yellow-500"
-                                  : "bg-red-500"
+                                  ? "bg-amber-500"
+                                  : "bg-rose-500"
                             }`}
                           />
                           {order.payment?.status ?? "N/A"}
                         </span>
-                        {order.payment?.method && (
-                          <>
-                            <span className="w-2 h-2 rounded-full bg-gray-300" />
-                            <span className="text-xs text-gray-500 capitalize">
-                              {order.payment.method}
-                            </span>
-                          </>
-                        )}
                       </div>
                     </td>
-                    <td className="py-3 px-6">
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Calendar size={14} />
+
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-xs font-medium tabular-nums text-gray-500">
+                        <Calendar size={13} />
                         {new Date(order.createdAt).toLocaleDateString()}
                       </div>
                     </td>
-                    <td className="py-3 px-6">
-                      <div className="flex items-center gap-2">
+
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
                         <InvoiceView order={order} />
                         <InvoicePDF order={order} />
+
                         {order.payment?.status === "pending" &&
                           order.payment?.method === "cod" && (
                             <button
                               onClick={() => handleConfirmPayment(order.id)}
                               disabled={confirmingPayment === order.id}
-                              className="p-2 bg-pink-100 text-pink-600 hover:bg-pink-200 rounded-lg transition-colors disabled:opacity-50"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-50 text-pink-600 ring-1 ring-inset ring-pink-100 transition-all hover:bg-pink-100 disabled:opacity-50"
                               title="Confirm Payment"
                             >
-                              <CreditCard size={16} />
+                              <CreditCard size={14} />
                             </button>
                           )}
+
                         <select
                           value={order.status.toLowerCase()}
                           onChange={(e) =>
                             handleStatusUpdate(order.id, e.target.value)
                           }
                           disabled={updatingStatus === order.id}
-                          className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                          className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:opacity-50"
                         >
                           <option value="pending">Pending</option>
                           <option value="confirmed">Confirmed</option>
@@ -348,54 +430,74 @@ export default function PendingOrdersPage() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* ─── Pagination ────────────────────────────────────────── */}
         {pagination && pagination.totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <p className="text-sm text-gray-600">
-                Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-                {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-                of {pagination.total} orders
+          <div className="border-t border-gray-100 bg-gray-50/60 px-6 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="text-xs font-medium tabular-nums text-gray-500">
+                Showing{" "}
+                <span className="font-semibold text-gray-700">
+                  {(pagination.page - 1) * pagination.limit + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-semibold text-gray-700">
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total,
+                  )}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-gray-700">
+                  {pagination.total}
+                </span>{" "}
+                orders
               </p>
-              <div className="flex gap-2">
+
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                  disabled={fetching || currentPage === 1}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={14} />
                 </button>
-                <div className="flex gap-1">
-                  {Array.from(
-                    { length: Math.min(5, pagination.totalPages) },
-                    (_, i) => {
-                      const pageNum = i + 1;
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`px-3 py-1 rounded-lg transition-colors ${
-                            currentPage === pageNum
-                              ? "bg-blue-600 text-white"
-                              : "hover:bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    },
-                  )}
-                </div>
+
+                {Array.from(
+                  { length: Math.min(5, pagination.totalPages) },
+                  (_, i) => {
+                    const startPage = Math.max(
+                      1,
+                      Math.min(currentPage - 2, pagination.totalPages - 4),
+                    );
+                    const pageNum = startPage + i;
+                    const isActive = currentPage === pageNum;
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        disabled={fetching}
+                        className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
+                          isActive
+                            ? "bg-blue-600 text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)]"
+                            : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  },
+                )}
+
                 <button
                   onClick={() =>
                     setCurrentPage((p) =>
                       Math.min(pagination.totalPages, p + 1),
                     )
                   }
-                  disabled={currentPage === pagination.totalPages}
-                  className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                  disabled={fetching || currentPage === pagination.totalPages}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={14} />
                 </button>
               </div>
             </div>

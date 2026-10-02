@@ -251,10 +251,40 @@ export default function Sidebar() {
   useEffect(() => {
     const fetchPendingCustomersCount = async () => {
       try {
-        const { users } = await api.getUsers(1, 100);
-        const count = users.filter(
-          (u: any) => !u.isApproved && u.role !== "admin",
+        const pageSize = 100;
+        const firstPage = await api.getUsers(1, pageSize);
+        let count = firstPage.users.filter(
+          (user) => !user.isApproved && user.role !== "admin",
         ).length;
+
+        for (
+          let firstPageNumber = 2;
+          firstPageNumber <= firstPage.pagination.pages;
+          firstPageNumber += 5
+        ) {
+          const pageNumbers = Array.from(
+            {
+              length: Math.min(
+                5,
+                firstPage.pagination.pages - firstPageNumber + 1,
+              ),
+            },
+            (_, index) => firstPageNumber + index,
+          );
+          const pages = await Promise.all(
+            pageNumbers.map((page) => api.getUsers(page, pageSize)),
+          );
+          count += pages.reduce(
+            (total, page) =>
+              total +
+              page.users.filter(
+                (user) => !user.isApproved && user.role !== "admin",
+              ).length,
+            0,
+          );
+        }
+
+        setPendingCustomersCount(count);
       } catch (error) {
         console.error("Failed to fetch pending customers count:", error);
       }

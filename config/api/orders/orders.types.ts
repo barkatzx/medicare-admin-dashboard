@@ -45,3 +45,10 @@ export interface Order {
   payment: Payment;
   shippingAddress?: ShippingAddress;
 }
+
+export interface OrderPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}

@@ -1,196 +1,258 @@
 "use client";
 
-import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchProducts } from "@/store/slices/productSlice";
-import { fetchUsers } from "@/store/slices/userSlice";
-import { fetchOrders } from "@/store/slices/orderSlice";
-import Card from "@/components/ui/Card";
-import dynamic from "next/dynamic";
-import {
-  ShoppingBag,
-  ChevronRight,
-  Calendar,
-  Package,
-  TrendingUp,
-} from "lucide-react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowRight, Clock3, Package, Users } from "lucide-react";
+import { api, type Order, type User } from "@/config/api";
+import SalesChart from "@/components/sales/SalesChart";
 
-const SalesChart = dynamic(() => import("@/components/sales/SalesChart"), {
-  loading: () => <div className="h-80 bg-gray-100 rounded-xl animate-pulse" />,
-  ssr: false,
-});
+const PAGE_SIZE = 100;
+const DISPLAY_LIMIT = 5;
+
+function newestFirst<T extends { createdAt?: string }>(items: T[]) {
+  return [...items].sort(
+    (left, right) =>
+      new Date(right.createdAt ?? 0).getTime() -
+      new Date(left.createdAt ?? 0).getTime(),
+  );
+}
 
 export default function DashboardPage() {
-  const dispatch = useAppDispatch();
-  const { products } = useAppSelector((state) => state.products);
-  const { users } = useAppSelector((state) => state.users);
-  const { orders } = useAppSelector((state) => state.orders);
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      dispatch(fetchProducts({ page: 1, limit: 20 })).unwrap(),
-      dispatch(fetchUsers({ page: 1, limit: 20 })).unwrap(),
-      dispatch(fetchOrders({ page: 1, limit: 10 })).unwrap(),
-    ]).catch((err) => console.error("Background fetch error:", err));
-  }, [dispatch]);
+    let isCurrent = true;
+
+    const loadPendingItems = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const [ordersResponse, firstUsersPage] = await Promise.all([
+          api.getAllOrders(1, DISPLAY_LIMIT, "pending"),
+          api.getUsers(1, PAGE_SIZE),
+        ]);
+
+        const users: User[] = firstUsersPage.users.filter(
+          (user) => !user.isApproved && user.role !== "admin",
+        );
+        const totalUserPages = Number(firstUsersPage.pagination?.pages) || 1;
+
+        for (
+          let firstPageNumber = 2;
+          users.length < DISPLAY_LIMIT && firstPageNumber <= totalUserPages;
+          firstPageNumber += 5
+        ) {
+          const pageNumbers = Array.from(
+            {
+              length: Math.min(5, totalUserPages - firstPageNumber + 1),
+            },
+            (_, index) => firstPageNumber + index,
+          );
+          const pages = await Promise.all(
+            pageNumbers.map((page) => api.getUsers(page, PAGE_SIZE)),
+          );
+          users.push(
+            ...pages.flatMap((page) =>
+              page.users.filter(
+                (user) => !user.isApproved && user.role !== "admin",
+              ),
+            ),
+          );
+        }
+
+        if (isCurrent) {
+          setPendingOrders(
+            newestFirst(ordersResponse.orders).slice(0, DISPLAY_LIMIT),
+          );
+          setPendingUsers(newestFirst(users).slice(0, DISPLAY_LIMIT));
+        }
+      } catch (loadError) {
+        console.error("Failed to load dashboard pending items:", loadError);
+        if (isCurrent) {
+          setError("Unable to load pending orders and users.");
+        }
+      } finally {
+        if (isCurrent) setLoading(false);
+      }
+    };
+
+    void loadPendingItems();
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
       <SalesChart />
-
-      <Card className="overflow-hidden border-0 rounded-xl">
-        <div className="px-6 py-5 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-xl">
-                <ShoppingBag size={18} className="text-blue-600" />
-              </div>
+      <div className="flex flex-col gap-5 lg:flex-row">
+        {/* ─── Pending Orders ──────────────────────────────────────── */}
+        <section className="min-w-0 flex-1 rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <header className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                <Package size={15} strokeWidth={2.25} />
+              </span>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Recent Orders
-                </h3>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Latest 5 transactions
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Pending orders
+                </h2>
+              </div>
+            </div>
+          </header>
+
+          <div className="px-6 py-2">
+            {loading ? (
+              <div
+                className="space-y-2 py-2"
+                aria-label="Loading pending orders"
+              >
+                {Array.from({ length: DISPLAY_LIMIT }, (_, index) => (
+                  <div
+                    key={index}
+                    className="h-14 animate-pulse rounded-xl bg-gray-100"
+                  />
+                ))}
+              </div>
+            ) : error ? (
+              <div className="my-3 rounded-xl bg-rose-50 p-4 ring-1 ring-inset ring-rose-100">
+                <p className="text-sm font-medium text-rose-700">{error}</p>
+              </div>
+            ) : pendingOrders.length === 0 ? (
+              <div className="flex min-h-[200px] flex-col items-center justify-center py-8 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+                  <Package size={22} className="text-gray-300" />
+                </div>
+                <p className="mt-4 text-sm font-medium text-gray-500">
+                  No pending orders
+                </p>
+                <p className="mt-1 text-xs text-gray-400">
+                  New orders will appear here
                 </p>
               </div>
-            </div>
-            <Link
-              href="/dashboard/orders"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-            >
-              View All
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto border-l border-r border-gray-100">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Order ID
-                </th>
-                <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {orders.slice(0, 5).map((order, idx) => (
-                <tr
-                  key={order.id}
-                  className="group hover:bg-gradient-to-r hover:from-gray-50 hover:to-transparent transition-all duration-200"
-                >
-                  <td className="py-3.5 px-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-mono font-semibold">
-                        {String(idx + 1).padStart(2, "0")}
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {pendingOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="group flex items-center justify-between gap-3 py-3.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-50 text-[11px] font-bold uppercase text-amber-600 ring-1 ring-inset ring-amber-100">
+                        {order.user?.name?.charAt(0) || "?"}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900">
+                          {order.user?.name || "Customer"}
+                        </p>
+                        <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-gray-500">
+                          <Clock3 size={11} className="shrink-0" />
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </p>
                       </div>
-                      <code className="text-sm font-mono font-medium text-gray-900 bg-gray-100 px-2 py-1 rounded-lg">
-                        #{order.id.slice(-8)}
-                      </code>
                     </div>
-                  </td>
-                  <td className="py-3.5 px-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xs font-semibold">
-                        {order.user?.name?.charAt(0) || "U"}
-                      </div>
-                      <span className="text-sm font-medium text-gray-800">
-                        {order.user?.name || "N/A"}
+
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-semibold tabular-nums text-gray-900">
+                        {Number(order.totalAmount).toLocaleString()} ৳
+                      </p>
+                      <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold capitalize text-amber-700 ring-1 ring-inset ring-amber-200/60">
+                        {order.status}
                       </span>
                     </div>
-                  </td>
-                  <td className="py-3.5 px-6">
-                    <span className="text-sm font-semibold text-gray-900">
-                      {parseFloat(order.totalAmount).toLocaleString()} ৳
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-6">
-                    {/* FIX: moved conditional classes into a proper expression */}
-                    <div
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ring-inset transition-all ${
-                        order.status === "completed" ||
-                        order.status === "delivered"
-                          ? "bg-green-50 text-green-700 ring-green-200"
-                          : order.status === "pending"
-                            ? "bg-yellow-50 text-yellow-700 ring-yellow-200"
-                            : order.status === "cancelled"
-                              ? "bg-red-50 text-red-700 ring-red-200"
-                              : "bg-gray-50 text-gray-700 ring-gray-200"
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          order.status === "completed" ||
-                          order.status === "delivered"
-                            ? "bg-green-500"
-                            : order.status === "pending"
-                              ? "bg-yellow-500"
-                              : order.status === "cancelled"
-                                ? "bg-red-500"
-                                : "bg-gray-500"
-                        }`}
-                      />
-                      {order.status === "delivered"
-                        ? "Delivered"
-                        : order.status}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ─── Pending Users ───────────────────────────────────────── */}
+        <section className="min-w-0 flex-1 rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <header className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <Users size={15} strokeWidth={2.25} />
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Pending users
+                </h2>
+              </div>
+            </div>
+          </header>
+
+          <div className="px-6 py-2">
+            {loading ? (
+              <div
+                className="space-y-2 py-2"
+                aria-label="Loading pending users"
+              >
+                {Array.from({ length: DISPLAY_LIMIT }, (_, index) => (
+                  <div
+                    key={index}
+                    className="h-14 animate-pulse rounded-xl bg-gray-100"
+                  />
+                ))}
+              </div>
+            ) : error ? (
+              <div className="my-3 rounded-xl bg-rose-50 p-4 ring-1 ring-inset ring-rose-100">
+                <p className="text-sm font-medium text-rose-700">{error}</p>
+              </div>
+            ) : pendingUsers.length === 0 ? (
+              <div className="flex min-h-[200px] flex-col items-center justify-center py-8 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+                  <Users size={22} className="text-gray-300" />
+                </div>
+                <p className="mt-4 text-sm font-medium text-gray-500">
+                  No pending users
+                </p>
+                <p className="mt-1 text-xs text-gray-400">
+                  New registrations will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {pendingUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="group flex items-center justify-between gap-3 py-3.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
+                        {user.name?.charAt(0) || "U"}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900">
+                          {user.name || "Unnamed user"}
+                        </p>
+                        <p className="truncate text-[11px] font-medium text-gray-500">
+                          {user.email}
+                        </p>
+                      </div>
                     </div>
-                  </td>
-                  <td className="py-3.5 px-6">
-                    <div className="flex items-center gap-1.5 text-sm text-gray-500">
-                      <Calendar size={14} className="text-gray-400" />
-                      <span className="font-medium">
-                        {new Date(order.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+
+                    <div className="shrink-0 text-right">
+                      <p className="text-[11px] font-medium tabular-nums text-gray-500">
+                        {user.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString()
+                          : "—"}
+                      </p>
+                      <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200/60">
+                        Pending approval
                       </span>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="px-6 py-3 bg-gray-50 border-t border-gray-100">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <Package size={12} />
-                Total: {orders.length} orders
-              </span>
-              <span className="flex items-center gap-1">
-                <TrendingUp size={12} />
-                Avg: ৳
-                {(
-                  orders.reduce(
-                    (sum, o) => sum + parseFloat(o.totalAmount),
-                    0,
-                  ) / orders.length || 0
-                ).toFixed(0)}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-gray-400">Updated just now</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse ml-1" />
-            </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      </Card>
+        </section>
+      </div>
     </div>
   );
 }

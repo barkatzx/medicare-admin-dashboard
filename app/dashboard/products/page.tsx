@@ -2,7 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchProducts, deleteProduct, fetchInventoryStats } from "@/store/slices/productSlice";
+import {
+  fetchProducts,
+  deleteProduct,
+  fetchInventoryStats,
+} from "@/store/slices/productSlice";
 import { fetchCategories } from "@/store/slices/categorySlice";
 import Button from "@/components/ui/Button";
 import {
@@ -121,14 +125,18 @@ export default function ProductsPage() {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   };
 
-  const lowStockCount = inventoryStats?.lowStockCount ?? products.filter(
-    (p) => p.stock <= 20 && p.stock > 0,
-  ).length;
-  const outOfStockCount = inventoryStats?.outOfStockCount ?? products.filter((p) => p.stock === 0).length;
-  const totalValue = inventoryStats?.totalValue ?? products.reduce(
-    (sum, p) => sum + (p.discountedPrice ?? p.price) * p.stock,
-    0,
-  );
+  const lowStockCount =
+    inventoryStats?.lowStockCount ??
+    products.filter((p) => p.stock <= 20 && p.stock > 0).length;
+  const outOfStockCount =
+    inventoryStats?.outOfStockCount ??
+    products.filter((p) => p.stock === 0).length;
+  const totalValue =
+    inventoryStats?.totalValue ??
+    products.reduce(
+      (sum, p) => sum + (p.discountedPrice ?? p.price) * p.stock,
+      0,
+    );
 
   const visibleProducts = showLowStock
     ? products.filter((p) => p.stock <= 20)

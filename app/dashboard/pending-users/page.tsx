@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { api } from "@/config/api";
 import { fetchUsers, approveUser, deleteUser } from "@/store/slices/userSlice";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -29,10 +30,67 @@ export default function PendingUsersPage() {
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [pendingUsersTotal, setPendingUsersTotal] = useState<number | null>(
+    null,
+  );
+  const [countRefresh, setCountRefresh] = useState(0);
 
   useEffect(() => {
     dispatch(fetchUsers({ page: 1, limit: 20 }));
   }, [dispatch]);
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    const countPendingUsers = async () => {
+      try {
+        const pageSize = 100;
+        const firstPage = await api.getUsers(1, pageSize);
+        let pendingCount = firstPage.users.filter(
+          (user) => !user.isApproved && user.role !== "admin",
+        ).length;
+
+        for (
+          let firstPageNumber = 2;
+          firstPageNumber <= firstPage.pagination.pages;
+          firstPageNumber += 5
+        ) {
+          const pageNumbers = Array.from(
+            {
+              length: Math.min(
+                5,
+                firstPage.pagination.pages - firstPageNumber + 1,
+              ),
+            },
+            (_, index) => firstPageNumber + index,
+          );
+          const pages = await Promise.all(
+            pageNumbers.map((page) => api.getUsers(page, pageSize)),
+          );
+          pendingCount += pages.reduce(
+            (total, page) =>
+              total +
+              page.users.filter(
+                (user) => !user.isApproved && user.role !== "admin",
+              ).length,
+            0,
+          );
+        }
+
+        if (isCurrent) setPendingUsersTotal(pendingCount);
+      } catch (error) {
+        console.error("Failed to load total pending users:", error);
+        if (isCurrent) {
+          setPendingUsersTotal(null);
+        }
+      }
+    };
+
+    void countPendingUsers();
+    return () => {
+      isCurrent = false;
+    };
+  }, [countRefresh]);
 
   const handlePageChange = (newPage: number) => {
     dispatch(fetchUsers({ page: newPage, limit: pagination.limit }));
@@ -41,6 +99,7 @@ export default function PendingUsersPage() {
   const handleApprove = async (userId: string) => {
     setApprovingId(userId);
     await dispatch(approveUser(userId));
+    setCountRefresh((count) => count + 1);
     setApprovingId(null);
     window.dispatchEvent(new Event("usersUpdated"));
   };
@@ -57,6 +116,7 @@ export default function PendingUsersPage() {
       await dispatch(deleteUser(userToDelete.id)).unwrap();
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
+      setCountRefresh((count) => count + 1);
       window.dispatchEvent(new Event("usersUpdated"));
     } catch (error: any) {
     } finally {
@@ -76,68 +136,80 @@ export default function PendingUsersPage() {
 
   if (loading && users.length === 0) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex h-96 items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 font-medium">Loading pending users...</p>
+          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-amber-500 border-t-transparent" />
+          <p className="text-sm font-medium text-gray-500">
+            Loading pending users…
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Search pending users by name, email, or phone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
-          />
-        </div>
-        <button
-          onClick={() =>
-            dispatch(
-              fetchUsers({ page: pagination.page, limit: pagination.limit }),
-            )
-          }
-          className="px-5 py-2.5 bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2"
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </button>
-      </div>
-
-      {/* Pending Approvals Table */}
-      <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-orange-50">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-amber-100 rounded-lg">
-              <Clock size={16} className="text-amber-600" />
-            </div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Pending Approvals
-            </h2>
-            <span className="px-2.5 py-0.5 bg-amber-200 text-amber-800 text-xs font-medium rounded-full ml-2">
-              {pagination.total}
+    <div className="space-y-6">
+      {/* ─── Pending Approvals Table ─────────────────────────────── */}
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <Clock size={15} strokeWidth={2.25} />
             </span>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">
+                Pending approvals
+              </h2>
+              <p className="text-[11px] text-gray-500">
+                {pendingUsersTotal === null
+                  ? "Total users unavailable"
+                  : `${pendingUsersTotal} ${
+                      pendingUsersTotal === 1 ? "user" : "users"
+                    }`}
+              </p>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-64">
+              <Search
+                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                size={16}
+              />
+              <input
+                type="text"
+                placeholder="Search by name, email, or phone…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-amber-300 focus:outline-none focus:ring-4 focus:ring-amber-50"
+              />
+            </div>
+            <button
+              onClick={() => {
+                dispatch(
+                  fetchUsers({
+                    page: pagination.page,
+                    limit: pagination.limit,
+                  }),
+                );
+                setCountRefresh((count) => count + 1);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
           </div>
         </div>
 
         {filteredUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Clock size={32} className="text-gray-400" />
+          <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+              <Clock size={22} className="text-gray-300" />
             </div>
-            <p className="text-gray-500 font-medium">No pending approvals</p>
-            <p className="text-sm text-gray-400 mt-1">
+            <p className="mt-4 text-sm font-medium text-gray-500">
+              No pending approvals
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
               {searchTerm
                 ? "Try adjusting your search"
                 : "All user requests have been processed"}
@@ -145,77 +217,75 @@ export default function PendingUsersPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[840px] text-left">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Phone
-                  </th>
-                  <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                  <th className="px-6 py-3">User</th>
+                  <th className="px-6 py-3">Email</th>
+                  <th className="px-6 py-3">Phone</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {filteredUsers.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-gray-50 hover:bg-amber-50/20 transition-colors"
+                    className="group transition-colors hover:bg-amber-50/30"
                   >
-                    <td className="py-3 px-6">
+                    <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-sm">
-                          <span className="text-white font-semibold text-sm">
-                            {user.name?.charAt(0) || "U"}
-                          </span>
-                        </div>
-                        <span className="font-medium text-gray-900">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-[11px] font-bold uppercase text-white shadow-[0_1px_2px_rgba(251,146,60,0.3)]">
+                          {user.name?.charAt(0) || "U"}
+                        </span>
+                        <span className="truncate text-sm font-semibold text-gray-900">
                           {user.name || "Unnamed User"}
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 px-6">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Mail size={14} className="text-gray-400" />
-                        <span>{user.email}</span>
+
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                        <Mail size={13} className="shrink-0 text-gray-400" />
+                        <span className="truncate">{user.email}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-6">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Phone size={14} className="text-gray-400" />
-                        <span>{user.phone_number}</span>
+
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-xs font-medium tabular-nums text-gray-600">
+                        <Phone size={13} className="shrink-0 text-gray-400" />
+                        <span className="truncate">{user.phone_number}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-6">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">
-                        <Clock size={10} />
+
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200/60">
+                        <Clock size={11} />
                         Pending
                       </span>
                     </td>
-                    <td className="py-3 px-6">
-                      <div className="flex items-center gap-2">
-                        <Button
+
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
                           onClick={() => handleApprove(user.id)}
-                          loading={approvingId === user.id}
-                          className="p-2 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-all duration-200 text-emerald-600"
+                          disabled={approvingId === user.id}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100 transition-all hover:bg-emerald-100 disabled:opacity-50"
+                          title="Approve user"
                         >
-                          <CheckCircle size={16} className="text-emerald-600" />
-                        </Button>
+                          {approvingId === user.id ? (
+                            <RefreshCw size={14} className="animate-spin" />
+                          ) : (
+                            <CheckCircle size={14} />
+                          )}
+                        </button>
+
                         <button
                           onClick={() => handleDeleteClick(user)}
-                          className="p-2 text-red-600 bg-red-100 hover:bg-red-200 rounded-lg transition-all duration-200"
-                          title="Delete User"
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100"
+                          title="Delete user"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
@@ -226,108 +296,111 @@ export default function PendingUsersPage() {
           </div>
         )}
 
-        {/* ── Pagination Controls ── */}
+        {/* ─── Pagination ────────────────────────────────────────── */}
         {pagination.pages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Showing{" "}
-              <span className="font-medium text-gray-700">
-                {(pagination.page - 1) * pagination.limit + 1}–
-                {Math.min(pagination.page * pagination.limit, pagination.total)}
-              </span>{" "}
-              of{" "}
-              <span className="font-medium text-gray-700">
-                {pagination.total}
-              </span>{" "}
-              users
-            </p>
+          <div className="border-t border-gray-100 bg-gray-50/60 px-6 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="text-xs font-medium tabular-nums text-gray-500">
+                Showing{" "}
+                <span className="font-semibold text-gray-700">
+                  {(pagination.page - 1) * pagination.limit + 1}–
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total,
+                  )}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-gray-700">
+                  {pagination.total}
+                </span>{" "}
+                users
+              </p>
 
-            <div className="flex items-center gap-1">
-              {/* Prev */}
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={!pagination.hasPrevPage || loading}
-                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft size={16} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={!pagination.hasPrevPage || loading}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={14} />
+                </button>
 
-              {/* Page numbers with ellipsis */}
-              {Array.from({ length: pagination.pages }, (_, i) => i + 1)
-                .filter(
-                  (p) =>
-                    p === 1 ||
-                    p === pagination.pages ||
-                    Math.abs(p - pagination.page) <= 1,
-                )
-                .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                  if (idx > 0 && p - (arr[idx - 1] as number) > 1)
-                    acc.push("...");
-                  acc.push(p);
-                  return acc;
-                }, [])
-                .map((p, idx) =>
-                  p === "..." ? (
-                    <span
-                      key={`ellipsis-${idx}`}
-                      className="px-2 text-gray-400 text-sm"
-                    >
-                      …
-                    </span>
-                  ) : (
-                    <button
-                      key={p}
-                      onClick={() => handlePageChange(p as number)}
-                      disabled={loading}
-                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
-                        pagination.page === p
-                          ? "bg-amber-500 text-white"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ),
-                )}
+                {Array.from({ length: pagination.pages }, (_, i) => i + 1)
+                  .filter(
+                    (p) =>
+                      p === 1 ||
+                      p === pagination.pages ||
+                      Math.abs(p - pagination.page) <= 1,
+                  )
+                  .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                    if (idx > 0 && p - (arr[idx - 1] as number) > 1)
+                      acc.push("...");
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) =>
+                    p === "..." ? (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="px-1 text-xs font-medium text-gray-400"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => handlePageChange(p as number)}
+                        disabled={loading}
+                        className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
+                          pagination.page === p
+                            ? "bg-amber-500 text-white shadow-[0_1px_2px_rgba(245,158,11,0.35)]"
+                            : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ),
+                  )}
 
-              {/* Next */}
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={!pagination.hasNextPage || loading}
-                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight size={16} />
-              </button>
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={!pagination.hasNextPage || loading}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* ─── Delete Confirmation Modal ───────────────────────────── */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         title="Delete User"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-red-50 rounded-xl border border-red-100">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-              <AlertTriangle size={20} className="text-red-600" />
+          <div className="flex items-start gap-3 rounded-xl border border-rose-100 bg-rose-50 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100">
+              <AlertTriangle size={18} className="text-rose-600" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm text-gray-700">
                 Are you sure you want to delete{" "}
-                <strong className="text-gray-900">
-                  "{userToDelete?.name || userToDelete?.email}"
+                <strong className="font-semibold text-gray-900">
+                  “{userToDelete?.name || userToDelete?.email}”
                 </strong>
                 ?
               </p>
-              <p className="text-xs text-red-600 mt-1">
+              <p className="mt-1 text-xs font-medium text-rose-600">
                 This action cannot be undone.
               </p>
             </div>
           </div>
-          <div className="flex gap-3 pt-2">
+
+          <div className="flex gap-3 pt-1">
             <Button
               variant="secondary"
               onClick={() => setIsDeleteModalOpen(false)}
@@ -338,7 +411,7 @@ export default function PendingUsersPage() {
             <Button
               onClick={handleDelete}
               loading={deletingId === userToDelete?.id}
-              className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700"
+              className="flex-1 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700"
             >
               Delete User
             </Button>
