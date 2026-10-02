@@ -6,7 +6,6 @@ import { fetchProducts } from "@/store/slices/productSlice";
 import { fetchUsers } from "@/store/slices/userSlice";
 import { fetchOrders } from "@/store/slices/orderSlice";
 import Card from "@/components/ui/Card";
-import DashboardStats from "@/components/dashboards/DashboardStats";
 import dynamic from "next/dynamic";
 import {
   ShoppingBag,
@@ -16,29 +15,17 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import Summary from "@/components/dashboards/summary";
 
-const SalesChart = dynamic(() => import("@/components/charts/SalesChart"), {
+const SalesChart = dynamic(() => import("@/components/sales/SalesChart"), {
   loading: () => <div className="h-80 bg-gray-100 rounded-xl animate-pulse" />,
   ssr: false,
 });
-
-const TopProductsChart = dynamic(
-  () => import("@/components/charts/TopProductsChart"),
-  {
-    loading: () => (
-      <div className="h-80 bg-gray-100 rounded-xl animate-pulse" />
-    ),
-    ssr: false,
-  },
-);
 
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
   const { products } = useAppSelector((state) => state.products);
   const { users } = useAppSelector((state) => state.users);
   const { orders } = useAppSelector((state) => state.orders);
-  const { statsData } = useAppSelector((state) => state.dashboard);
 
   useEffect(() => {
     Promise.all([
@@ -51,16 +38,6 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <SalesChart />
-      <DashboardStats />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="col-span-1">
-          <Summary />
-        </Card>
-        <Card className="col-span-1">
-          <TopProductsChart />
-        </Card>
-      </div>
 
       <Card className="overflow-hidden border-0 rounded-xl">
         <div className="px-6 py-5 bg-gray-50 border-b border-gray-100">

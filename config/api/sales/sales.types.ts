@@ -1,4 +1,3 @@
-import type { Order } from "../orders/orders.types";
 import type { Product } from "../products/products.types";
 
 export interface DailySalesData {
@@ -19,38 +18,57 @@ export interface MonthlySalesData {
   orders: number;
 }
 
+export interface SalesOverviewData {
+  totalSales: number;
+  totalOrders: number;
+  averageOrderValue: number;
+  totalItemsSold: number;
+  totalDiscounts: number;
+  totalCustomers: number;
+  topProducts: TopSalesProduct[];
+  topCategories: TopCategory[];
+  topCustomers: TopCustomer[];
+}
+
+export interface SalesGrowthData {
+  daily: number;
+  weekly: number;
+  monthly: number;
+  yearly: number;
+}
+
+export interface SalesStatus {
+  status: string;
+  totalSales: number;
+  totalOrders: number;
+}
+
+export interface TopSalesProduct {
+  id: string;
+  name: string;
+  price: string;
+  images: Array<{ url: string }>;
+  totalSold: number;
+}
+
+export interface TopCategory {
+  id: string;
+  name: string;
+  totalSold: number;
+}
+
+export interface TopCustomer {
+  id: string;
+  customerName: string;
+  pharmacyName: string | null;
+  totalOrders: number;
+  totalSales: number;
+}
+
 export interface SalesSummaryData {
-  overall_summary: {
-    totalSales: number;
-    totalOrders: number;
-    averageOrderValue: number;
-    totalItemsSold: number;
-    totalDiscounts: number;
-    totalCustomers: number;
-    topProducts: Array<{
-      id: string;
-      name: string;
-      price: string;
-      images: Array<{ url: string }>;
-      totalSold: number;
-    }>;
-    topCategories: Array<{
-      id: string;
-      name: string;
-      totalSold: number;
-    }>;
-  };
-  growth_percentage: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-    yearly: number;
-  };
-  sales_by_status: Array<{
-    status: string;
-    totalSales: number;
-    totalOrders: number;
-  }>;
+  overall_summary: SalesOverviewData;
+  growth_percentage: SalesGrowthData;
+  sales_by_status: SalesStatus[];
 }
 
 export interface SalesSummary {
@@ -87,40 +105,4 @@ export interface YearlyResponse {
 export interface TopProduct extends Product {
   totalSold: number;
   totalRevenue: number;
-}
-
-export interface DashboardData {
-  today: {
-    sales: number;
-    orders: number;
-    items: number;
-  };
-  this_week: {
-    sales: number;
-    orders: number;
-    items: number;
-  };
-  this_month: {
-    sales: number;
-    orders: number;
-    items: number;
-  };
-  this_year: {
-    sales: number;
-    orders: number;
-    items: number;
-  };
-  lifetime: {
-    sales: number;
-    orders: number;
-    customers: number;
-    products_sold: number;
-  };
-  growth: {
-    daily: number;
-    weekly: number;
-    monthly: number;
-    yearly: number;
-  };
-  recent_orders: Order[];
 }

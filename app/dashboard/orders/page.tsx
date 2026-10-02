@@ -16,16 +16,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  DollarSign,
-  ShoppingBag,
   CreditCard,
-  Users,
-  TrendingUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import InvoicePDF from "../../../components/orders/InvoicePDF";
 import InvoiceView from "../../../components/orders/InvoiceView";
-import { api, DashboardData } from "@/config/api";
 
 export default function OrdersPage() {
   const dispatch = useAppDispatch();
@@ -38,26 +33,12 @@ export default function OrdersPage() {
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(
     null,
   );
-  const [dashboardStats, setDashboardStats] = useState<DashboardData | null>(null);
 
   useEffect(() => {
     dispatch(
       fetchOrders({ page: currentPage, limit: 10, status: "delivered" }),
     );
   }, [dispatch, currentPage]);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      const data = await api.getDashboardData();
-      setDashboardStats(data);
-    } catch (error) {
-      console.error("Failed to fetch dashboard stats:", error);
-    }
-  };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(orderId);
@@ -66,7 +47,6 @@ export default function OrdersPage() {
         updateOrderStatus({ orderId, status: newStatus }),
       ).unwrap();
       toast.success(`Order status updated to ${newStatus}`);
-      fetchStats();
     } catch {
       toast.error("Failed to update order status");
     } finally {
@@ -117,70 +97,6 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards - Showing Lifetime Analytics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Lifetime Revenue</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                ৳{(dashboardStats?.lifetime.sales ?? 0).toLocaleString()}
-              </p>
-              <div className="flex items-center gap-1 mt-1">
-                <TrendingUp size={12} className="text-green-500" />
-                <p className="text-[10px] text-gray-400">Monthly growth: {dashboardStats?.growth.monthly.toFixed(1) ?? 0}%</p>
-              </div>
-            </div>
-            <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center">
-              <DollarSign size={20} className="text-indigo-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Total Orders</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">
-                {dashboardStats?.lifetime.orders ?? 0}
-              </p>
-              <p className="text-[10px] text-gray-400 mt-1">Completed successfully</p>
-            </div>
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-              <ShoppingBag size={20} className="text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Products Sold</p>
-              <p className="text-2xl font-bold text-amber-600 mt-1">
-                {dashboardStats?.lifetime.products_sold ?? 0}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-              <Package size={20} className="text-amber-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Unique Customers</p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">
-                {dashboardStats?.lifetime.customers ?? 0}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <Users size={20} className="text-emerald-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Search */}
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1 relative">

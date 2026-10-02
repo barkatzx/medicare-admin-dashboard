@@ -407,18 +407,6 @@ const adminRoutes: ApiEndpoint[] = [
   },
   {
     method: "GET",
-    endpoint: "/sales/export",
-    description: "Export sales data",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/sales/dashboard",
-    description: "Get dashboard data",
-    auth: "admin",
-  },
-  {
-    method: "GET",
     endpoint: "/sales/today-ordered-products",
     description: "Get today's ordered products",
     auth: "admin",

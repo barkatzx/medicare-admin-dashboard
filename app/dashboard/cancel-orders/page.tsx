@@ -14,12 +14,10 @@ import {
   ChevronRight,
   Calendar,
   AlertTriangle,
-  History,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import InvoicePDF from "../../../components/orders/InvoicePDF";
 import InvoiceView from "../../../components/orders/InvoiceView";
-import { api, DashboardData } from "@/config/api";
 
 export default function CancelOrdersPage() {
   const dispatch = useAppDispatch();
@@ -29,7 +27,6 @@ export default function CancelOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
-  const [dashboardStats, setDashboardStats] = useState<DashboardData | null>(null);
 
   useEffect(() => {
     // Only fetch cancelled orders
@@ -38,19 +35,6 @@ export default function CancelOrdersPage() {
     );
   }, [dispatch, currentPage]);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      const data = await api.getDashboardData();
-      setDashboardStats(data);
-    } catch (error) {
-      console.error("Failed to fetch dashboard stats:", error);
-    }
-  };
-
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(orderId);
     try {
@@ -58,7 +42,6 @@ export default function CancelOrdersPage() {
         updateOrderStatus({ orderId, status: newStatus }),
       ).unwrap();
       toast.success(`Order status updated to ${newStatus}`);
-      fetchStats();
     } catch {
       toast.error("Failed to update order status");
     } finally {
@@ -139,20 +122,6 @@ export default function CancelOrdersPage() {
           </div>
         </div>
 
-        <div className="rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Cancellation Rate</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {dashboardStats?.lifetime.orders ? ((pagination?.total ?? 0) / dashboardStats.lifetime.orders * 100).toFixed(1) : 0}%
-              </p>
-              <p className="text-[10px] text-gray-400 mt-1">Vs lifetime total</p>
-            </div>
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-              <History size={20} className="text-blue-600" />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Search */}

@@ -6,7 +6,6 @@ import productReducer from "./slices/productSlice";
 import categoryReducer from "./slices/categorySlice";
 import orderReducer from "./slices/orderSlice";
 import salesReducer from "./slices/salesSlice";
-import dashboardReducer from "./slices/dashboardSlice";
 import notificationReducer from "./slices/notificationSlice";
 import trendingReducer from "./slices/trendingSlice";
 import featuredReducer from "./slices/featuredSlice";
@@ -19,7 +18,6 @@ export const store = configureStore({
     categories: categoryReducer,
     orders: orderReducer,
     sales: salesReducer,
-    dashboard: dashboardReducer,
     notifications: notificationReducer,
     trending: trendingReducer,
     featured: featuredReducer,

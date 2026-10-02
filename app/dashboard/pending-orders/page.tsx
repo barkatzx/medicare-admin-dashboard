@@ -16,16 +16,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
-  DollarSign,
-  ShoppingBag,
   CreditCard,
   Clock,
-  TrendingUp,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import InvoicePDF from "../../../components/orders/InvoicePDF";
 import InvoiceView from "../../../components/orders/InvoiceView";
-import { api, DashboardData } from "@/config/api";
 
 export default function PendingOrdersPage() {
   const dispatch = useAppDispatch();
@@ -39,28 +35,12 @@ export default function PendingOrdersPage() {
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(
     null,
   );
-  const [dashboardStats, setDashboardStats] = useState<DashboardData | null>(
-    null,
-  );
 
   useEffect(() => {
     dispatch(
       fetchOrders({ page: currentPage, limit: 10, status: statusFilter }),
     );
   }, [dispatch, currentPage, statusFilter]);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      const data = await api.getDashboardData();
-      setDashboardStats(data);
-    } catch (error) {
-      console.error("Failed to fetch dashboard stats:", error);
-    }
-  };
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(orderId);
@@ -69,7 +49,6 @@ export default function PendingOrdersPage() {
         updateOrderStatus({ orderId, status: newStatus }),
       ).unwrap();
       toast.success(`Order status updated to ${newStatus}`);
-      fetchStats(); // Refresh stats after update
       window.dispatchEvent(new Event("ordersUpdated"));
     } catch {
       toast.error("Failed to update order status");
@@ -83,7 +62,6 @@ export default function PendingOrdersPage() {
     try {
       await dispatch(confirmPayment(orderId)).unwrap();
       toast.success("Payment confirmed successfully");
-      fetchStats();
       window.dispatchEvent(new Event("ordersUpdated"));
     } catch {
       toast.error("Failed to confirm payment");
@@ -158,66 +136,6 @@ export default function PendingOrdersPage() {
     <div className="space-y-6">
       {/* Stats Cards - Showing Today's Analytics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">
-                Today's Orders
-              </p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {dashboardStats?.today.orders ?? 0}
-              </p>
-              <div className="flex items-center gap-1 mt-1">
-                <TrendingUp
-                  size={12}
-                  className={
-                    dashboardStats?.growth.daily &&
-                    dashboardStats.growth.daily > 0
-                      ? "text-green-500"
-                      : "text-gray-400"
-                  }
-                />
-                <p className="text-[10px] text-gray-400">
-                  Daily growth: {dashboardStats?.growth.daily.toFixed(1) ?? 0}%
-                </p>
-              </div>
-            </div>
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-              <ShoppingBag size={20} className="text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">
-                Today's Revenue
-              </p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">
-                ৳{(dashboardStats?.today.sales ?? 0).toLocaleString()}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <DollarSign size={20} className="text-emerald-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl p-4 border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Items Ordered</p>
-              <p className="text-2xl font-bold text-amber-600 mt-1">
-                {dashboardStats?.today.items ?? 0}
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-              <Package size={20} className="text-amber-600" />
-            </div>
-          </div>
-        </div>
-
         <div className="rounded-xl p-4 border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
