@@ -71,6 +71,31 @@ export interface SalesSummaryData {
   sales_by_status: SalesStatus[];
 }
 
+export interface OrderedProduct {
+  productName: string;
+  distributor: string | null;
+  quantity: number;
+  price: number;
+  tp: number | null;
+}
+
+export interface OrderedProductsSummary {
+  totalProducts: number;
+  totalQuantity: number;
+  totalRevenue: number;
+}
+
+export interface OrderedProductsData {
+  products: OrderedProduct[];
+  summary: OrderedProductsSummary;
+}
+
+export interface OrderedProductsResponse {
+  success: boolean;
+  data: OrderedProductsData;
+  message: string;
+}
+
 export interface SalesSummary {
   totalRevenue: number;
   totalOrders: number;

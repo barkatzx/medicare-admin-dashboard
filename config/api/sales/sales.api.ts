@@ -1,5 +1,6 @@
 import { apiClient } from "../client";
 import type {
+  OrderedProductsData,
   SalesSummaryData,
   TopProduct,
   YearlyResponse,
@@ -12,7 +13,7 @@ export async function getTopProducts(
   return Array.isArray(data) ? data : [];
 }
 
-export async function getTodayOrderedProducts(): Promise<any> {
+export async function getTodayOrderedProducts(): Promise<OrderedProductsData> {
   return apiClient.request("/sales/today-ordered-products");
 }
 

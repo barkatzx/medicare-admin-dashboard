@@ -22,6 +22,7 @@ import {
   Sparkles,
   Star,
   TrendingUp,
+  Truck,
   UserCheck,
   Users,
   XCircle,
@@ -122,12 +123,17 @@ const menuItems = [
     icon: LayoutDashboard,
     description: "Overview & analytics",
   },
-  // Users, Inventory, and Orders are handled separately as dropdowns
   {
     name: "Reports",
     href: "/dashboard/reports",
     icon: AreaChart,
     description: "Sales analytics",
+  },
+  {
+    name: "Shipments",
+    href: "/dashboard/today-shipments",
+    icon: Truck,
+    description: "Manage shipments",
   },
 ];
 
