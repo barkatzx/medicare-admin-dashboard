@@ -14,6 +14,7 @@ import {
 } from "@/store/slices/productSlice";
 import { createCategory, fetchCategories } from "@/store/slices/categorySlice";
 import Button from "@/components/ui/Button";
+import type { Product } from "@/config/api";
 import {
   Upload,
   X,
@@ -33,7 +34,7 @@ import {
 import toast from "react-hot-toast";
 
 interface ProductFormProps {
-  product?: any;
+  product?: Product | null;
   categories: any[];
   onSuccess: () => void;
   onCancel: () => void;
@@ -72,6 +73,8 @@ export default function ProductForm({
     price: product?.price || 0,
     discountedPrice: product?.discountedPrice || null,
     stock: product?.stock || 0,
+    distributor: product?.distributor ?? "",
+    tp: product?.tp ?? null,
     categoryId: product?.categoryId || "",
   });
 
@@ -315,12 +318,14 @@ export default function ProductForm({
     try {
       if (product) {
         // Update existing product
-        const updateData: any = {
+        const updateData: Partial<Product> = {
           name: formData.name,
           description: formData.description,
           price: formData.price,
           discountedPrice: formData.discountedPrice,
           stock: formData.stock,
+          distributor: formData.distributor || null,
+          tp: formData.tp,
           categoryId: formData.categoryId,
         };
 
@@ -366,6 +371,8 @@ export default function ProductForm({
           price: formData.price,
           discountedPrice: formData.discountedPrice,
           stock: formData.stock,
+          distributor: formData.distributor || null,
+          tp: formData.tp,
           categoryId: formData.categoryId,
         };
 
@@ -560,6 +567,43 @@ export default function ProductForm({
           </div>
         </div>
 
+        {/* Distributor and TP */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Distributor
+            </label>
+            <input
+              type="text"
+              value={formData.distributor}
+              onChange={(e) =>
+                setFormData({ ...formData, distributor: e.target.value })
+              }
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Optional"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              TP
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.tp ?? ""}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  tp: e.target.value ? parseFloat(e.target.value) : null,
+                })
+              }
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Optional"
+            />
+          </div>
+        </div>
+
         {/* Price and Stock */}
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -676,7 +720,7 @@ export default function ProductForm({
                   >
                     <img
                       src={img.url}
-                      alt={img.altText || product.name}
+                      alt={img.altText || product.name || ""}
                       className="w-full h-full object-cover"
                     />
                     {primaryImageId === img.id && (

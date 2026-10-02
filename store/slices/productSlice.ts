@@ -39,23 +39,6 @@ const initialState: ProductState = {
   inventoryStats: null,
 };
 
-// export const fetchProducts = createAsyncThunk(
-//   "products/fetchAll",
-//   async ({
-//     page = 1,
-//     limit = 20,
-//     search,
-//     categoryId,
-//   }: {
-//     page?: number;
-//     limit?: number;
-//     search?: string;
-//     categoryId?: string;
-//   } = {}) => {
-//     const response = await api.getAllProducts(page, limit, search, categoryId);
-//     return response;
-//   },
-// );
 export const fetchProducts = createAsyncThunk(
   "products/fetchAll",
   async ({
@@ -83,7 +66,7 @@ export const fetchProductById = createAsyncThunk(
 
 export const createProduct = createAsyncThunk(
   "products/create",
-  async (productData: any) => {
+  async (productData: Partial<Product>) => {
     const response = await api.createProduct(productData);
     return response;
   },
@@ -183,18 +166,25 @@ export const fetchInventoryStats = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       // Fetch with a large limit to calculate global stats
-      const response = await api.getAllProducts(1, 1000); 
+      const response = await api.getAllProducts(1, 1000);
       const allProducts = response.products;
-      
-      const lowStockCount = allProducts.filter(p => p.stock <= 20 && p.stock > 0).length;
-      const outOfStockCount = allProducts.filter(p => p.stock === 0).length;
-      const totalValue = allProducts.reduce((sum, p) => sum + (p.discountedPrice ?? p.price) * p.stock, 0);
-      
+
+      const lowStockCount = allProducts.filter(
+        (p) => p.stock <= 20 && p.stock > 0,
+      ).length;
+      const outOfStockCount = allProducts.filter((p) => p.stock === 0).length;
+      const totalValue = allProducts.reduce(
+        (sum, p) => sum + (p.discountedPrice ?? p.price) * p.stock,
+        0,
+      );
+
       return { lowStockCount, outOfStockCount, totalValue };
     } catch (error: any) {
-      return rejectWithValue(error.message || "Failed to fetch inventory stats");
+      return rejectWithValue(
+        error.message || "Failed to fetch inventory stats",
+      );
     }
-  }
+  },
 );
 
 const productSlice = createSlice({

@@ -38,6 +38,7 @@ import toast from "react-hot-toast";
 import ProductForm from "../../../components/products/ProductForm";
 import StockManagementModal from "../../../components/products/StockManagementModal";
 import { Product } from "@/config/api";
+import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 
 export default function ProductsPage() {
   const dispatch = useAppDispatch();
@@ -161,12 +162,6 @@ export default function ProductsPage() {
       icon: AlertTriangle,
       color: "from-red-500 to-rose-600",
     },
-    // {
-    //   label: "Inventory Value",
-    //   value: `৳${totalValue.toLocaleString()}`,
-    //   icon: DollarSign,
-    //   color: "from-emerald-500 to-teal-600",
-    // },
     {
       label: "Trending",
       value: trendingProducts.length,
@@ -353,6 +348,8 @@ export default function ProductsPage() {
                       "Category",
                       "Price",
                       "Discounted",
+                      "Distributor",
+                      "TP",
                       "Stock",
                       "Actions",
                     ].map((h) => (
@@ -410,14 +407,14 @@ export default function ProductsPage() {
                         </td>
 
                         <td className="py-3 px-6 font-semibold text-gray-900">
-                          ৳{product.price.toLocaleString()}
+                          {formatSalesCurrency(product.price)}
                         </td>
 
                         <td className="py-3 px-6">
                           {product.discountedPrice ? (
                             <span className="text-emerald-600 font-semibold">
-                              ৳{product.discountedPrice.toLocaleString()}
-                              {product.discountPercent > 0 && (
+                              {formatSalesCurrency(product.discountedPrice)}
+                              {(product.discountPercent ?? 0) > 0 && (
                                 <span className="text-xs text-gray-500 ml-1">
                                   ({product.discountPercent}% off)
                                 </span>
@@ -426,6 +423,16 @@ export default function ProductsPage() {
                           ) : (
                             <span className="text-gray-400">—</span>
                           )}
+                        </td>
+
+                        <td className="py-3 px-6 text-sm text-gray-600">
+                          {product.distributor ?? "N/A"}
+                        </td>
+
+                        <td className="py-3 px-6 text-sm font-medium text-gray-900">
+                          {product.tp === null || product.tp === undefined
+                            ? "N/A"
+                            : formatSalesCurrency(product.tp)}
                         </td>
 
                         <td className="py-3 px-6">

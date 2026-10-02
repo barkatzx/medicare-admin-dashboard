@@ -17,6 +17,8 @@ export interface Product {
   discountedPrice: number | null;
   discountPercent: number;
   stock: number;
+  distributor: string | null;
+  tp: number | null;
   categoryId: string;
   featured?: boolean;
   trending?: boolean;
@@ -26,5 +28,6 @@ export interface Product {
   category?: Category;
   finalPrice?: number;
   savings?: number;
+  discountBadge?: string;
   primaryImageId?: string;
 }
