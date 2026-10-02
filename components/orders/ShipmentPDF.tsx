@@ -132,7 +132,7 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
                 <th>Product name</th>
                 <th>Distributor</th>
                 <th class="number">Quantity</th>
-                <th class="number">Price</th>
+                <th class="number">MRP</th>
                 <th class="number">TP</th>
               </tr>
             </thead>

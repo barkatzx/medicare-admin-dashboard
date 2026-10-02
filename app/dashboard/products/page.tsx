@@ -301,11 +301,9 @@ export default function ProductsPage() {
             <div className="p-1.5 bg-blue-100 rounded-lg">
               <Package size={16} className="text-blue-600" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              Product Inventory
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900">Products</h2>
             <span className="px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full ml-2">
-              {pagination?.total ?? products.length} products
+              {pagination?.total ?? products.length}
             </span>
           </div>
           <button
@@ -346,9 +344,9 @@ export default function ProductsPage() {
                     {[
                       "Product",
                       "Category",
-                      "Price",
-                      "Discounted",
+                      // "Discounted",
                       "Distributor",
+                      "MRP",
                       "TP",
                       "Stock",
                       "Actions",
@@ -406,11 +404,7 @@ export default function ProductsPage() {
                           </span>
                         </td>
 
-                        <td className="py-3 px-6 font-semibold text-gray-900">
-                          {formatSalesCurrency(product.price)}
-                        </td>
-
-                        <td className="py-3 px-6">
+                        {/* <td className="py-3 px-6">
                           {product.discountedPrice ? (
                             <span className="text-emerald-600 font-semibold">
                               {formatSalesCurrency(product.discountedPrice)}
@@ -423,10 +417,13 @@ export default function ProductsPage() {
                           ) : (
                             <span className="text-gray-400">—</span>
                           )}
-                        </td>
+                        </td> */}
 
                         <td className="py-3 px-6 text-sm text-gray-600">
                           {product.distributor ?? "N/A"}
+                        </td>
+                        <td className="py-3 px-6 font-semibold text-gray-900">
+                          {formatSalesCurrency(product.price)}
                         </td>
 
                         <td className="py-3 px-6 text-sm font-medium text-gray-900">
@@ -448,16 +445,6 @@ export default function ProductsPage() {
                             >
                               {product.stock} units
                             </span>
-                            {product.stock > 0 && product.stock <= 20 && (
-                              <span className="text-xs text-amber-600 font-medium">
-                                Low!
-                              </span>
-                            )}
-                            {product.stock === 0 && (
-                              <span className="text-xs text-red-600 font-medium">
-                                Out!
-                              </span>
-                            )}
                           </div>
                         </td>
 
