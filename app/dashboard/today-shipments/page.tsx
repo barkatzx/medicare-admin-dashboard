@@ -30,10 +30,7 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
     <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
       <div className="flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-4 sm:px-6">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">Products</h2>
-          <p className="mt-1 text-xs text-gray-500">
-            {products.length} {products.length === 1 ? "product" : "products"}
-          </p>
+          <h2 className="text-sm font-bold">Products ({products.length})</h2>
         </div>
         <ShipmentPDF products={products} />
       </div>

@@ -56,35 +56,68 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
               padding: 28px;
               color: #1f2937;
               font-family: 'Outfit', 'Helvetica', 'Arial', sans-serif;
+              -webkit-font-smoothing: antialiased;
             }
             header {
-              margin-bottom: 10px;
-              padding-bottom: 10px;
+              margin-bottom: 20px;
+              padding-bottom: 16px;
+              border-bottom: 1px solid #e5e7eb;
               text-align: center;
             }
-            h1 { margin: 0 0 6px; font-size: 15px; }
-            p { margin: 0; color: #6b7280; font-size: 12px; }
+            h1 {
+              margin: 0 0 6px;
+              font-size: 16px;
+              font-weight: 600;
+              letter-spacing: -0.01em;
+              color: #111827;
+            }
+            p {
+              margin: 0;
+              color: #6b7280;
+              font-size: 11px;
+              font-weight: 400;
+              letter-spacing: 0.02em;
+            }
             table { width: 100%; border-collapse: collapse; }
             th, td {
-              padding: 10px 8px;
-              border-bottom: 1px solid #e5e7eb;
+              padding: 10px 10px;
+              border-bottom: 1px solid #f1f5f9;
               text-align: left;
               vertical-align: top;
               font-size: 11px;
               overflow-wrap: anywhere;
             }
             th {
-              background: #f3f4f6;
-              color: #374151;
-              font-size: 10px;
+              background: #f8fafc;
+              color: #64748b;
+              font-size: 9px;
+              font-weight: 600;
               text-transform: uppercase;
-              letter-spacing: .04em;
+              letter-spacing: 0.08em;
+              border-bottom: 1px solid #e2e8f0;
             }
-            .number { text-align: right; white-space: nowrap; }
+            tbody tr:nth-child(even) { background: #fafbfc; }
+            td:first-child { font-weight: 500; color: #111827; }
+            .number {
+              text-align: right;
+              white-space: nowrap;
+              font-variant-numeric: tabular-nums;
+            }
+            tfoot td {
+              padding-top: 14px;
+              border-top: 1px solid #e2e8f0;
+              border-bottom: none;
+              font-size: 10px;
+              color: #64748b;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+            }
             @page { size: landscape; margin: 12mm; }
             @media print {
               body { padding: 0; }
               tr { break-inside: avoid; }
+              thead { display: table-header-group; }
             }
           </style>
         </head>
@@ -96,7 +129,7 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
           <table>
             <thead>
               <tr>
-                <th>Product Name</th>
+                <th>Product name</th>
                 <th>Distributor</th>
                 <th class="number">Quantity</th>
                 <th class="number">Price</th>
@@ -104,6 +137,12 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
               </tr>
             </thead>
             <tbody>${rows}</tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2">${products.length} product${products.length === 1 ? "" : "s"}</td>
+                <td class="number" colspan="3">Total quantity: ${products.reduce((sum, p) => sum + p.quantity, 0)}</td>
+              </tr>
+            </tfoot>
           </table>
           <script>
             window.onload = function () {
@@ -122,10 +161,10 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
       type="button"
       onClick={printShipment}
       disabled={products.length === 0}
-      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
       title="Print ordered products"
     >
-      <Printer size={15} />
+      <Printer size={14} strokeWidth={2.25} />
       Print
     </button>
   );
