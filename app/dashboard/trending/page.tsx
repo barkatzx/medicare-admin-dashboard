@@ -11,18 +11,12 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import {
   Star,
-  Award,
   Loader2,
   Package,
   AlertCircle,
   TrendingUp,
   Shield,
-  Sparkles,
-  Zap,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  Heart,
+  RefreshCw,
 } from "lucide-react";
 
 export default function TrendingProductsPage() {
@@ -53,161 +47,148 @@ export default function TrendingProductsPage() {
 
   if (error && !loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8 bg-white rounded-2xl shadow-xl">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-10 h-10 text-red-600" />
+      <div className="flex h-96 items-center justify-center">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-50">
+            <AlertCircle size={24} className="text-rose-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">
-            Error Loading Trending Products
-          </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <p className="mb-1 text-sm font-medium text-gray-700">
+            Failed to load trending products
+          </p>
+          <p className="mb-5 text-xs text-gray-400">{error}</p>
           <button
             onClick={() => dispatch(fetchTrendingProducts() as any)}
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)] transition-all hover:bg-blue-700"
           >
-            Try Again
+            <RefreshCw size={15} />
+            Try again
           </button>
         </div>
       </div>
     );
   }
 
+  const totalValue = trendingProducts.reduce(
+    (sum, p) => sum + (p.finalPrice || p.price),
+    0,
+  );
+  const totalStock = trendingProducts.reduce((sum, p) => sum + p.stock, 0);
+  const categoryCount = new Set(trendingProducts.map((p) => p.categoryId)).size;
+
+  const stats = [
+    {
+      label: "Total trending",
+      value: trendingProducts.length,
+      icon: Star,
+      accent: "bg-yellow-400",
+      iconTone: "bg-yellow-50 text-yellow-600",
+    },
+    {
+      label: "Total value",
+      value: `৳${totalValue.toLocaleString()}`,
+      icon: TrendingUp,
+      accent: "bg-emerald-500",
+      iconTone: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      label: "Categories",
+      value: categoryCount,
+      icon: Shield,
+      accent: "bg-violet-500",
+      iconTone: "bg-violet-50 text-violet-600",
+    },
+    {
+      label: "Total stock",
+      value: totalStock.toLocaleString(),
+      icon: Package,
+      accent: "bg-blue-500",
+      iconTone: "bg-blue-50 text-blue-600",
+    },
+  ];
+
   return (
-    <div className="min-h-screen">
-      <div className="mx-auto">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl border border-gray-100 p-4 transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Total Trending</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {trendingProducts.length}
-                </p>
+    <div className="space-y-6">
+      {/* ─── Stats ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {stats.map(({ label, value, icon: Icon, accent, iconTone }) => (
+          <article
+            key={label}
+            className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-200 hover:shadow-[0_4px_12px_rgba(16,24,40,0.08)]"
+          >
+            <span
+              className={`absolute inset-x-0 top-0 h-0.5 ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100`}
+            />
+            <div className="flex items-center gap-3.5">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconTone} transition-transform duration-200 group-hover:scale-105`}
+              >
+                <Icon size={18} strokeWidth={2} />
               </div>
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Star className="w-5 h-5 text-yellow-600 fill-yellow-600" />
+              <div className="min-w-0">
+                <p className="truncate text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                  {label}
+                </p>
+                <p className="mt-0.5 truncate text-xl font-bold tabular-nums tracking-tight text-gray-900">
+                  {value}
+                </p>
               </div>
             </div>
-          </div>
+          </article>
+        ))}
+      </div>
 
-          <div className="bg-white rounded-xl border border-gray-100 p-4 transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Total Value</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  ৳
-                  {trendingProducts
-                    .reduce((sum, p) => sum + (p.finalPrice || p.price), 0)
-                    .toLocaleString()}
-                </p>
-              </div>
-              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-emerald-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-100 p-4 transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Categories</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {new Set(trendingProducts.map((p) => p.categoryId)).size}
-                </p>
-              </div>
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-gray-100 p-4 transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Total Stock</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {trendingProducts
-                    .reduce((sum, p) => sum + p.stock, 0)
-                    .toLocaleString()}
-                </p>
-              </div>
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Package className="w-5 h-5 text-blue-600" />
-              </div>
+      {/* ─── Trending Products Table ─────────────────────────────── */}
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600">
+              <Star size={15} strokeWidth={2.25} className="fill-current" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">
+                Trending products
+              </h2>
+              <p className="text-[11px] text-gray-500">
+                {trendingProducts.length}{" "}
+                {trendingProducts.length === 1 ? "product" : "products"}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Trending Products Table */}
-        <div className="rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 to-white">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Star className="w-4 h-4 text-yellow-600 fill-yellow-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Trending Products
-              </h2>
-              {loading && (
-                <div className="flex items-center gap-2 text-sm text-yellow-600 ml-auto">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Syncing...</span>
-                </div>
-              )}
+        <div className="relative">
+          {loading && trendingProducts.length === 0 ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center">
+              <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-yellow-500 border-t-transparent" />
+              <p className="mt-3 text-xs font-medium text-gray-500">
+                Loading trending products…
+              </p>
             </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            {loading && trendingProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="relative">
-                  <div className="w-16 h-16 border-4 border-yellow-100 rounded-full animate-pulse" />
-                  <Loader2 className="w-8 h-8 text-yellow-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-spin" />
-                </div>
-                <p className="text-gray-500 mt-4">
-                  Loading trending products...
-                </p>
+          ) : trendingProducts.length === 0 ? (
+            <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+                <Star size={22} className="text-gray-300" />
               </div>
-            ) : trendingProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-gray-50">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                  <Star className="w-10 h-10 text-gray-300" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No trending products yet
-                </h3>
-                <p className="text-gray-500 text-center max-w-md">
-                  Go to the Products page and click the Star icon to mark
-                  products as trending and showcase them here.
-                </p>
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                      #
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                      PRODUCT
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                      CATEGORY
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                      PRICE
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600">
-                      STOCK
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Discount
-                    </th>
-                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Actions
-                    </th>
+              <p className="mt-4 text-sm font-medium text-gray-500">
+                No trending products yet
+              </p>
+              <p className="mt-1 max-w-xs text-xs text-gray-400">
+                Go to the Products page and click the star icon to mark products
+                as trending
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1000px] text-left">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    <th className="w-14 px-6 py-3">#</th>
+                    <th className="px-6 py-3">Product</th>
+                    <th className="px-6 py-3">Category</th>
+                    <th className="px-6 py-3 text-right">Price</th>
+                    <th className="px-6 py-3 text-center">Stock</th>
+                    <th className="px-6 py-3">Discount</th>
+                    <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -216,137 +197,131 @@ export default function TrendingProductsPage() {
                       product.images?.find((img) => img.isDefault) ||
                       product.images?.[0];
                     const isUpdating = updatingId === product.id;
+                    const isTop = index === 0;
+                    const isLow = product.stock <= 20;
 
                     return (
                       <tr
                         key={product.id}
-                        className="hover:bg-gray-50 transition-colors group"
+                        className="group transition-colors hover:bg-gray-50/80"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold text-yellow-600">
-                                #{index + 1}
-                              </span>
-                            </div>
-                          </div>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-bold tabular-nums transition-transform duration-200 group-hover:scale-105 ${
+                              isTop
+                                ? "bg-yellow-100 text-yellow-700 ring-1 ring-inset ring-yellow-200/60"
+                                : index < 3
+                                  ? "bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-200/60"
+                                  : "bg-gray-50 text-gray-400 ring-1 ring-inset ring-gray-100"
+                            }`}
+                          >
+                            {index + 1}
+                          </span>
                         </td>
 
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 relative bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
                               {defaultImage?.url ? (
                                 <Image
                                   src={defaultImage.url}
                                   alt={product.name || "Product"}
                                   fill
+                                  sizes="40px"
                                   className="object-cover"
                                   unoptimized
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Package className="w-5 h-5 text-gray-400" />
+                                <div className="flex h-full items-center justify-center">
+                                  <Package
+                                    size={16}
+                                    className="text-gray-300"
+                                  />
                                 </div>
                               )}
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900 line-clamp-1">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-gray-900">
                                 {product.name}
                               </p>
-                              {product.description && (
-                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                                  {product.description.substring(0, 60)}...
-                                </p>
-                              )}
                             </div>
                           </div>
                         </td>
 
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg">
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center rounded-lg bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-600 ring-1 ring-inset ring-gray-100">
                             {product.category?.name || "Uncategorized"}
                           </span>
                         </td>
 
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div>
-                            <p className="text-sm font-bold text-gray-900">
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex flex-col items-end">
+                            <span className="text-sm font-semibold tabular-nums text-gray-900">
                               ৳
                               {(
                                 product.finalPrice || product.price
                               ).toLocaleString()}
-                            </p>
+                            </span>
                             {product.discountPercent > 0 && (
-                              <p className="text-xs text-gray-400 line-through">
+                              <span className="text-[10px] font-medium tabular-nums text-gray-400 line-through">
                                 ৳{product.price.toLocaleString()}
-                              </p>
+                              </span>
                             )}
                           </div>
                         </td>
 
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 text-center">
                           <span
-                            className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                              product.stock <= 20
-                                ? "bg-red-100 text-red-700"
-                                : "bg-emerald-100 text-emerald-700"
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset tabular-nums ${
+                              isLow
+                                ? "bg-rose-50 text-rose-700 ring-rose-200/60"
+                                : "bg-emerald-50 text-emerald-700 ring-emerald-200/60"
                             }`}
                           >
                             {product.stock}
                           </span>
                         </td>
 
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4">
                           {product.discountPercent > 0 ? (
-                            <div className="flex items-center gap-1">
-                              <span className="inline-flex px-2 py-1 text-xs font-bold bg-emerald-100 text-emerald-700 rounded-lg">
-                                -{product.discountPercent}%
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                Save ৳
-                                {(
-                                  product.price -
-                                  (product.finalPrice || product.price)
-                                ).toLocaleString()}
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-inset ring-emerald-200/60">
+                                −{product.discountPercent}%
                               </span>
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-400">
+                            <span className="text-[11px] font-medium text-gray-400">
                               No discount
                             </span>
                           )}
                         </td>
 
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => handleRemoveTrending(product.id)}
-                            disabled={isUpdating}
-                            className="group/btn relative p-2 bg-red-50 hover:bg-red-100 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Remove from trending"
-                          >
-                            {isUpdating ? (
-                              <Loader2
-                                size={16}
-                                className="animate-spin text-red-600"
-                              />
-                            ) : (
-                              <>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end">
+                            <button
+                              onClick={() => handleRemoveTrending(product.id)}
+                              disabled={isUpdating}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 ring-1 ring-inset ring-yellow-100 transition-all hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-100 disabled:opacity-50"
+                              title="Remove from trending"
+                            >
+                              {isUpdating ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
                                 <Star
-                                  size={16}
-                                  className="text-yellow-600 fill-yellow-600"
+                                  size={14}
+                                  className="fill-current transition-transform duration-200 group-hover:scale-105"
                                 />
-                                <div className="absolute inset-0 bg-yellow-200 rounded-lg scale-0 transition-transform duration-200" />
-                              </>
-                            )}
-                          </button>
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

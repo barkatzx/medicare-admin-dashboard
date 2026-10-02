@@ -223,8 +223,8 @@ export default function InvoicePDF({ order }: InvoicePDFProps) {
           </div>
 
           <div class="footer">
-            <p>Thank you for shopping with MediCare!</p>
-            <p>For queries, contact: support@medicare.com</p>
+            <p>Thank you for shopping with MediCarePLC!</p>
+            <p>For queries, contact: support@medicareplc.com</p>
           </div>
         </div>
         <script>

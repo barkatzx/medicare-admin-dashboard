@@ -345,10 +345,10 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
           {/* Footer */}
           <div className="text-center pt-4 border-t">
             <p className="text-xs text-gray-500">
-              Thank you for shopping with MediCare!
+              Thank you for shopping with MediCarePLC!
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              For any queries, please contact us at support@medicare.com
+              For any queries, please contact us at support@medicareplc.com
             </p>
           </div>
         </div>

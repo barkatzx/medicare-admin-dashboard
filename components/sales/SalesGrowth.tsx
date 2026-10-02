@@ -32,17 +32,6 @@ export default function SalesGrowth({ growth }: SalesGrowthProps) {
               key={label}
               className="group relative overflow-hidden rounded-xl border border-gray-100 bg-gray-50/60 p-4 sm:p-5"
             >
-              {/* Subtle accent bar */}
-              <span
-                className={`absolute inset-x-0 top-0 h-0.5 ${
-                  isPositive
-                    ? "bg-emerald-400"
-                    : isNegative
-                      ? "bg-rose-400"
-                      : "bg-gray-300"
-                }`}
-              />
-
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                   {label}

@@ -12,16 +12,13 @@ import {
   Shield,
   User,
   Globe,
-  Mail,
   Phone,
   MapPin,
   Clock,
-  CheckCircle,
   Edit,
   Eye,
   EyeOff,
   AlertCircle,
-  Store,
   Calendar,
   Plus,
   Trash2,
@@ -29,16 +26,11 @@ import {
   Save,
   Star,
   RefreshCw,
-  LogOut,
   Settings,
   ChevronRight,
-  CreditCard,
   Lock,
   Fingerprint,
   BellRing,
-  Smartphone,
-  Monitor,
-  Globe2,
   AtSign,
   Building2,
 } from "lucide-react";
@@ -170,7 +162,6 @@ export default function SettingsPage() {
   const fetchNotifications = async () => {
     try {
       const data = await api.getNotifications();
-      // data is now { notifications, unreadCount, pagination }
       setNotifications(data?.notifications || []);
       setUnreadCount(data?.unreadCount || 0);
     } catch (error: any) {
@@ -318,10 +309,10 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex h-96 items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading profile...</p>
+          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-blue-500 border-t-transparent" />
+          <p className="text-sm font-medium text-gray-500">Loading profile…</p>
         </div>
       </div>
     );
@@ -329,13 +320,18 @@ export default function SettingsPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center max-w-md">
-          <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
-          <p className="text-gray-700 mb-2">{error}</p>
-          <div className="flex gap-3 justify-center">
+      <div className="flex h-96 items-center justify-center">
+        <div className="max-w-md text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-rose-50">
+            <AlertCircle size={24} className="text-rose-600" />
+          </div>
+          <p className="mb-1 text-sm font-medium text-gray-700">{error}</p>
+          <p className="mb-5 text-xs text-gray-400">
+            Please try again or sign in again
+          </p>
+          <div className="flex justify-center gap-3">
             <Button onClick={fetchAllData} className="gap-2">
-              <RefreshCw size={16} />
+              <RefreshCw size={15} />
               Retry
             </Button>
             <Button
@@ -352,108 +348,115 @@ export default function SettingsPage() {
 
   if (!profile) return null;
 
+  const profileFields = [
+    { icon: User, label: "Full name", value: profile.name || "N/A" },
+    {
+      icon: Building2,
+      label: "Pharmacy name",
+      value: profile.pharmacy_name || "N/A",
+    },
+    { icon: AtSign, label: "Email address", value: profile.email },
+    { icon: Phone, label: "Phone number", value: profile.phone_number },
+    {
+      icon: Calendar,
+      label: "Member since",
+      value: new Date(profile.createdAt).toLocaleDateString(),
+    },
+    { icon: Shield, label: "Role", value: profile.role?.toUpperCase() },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content - Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Profile Card - Redesigned */}
-          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-                    <User size={22} className="text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      Profile Information
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      View and manage your personal information
-                    </p>
-                  </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* ─── Main column ─────────────────────────────────────── */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Profile */}
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <User size={15} strokeWidth={2.25} />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Profile information
+                  </h2>
+                  <p className="text-[11px] text-gray-500">
+                    View and manage your personal information
+                  </p>
                 </div>
-                {!isEditing && (
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    <Edit size={14} />
-                    Edit Profile
-                  </button>
-                )}
               </div>
+
+              {!isEditing && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                >
+                  <Edit size={13} />
+                  Edit
+                </button>
+              )}
             </div>
 
             <div className="p-6">
               {isEditing ? (
                 <div className="space-y-5">
-                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {[
+                      {
+                        label: "Full name",
+                        key: "name" as const,
+                        type: "text",
+                        placeholder: "Enter your full name",
+                      },
+                      {
+                        label: "Pharmacy name",
+                        key: "pharmacy_name" as const,
+                        type: "text",
+                        placeholder: "Enter pharmacy name",
+                      },
+                      {
+                        label: "Phone number",
+                        key: "phone_number" as const,
+                        type: "tel",
+                        placeholder: "Enter phone number",
+                      },
+                    ].map(({ label, key, type, placeholder }) => (
+                      <div key={key}>
+                        <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                          {label}
+                        </label>
+                        <input
+                          type={type}
+                          value={editForm[key]}
+                          placeholder={placeholder}
+                          onChange={(e) =>
+                            setEditForm({ ...editForm, [key]: e.target.value })
+                          }
+                          className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
+                        />
+                      </div>
+                    ))}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.name}
-                        onChange={(e) =>
-                          setEditForm({ ...editForm, name: e.target.value })
-                        }
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Pharmacy Name
-                      </label>
-                      <input
-                        type="text"
-                        value={editForm.pharmacy_name}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            pharmacy_name: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        value={editForm.phone_number}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            phone_number: e.target.value,
-                          })
-                        }
-                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Address
+                      <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                        Email address
                       </label>
                       <input
                         type="email"
                         value={profile?.email || ""}
                         disabled
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-gray-500 cursor-not-allowed"
+                        className="w-full cursor-not-allowed rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-500"
                       />
-                      <p className="mt-1 text-xs text-gray-400">
+                      <p className="mt-1 text-[11px] font-medium text-gray-400">
                         Email cannot be changed
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-3 pt-2">
+
+                  <div className="flex gap-3 pt-1">
                     <Button onClick={handleUpdateProfile} className="gap-2">
-                      <Save size={16} />
-                      Save Changes
+                      <Save size={15} />
+                      Save changes
                     </Button>
                     <Button
                       variant="secondary"
@@ -464,48 +467,21 @@ export default function SettingsPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {[
-                    {
-                      icon: User,
-                      label: "Full Name",
-                      value: profile?.name || "N/A",
-                    },
-                    {
-                      icon: Building2,
-                      label: "Pharmacy Name",
-                      value: profile?.pharmacy_name || "N/A",
-                    },
-                    {
-                      icon: AtSign,
-                      label: "Email Address",
-                      value: profile?.email,
-                    },
-                    {
-                      icon: Phone,
-                      label: "Phone Number",
-                      value: profile?.phone_number,
-                    },
-                    {
-                      icon: Calendar,
-                      label: "Member Since",
-                      value: new Date(profile?.createdAt).toLocaleDateString(),
-                    },
-                    {
-                      icon: Shield,
-                      label: "Role",
-                      value: profile?.role?.toUpperCase(),
-                    },
-                  ].map((item, idx) => (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {profileFields.map(({ icon: Icon, label, value }) => (
                     <div
-                      key={idx}
-                      className="flex items-start gap-3 rounded-xl bg-gray-50 p-4 transition-all hover:bg-gray-100"
+                      key={label}
+                      className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3.5 transition-colors hover:bg-gray-50"
                     >
-                      <item.icon size={18} className="mt-0.5 text-blue-600" />
-                      <div>
-                        <p className="text-xs text-gray-500">{item.label}</p>
-                        <p className="text-sm font-medium text-gray-900">
-                          {item.value}
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 ring-1 ring-inset ring-gray-100">
+                        <Icon size={14} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                          {label}
+                        </p>
+                        <p className="mt-0.5 truncate text-sm font-semibold text-gray-900">
+                          {value}
                         </p>
                       </div>
                     </div>
@@ -515,202 +491,236 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Addresses Card - Redesigned */}
-          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                    <MapPin size={18} className="text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      Saved Addresses
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                      Manage your delivery addresses
-                    </p>
-                  </div>
+          {/* Addresses */}
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <MapPin size={15} strokeWidth={2.25} />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Saved addresses
+                  </h3>
+                  <p className="text-[11px] text-gray-500">
+                    Manage your delivery addresses
+                  </p>
                 </div>
-                <button
-                  onClick={() => {
-                    setEditingAddress(null);
-                    setAddressForm({
-                      street: "",
-                      city: "",
-                      state: "",
-                      postalCode: "",
-                      country: "Bangladesh",
-                      isDefault: false,
-                    });
-                    setIsAddressModalOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                >
-                  <Plus size={14} />
-                  Add
-                </button>
               </div>
+
+              <button
+                onClick={() => {
+                  setEditingAddress(null);
+                  setAddressForm({
+                    street: "",
+                    city: "",
+                    state: "",
+                    postalCode: "",
+                    country: "Bangladesh",
+                    isDefault: false,
+                  });
+                  setIsAddressModalOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <Plus size={13} />
+                Add
+              </button>
             </div>
+
             <div className="p-6">
-              <div className="space-y-3">
-                {addresses?.length === 0 ? (
-                  <div className="text-center py-8">
-                    <MapPin size={40} className="mx-auto mb-3 text-gray-300" />
-                    <p className="text-sm text-gray-500">No saved addresses</p>
-                    <button
-                      onClick={() => setIsAddressModalOpen(true)}
-                      className="mt-2 text-sm text-blue-600 hover:text-blue-700"
-                    >
-                      Add your first address
-                    </button>
+              {addresses.length === 0 ? (
+                <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+                    <MapPin size={22} className="text-gray-300" />
                   </div>
-                ) : (
-                  addresses?.map((address) => (
-                    <div
+                  <p className="mt-4 text-sm font-medium text-gray-500">
+                    No saved addresses
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    Add your first delivery address to get started
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {addresses.map((address) => (
+                    <article
                       key={address.id}
-                      className="group rounded-xl border border-gray-100 bg-gray-50 p-4 transition-all hover:border-blue-200 hover:bg-white"
+                      className={`group relative rounded-xl border p-4 transition-all ${
+                        address.isDefault
+                          ? "border-blue-200 bg-blue-50/40"
+                          : "border-gray-100 bg-gray-50/60 hover:border-gray-200 hover:bg-white"
+                      }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Home size={14} className="text-gray-400" />
-                            <p className="text-sm font-medium text-gray-900">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-2.5">
+                          <span
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                              address.isDefault
+                                ? "bg-blue-100 text-blue-600"
+                                : "bg-white text-gray-500 ring-1 ring-inset ring-gray-100"
+                            }`}
+                          >
+                            <Home size={13} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-gray-900">
                               {address.street}
                             </p>
+                            <p className="mt-0.5 truncate text-xs font-medium text-gray-500">
+                              {address.city}
+                              {address.state ? `, ${address.state}` : ""}
+                              {address.postalCode
+                                ? ` ${address.postalCode}`
+                                : ""}
+                            </p>
+                            <p className="mt-0.5 truncate text-[11px] text-gray-400">
+                              {address.country}
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-600 ml-5">
-                            {address.city}, {address.state} {address.postalCode}
-                          </p>
-                          <p className="text-xs text-gray-500 ml-5">
-                            {address.country}
-                          </p>
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                          {address.isDefault && (
-                            <span className="mr-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                              Default
-                            </span>
-                          )}
-                          <button
-                            onClick={() => {
-                              setEditingAddress(address);
-                              setAddressForm({
-                                street: address.street,
-                                city: address.city,
-                                state: address.state,
-                                postalCode: address.postalCode,
-                                country: address.country,
-                                isDefault: address.isDefault,
-                              });
-                              setIsAddressModalOpen(true);
-                            }}
-                            className="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50"
-                          >
-                            <Edit size={14} />
-                          </button>
-                          {!address.isDefault && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleSetDefaultAddress(address.id)
-                                }
-                                className="rounded-lg p-1.5 text-yellow-600 hover:bg-yellow-50"
-                                title="Set as default"
-                              >
-                                <Star size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAddress(address.id)}
-                                className="rounded-lg p-1.5 text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </>
-                          )}
-                        </div>
+
+                        {address.isDefault && (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-200/60">
+                            <Star size={9} className="fill-current" />
+                            Default
+                          </span>
+                        )}
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
+
+                      <div className="mt-3 flex items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
+                        <button
+                          onClick={() => {
+                            setEditingAddress(address);
+                            setAddressForm({
+                              street: address.street,
+                              city: address.city,
+                              state: address.state,
+                              postalCode: address.postalCode,
+                              country: address.country,
+                              isDefault: address.isDefault,
+                            });
+                            setIsAddressModalOpen(true);
+                          }}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100"
+                          title="Edit address"
+                        >
+                          <Edit size={13} />
+                        </button>
+
+                        {!address.isDefault && (
+                          <>
+                            <button
+                              onClick={() =>
+                                handleSetDefaultAddress(address.id)
+                              }
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-100 transition-all hover:bg-amber-100"
+                              title="Set as default"
+                            >
+                              <Star size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAddress(address.id)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100"
+                              title="Delete address"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar */}
+        {/* ─── Sidebar ─────────────────────────────────────────── */}
         <div className="space-y-6">
-          {/* Security Card - Modern */}
-          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                  <Shield size={18} className="text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Security</h3>
-                  <p className="text-xs text-gray-500">Protect your account</p>
-                </div>
+          {/* Security */}
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center gap-2.5 border-b border-gray-100 px-6 py-4">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <Shield size={15} strokeWidth={2.25} />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Security
+                </h3>
+                <p className="text-[11px] text-gray-500">
+                  Protect your account
+                </p>
               </div>
             </div>
-            <div className="p-4">
+
+            <div className="space-y-1 p-3">
               <button
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="flex w-full items-center justify-between rounded-xl p-3 transition-all hover:bg-gray-50"
+                className="group flex w-full items-center justify-between rounded-xl px-3 py-2.5 transition-all hover:bg-gray-50"
               >
-                <div className="flex items-center gap-3">
-                  <Lock size={16} className="text-gray-500" />
-                  <span className="text-sm text-gray-700">Change Password</span>
-                </div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </button>
-              <button className="flex w-full items-center justify-between rounded-xl p-3 transition-all hover:bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <Fingerprint size={16} className="text-gray-500" />
-                  <span className="text-sm text-gray-700">
-                    Two-Factor Authentication
+                <div className="flex items-center gap-2.5">
+                  <Lock size={15} className="text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Change password
                   </span>
                 </div>
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                <ChevronRight
+                  size={15}
+                  className="text-gray-400 transition-transform duration-200 group-hover:translate-x-0.5"
+                />
+              </button>
+
+              <button className="group flex w-full items-center justify-between rounded-xl px-3 py-2.5 transition-all hover:bg-gray-50">
+                <div className="flex items-center gap-2.5">
+                  <Fingerprint size={15} className="text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Two-factor auth
+                  </span>
+                </div>
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
                   Soon
                 </span>
               </button>
             </div>
           </div>
 
-          {/* Notifications Card - Modern */}
-          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                    <Bell size={18} className="text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      Notifications
-                    </h3>
-                    <p className="text-xs text-gray-500">Stay updated</p>
-                  </div>
+          {/* Notifications */}
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <Bell size={15} strokeWidth={2.25} />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Notifications
+                  </h3>
+                  <p className="text-[11px] text-gray-500">Stay updated</p>
                 </div>
-                {unreadCount > 0 && (
-                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
-                    {unreadCount} new
-                  </span>
-                )}
               </div>
+              {unreadCount > 0 && (
+                <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-200/60">
+                  {unreadCount} new
+                </span>
+              )}
             </div>
-            <div className="p-4">
+
+            <div className="space-y-2 p-4">
               <button
                 onClick={() => setIsNotificationsOpen(true)}
-                className="mb-3 w-full rounded-xl bg-gray-50 px-4 py-2.5 text-center text-sm font-medium text-blue-600 transition-all hover:bg-gray-100"
+                className="w-full rounded-xl bg-gray-50 px-4 py-2.5 text-center text-xs font-semibold text-blue-600 transition-all hover:bg-blue-50 hover:text-blue-700"
               >
-                View all notifications ({notifications.length})
+                View all notifications
+                <span className="ml-1 text-gray-400">
+                  ({notifications.length})
+                </span>
               </button>
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="w-full text-center text-xs text-gray-500 hover:text-gray-700"
+                  className="w-full text-center text-[11px] font-medium text-gray-500 transition-colors hover:text-gray-700"
                 >
                   Mark all as read
                 </button>
@@ -718,53 +728,67 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Preferences Card - Modern */}
-          <div className="rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-                  <Globe size={18} className="text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Preferences</h3>
-                  <p className="text-xs text-gray-500">
-                    Customize your experience
-                  </p>
-                </div>
+          {/* Preferences */}
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center gap-2.5 border-b border-gray-100 px-6 py-4">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <Settings size={15} strokeWidth={2.25} />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Preferences
+                </h3>
+                <p className="text-[11px] text-gray-500">
+                  Customize your experience
+                </p>
               </div>
             </div>
-            <div className="p-4 space-y-3">
-              <label className="flex cursor-pointer items-center justify-between rounded-xl p-2 transition-all hover:bg-gray-50">
-                <div className="flex items-center gap-3">
+
+            <div className="space-y-1 p-3">
+              <label className="flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 transition-all hover:bg-gray-50">
+                <div className="flex items-center gap-2.5">
                   {darkMode ? (
-                    <Moon size={16} className="text-gray-500" />
+                    <Moon size={15} className="text-gray-400" />
                   ) : (
-                    <Sun size={16} className="text-gray-500" />
+                    <Sun size={15} className="text-gray-400" />
                   )}
-                  <span className="text-sm text-gray-700">Dark Mode</span>
-                </div>
-                <button
-                  onClick={() => setDarkMode(!darkMode)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${darkMode ? "bg-blue-600" : "bg-gray-300"}`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${darkMode ? "translate-x-6" : "translate-x-1"}`}
-                  />
-                </button>
-              </label>
-              <label className="flex cursor-pointer items-center justify-between rounded-xl p-2 transition-all hover:bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <BellRing size={16} className="text-gray-500" />
-                  <span className="text-sm text-gray-700">
-                    Email Notifications
+                  <span className="text-sm font-medium text-gray-700">
+                    Dark mode
                   </span>
                 </div>
                 <button
-                  onClick={() => setEmailNotifications(!emailNotifications)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${emailNotifications ? "bg-blue-600" : "bg-gray-300"}`}
+                  type="button"
+                  onClick={() => setDarkMode(!darkMode)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    darkMode ? "bg-blue-600" : "bg-gray-200"
+                  }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${emailNotifications ? "translate-x-6" : "translate-x-1"}`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                      darkMode ? "translate-x-4" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </label>
+
+              <label className="flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 transition-all hover:bg-gray-50">
+                <div className="flex items-center gap-2.5">
+                  <BellRing size={15} className="text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Email notifications
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEmailNotifications(!emailNotifications)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    emailNotifications ? "bg-blue-600" : "bg-gray-200"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                      emailNotifications ? "translate-x-4" : "translate-x-0.5"
+                    }`}
                   />
                 </button>
               </label>
@@ -773,16 +797,16 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Modals remain the same */}
+      {/* ─── Modals ──────────────────────────────────────────────── */}
       <Modal
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
-        title="Change Password"
+        title="Change password"
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Current Password
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Current password
             </label>
             <div className="relative">
               <input
@@ -794,21 +818,22 @@ export default function SettingsPage() {
                     oldPassword: e.target.value,
                   })
                 }
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 pr-10 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
                 placeholder="Enter your current password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-gray-600"
               >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              New Password
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              New password
             </label>
             <input
               type="password"
@@ -819,13 +844,14 @@ export default function SettingsPage() {
                   newPassword: e.target.value,
                 })
               }
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
               placeholder="Enter new password (min 6 characters)"
             />
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm New Password
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Confirm new password
             </label>
             <input
               type="password"
@@ -836,28 +862,32 @@ export default function SettingsPage() {
                   confirmPassword: e.target.value,
                 })
               }
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
               placeholder="Confirm your new password"
             />
           </div>
+
           {passwordData.newPassword &&
             passwordData.confirmPassword &&
             passwordData.newPassword !== passwordData.confirmPassword && (
-              <div className="flex items-center gap-2 text-red-600 text-sm">
-                <AlertCircle size={14} />
-                Passwords do not match
+              <div className="flex items-center gap-2 rounded-lg bg-rose-50 px-3 py-2 ring-1 ring-inset ring-rose-100">
+                <AlertCircle size={14} className="shrink-0 text-rose-600" />
+                <span className="text-xs font-medium text-rose-700">
+                  Passwords do not match
+                </span>
               </div>
             )}
-          <div className="flex gap-3 pt-4">
-            <Button onClick={handleChangePassword} className="flex-1">
-              Update Password
-            </Button>
+
+          <div className="flex gap-3 pt-2">
             <Button
               variant="secondary"
               onClick={() => setIsPasswordModalOpen(false)}
               className="flex-1"
             >
               Cancel
+            </Button>
+            <Button onClick={handleChangePassword} className="flex-1">
+              Update password
             </Button>
           </div>
         </div>
@@ -866,12 +896,12 @@ export default function SettingsPage() {
       <Modal
         isOpen={isAddressModalOpen}
         onClose={() => setIsAddressModalOpen(false)}
-        title={editingAddress ? "Edit Address" : "Add New Address"}
+        title={editingAddress ? "Edit address" : "Add new address"}
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Street Address *
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Street address <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -879,14 +909,15 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setAddressForm({ ...addressForm, street: e.target.value })
               }
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
               placeholder="Street address"
             />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                City *
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                City <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -894,11 +925,11 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setAddressForm({ ...addressForm, city: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                 State
               </label>
               <input
@@ -907,14 +938,15 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setAddressForm({ ...addressForm, state: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
               />
             </div>
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Postal Code
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                Postal code
               </label>
               <input
                 type="text"
@@ -922,12 +954,12 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setAddressForm({ ...addressForm, postalCode: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Country *
+              <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+                Country <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -935,11 +967,12 @@ export default function SettingsPage() {
                 onChange={(e) =>
                   setAddressForm({ ...addressForm, country: e.target.value })
                 }
-                className="w-full rounded-xl border border-gray-200 px-4 py-2.5 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
               />
             </div>
           </div>
-          <label className="flex cursor-pointer items-center gap-2">
+
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-gray-100 bg-gray-50/60 px-3.5 py-2.5 transition-colors hover:bg-gray-50">
             <input
               type="checkbox"
               checked={addressForm.isDefault}
@@ -948,20 +981,21 @@ export default function SettingsPage() {
               }
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-gray-700">
+            <span className="text-sm font-medium text-gray-700">
               Set as default address
             </span>
           </label>
-          <div className="flex gap-3 pt-4">
-            <Button onClick={handleSaveAddress} className="flex-1">
-              {editingAddress ? "Update Address" : "Add Address"}
-            </Button>
+
+          <div className="flex gap-3 pt-2">
             <Button
               variant="secondary"
               onClick={() => setIsAddressModalOpen(false)}
               className="flex-1"
             >
               Cancel
+            </Button>
+            <Button onClick={handleSaveAddress} className="flex-1">
+              {editingAddress ? "Update address" : "Add address"}
             </Button>
           </div>
         </div>
@@ -972,40 +1006,47 @@ export default function SettingsPage() {
         onClose={() => setIsNotificationsOpen(false)}
         title="Notifications"
       >
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+        <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
           {notifications.length === 0 ? (
-            <div className="text-center py-8">
-              <Bell size={48} className="mx-auto mb-3 text-gray-300" />
-              <p className="text-gray-500">No notifications yet</p>
+            <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
+                <Bell size={22} className="text-gray-300" />
+              </div>
+              <p className="mt-4 text-sm font-medium text-gray-500">
+                No notifications yet
+              </p>
+              <p className="mt-1 text-xs text-gray-400">
+                Updates will appear here
+              </p>
             </div>
           ) : (
             notifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`cursor-pointer rounded-xl border p-4 transition-all ${
+                className={`cursor-pointer rounded-xl border p-3.5 transition-all ${
                   notification.isRead
-                    ? "bg-white"
-                    : "border-blue-200 bg-blue-50"
+                    ? "border-gray-100 bg-white hover:bg-gray-50"
+                    : "border-blue-200 bg-blue-50/60 hover:bg-blue-50"
                 }`}
                 onClick={() =>
                   !notification.isRead && handleMarkAsRead(notification.id)
                 }
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-gray-900">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="truncate text-sm font-semibold text-gray-900">
                       {notification.title}
                     </h4>
                     <p className="mt-1 text-xs text-gray-600">
                       {notification.message}
                     </p>
-                    <p className="mt-2 flex items-center gap-1 text-xs text-gray-400">
+                    <p className="mt-2 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-gray-400">
                       <Clock size={10} />
                       {getTimeAgo(notification.createdAt)}
                     </p>
                   </div>
                   {!notification.isRead && (
-                    <div className="h-2 w-2 rounded-full bg-blue-600"></div>
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
                   )}
                 </div>
               </div>

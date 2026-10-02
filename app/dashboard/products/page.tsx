@@ -391,14 +391,14 @@ export default function ProductsPage() {
                               )}
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900">
+                              <p className="text-sm text-gray-900">
                                 {product.name}
                               </p>
-                              {product.description && (
+                              {/* {product.description && (
                                 <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
                                   {product.description.substring(0, 60)}...
                                 </p>
-                              )}
+                              )} */}
                             </div>
                           </div>
                         </td>
