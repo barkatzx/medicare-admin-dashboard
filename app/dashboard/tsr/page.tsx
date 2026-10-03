@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Mail,
+  MapPin,
   Phone,
   RefreshCw,
   Search,
@@ -28,6 +29,7 @@ const TSR = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userForLocation, setUserForLocation] = useState<User | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -237,6 +239,15 @@ const TSR = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
+                          onClick={() => setUserForLocation(user)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100 transition-all hover:bg-emerald-100"
+                          title="View location"
+                          aria-label={`View location for ${user.name || user.email}`}
+                        >
+                          <MapPin size={14} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setUserToDelete(user)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100"
                           title="Delete user"
@@ -377,6 +388,76 @@ const TSR = () => {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      <Modal
+        isOpen={userForLocation !== null}
+        onClose={() => setUserForLocation(null)}
+        title={`${userForLocation?.name || "User"} location`}
+      >
+        {userForLocation && (
+          <div className="space-y-5">
+            <section>
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Full address
+              </h4>
+              <p className="mt-2 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+                {userForLocation.fullAddress || "N/A"}
+              </p>
+            </section>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {(
+                [
+                  {
+                    label: "Division",
+                    area: userForLocation.division,
+                    id: userForLocation.divisionId,
+                  },
+                  {
+                    label: "District",
+                    area: userForLocation.district,
+                    id: userForLocation.districtId,
+                  },
+                  {
+                    label: "Upazila",
+                    area: userForLocation.upazila,
+                    id: userForLocation.upazilaId,
+                  },
+                ] as const
+              ).map(({ label, area, id }) => (
+                <section
+                  key={label}
+                  className="min-w-0 rounded-xl border border-gray-100 p-4"
+                >
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {label}
+                  </h4>
+                  <p className="mt-2 truncate text-sm font-semibold text-gray-900">
+                    {area?.name || "N/A"}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {area?.bnName || "N/A"}
+                  </p>
+                  <dl className="mt-3 space-y-2 border-t border-gray-100 pt-3 text-xs">
+                    <div>
+                      <dt className="text-gray-400">Code</dt>
+                      <dd className="mt-0.5 break-all font-medium text-gray-700">
+                        {area?.code || "N/A"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-400">ID</dt>
+                      <dd className="mt-0.5 break-all font-medium text-gray-700">
+                        {area?.id || id || "N/A"}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+              ))}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

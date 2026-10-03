@@ -9,6 +9,7 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  CircleDollarSign,
   Clock,
   Grid3X3,
   HelpCircle,
@@ -418,6 +419,24 @@ export default function Sidebar() {
                     </Link>
                   );
                 })}
+
+                <Link
+                  href="/admin/tsr-sales"
+                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${isCollapsed ? "justify-center" : ""} ${pathname.startsWith("/admin/tsr-sales") ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}`}
+                >
+                  <CircleDollarSign
+                    size={20}
+                    className={`flex-shrink-0 transition-all duration-200 ${pathname.startsWith("/admin/tsr-sales") ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
+                  />
+                  {showText && (
+                    <span className="text-sm font-medium whitespace-nowrap">
+                      TSR Sales
+                    </span>
+                  )}
+                  {pathname.startsWith("/admin/tsr-sales") && showText && (
+                    <div className="absolute left-0 h-8 w-1 rounded-r-full bg-gradient-to-b from-blue-500 to-blue-600" />
+                  )}
+                </Link>
 
                 {/* ── Users Dropdown ── */}
                 <div>
