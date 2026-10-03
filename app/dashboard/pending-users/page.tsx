@@ -3,9 +3,15 @@
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { api } from "@/config/api";
-import { fetchUsers, approveUser, deleteUser } from "@/store/slices/userSlice";
+import {
+  fetchUsers,
+  approveUser,
+  deleteUser,
+  promoteUserToTSR,
+} from "@/store/slices/userSlice";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import toast from "react-hot-toast";
 import {
   CheckCircle,
   Mail,
@@ -16,6 +22,7 @@ import {
   Search,
   Users as UsersIcon,
   UserCheck,
+  ArrowUpRight,
   Trash2,
   AlertTriangle,
   ChevronLeft,
@@ -24,7 +31,12 @@ import {
 
 export default function PendingUsersPage() {
   const dispatch = useAppDispatch();
-  const { users, loading, pagination } = useAppSelector((state) => state.users);
+  const {
+    users,
+    loading,
+    pagination,
+    promotionLoadingIds,
+  } = useAppSelector((state) => state.users);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<any>(null);
@@ -47,7 +59,7 @@ export default function PendingUsersPage() {
         const pageSize = 100;
         const firstPage = await api.getUsers(1, pageSize);
         let pendingCount = firstPage.users.filter(
-          (user) => !user.isApproved && user.role !== "admin",
+          (user) => !user.isApproved && user.role === "customer",
         ).length;
 
         for (
@@ -71,7 +83,7 @@ export default function PendingUsersPage() {
             (total, page) =>
               total +
               page.users.filter(
-                (user) => !user.isApproved && user.role !== "admin",
+                (user) => !user.isApproved && user.role === "customer",
               ).length,
             0,
           );
@@ -104,6 +116,18 @@ export default function PendingUsersPage() {
     window.dispatchEvent(new Event("usersUpdated"));
   };
 
+  const handlePromote = async (userId: string) => {
+    try {
+      await dispatch(promoteUserToTSR(userId)).unwrap();
+      setCountRefresh((count) => count + 1);
+      window.dispatchEvent(new Event("usersUpdated"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to promote user to TSR",
+      );
+    }
+  };
+
   const handleDeleteClick = (user: any) => {
     setUserToDelete(user);
     setIsDeleteModalOpen(true);
@@ -125,7 +149,7 @@ export default function PendingUsersPage() {
   };
 
   const filteredUsers = users.filter((user) => {
-    const isPending = !user.isApproved && user.role !== "admin";
+    const isPending = !user.isApproved && user.role === "customer";
     if (!isPending) return false;
     return (
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -267,6 +291,21 @@ export default function PendingUsersPage() {
 
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
+                        {user.role === "customer" && (
+                          <button
+                            onClick={() => handlePromote(user.id)}
+                            disabled={promotionLoadingIds.includes(user.id)}
+                            className="inline-flex h-8 items-center gap-1 rounded-lg bg-blue-50 px-2.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            title="Promote customer to TSR"
+                          >
+                            {promotionLoadingIds.includes(user.id) ? (
+                              <RefreshCw size={13} className="animate-spin" />
+                            ) : (
+                              <ArrowUpRight size={13} />
+                            )}
+                            Promote to TSR
+                          </button>
+                        )}
                         <button
                           onClick={() => handleApprove(user.id)}
                           disabled={approvingId === user.id}

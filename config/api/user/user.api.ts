@@ -33,6 +33,14 @@ export async function approveUser(userId: string): Promise<User> {
   return apiClient.request(`/users/approve/${userId}`, { method: "PUT" });
 }
 
+export async function promoteUserToTSR(userId: string): Promise<User> {
+  const response = await apiClient.request(`/users/${userId}/role`, {
+    method: "PATCH",
+    body: JSON.stringify({ role: "TSR" }),
+  });
+  return response?.data ?? response;
+}
+
 export async function deleteUser(userId: string): Promise<void> {
   await apiClient.request(`/users/${userId}`, {
     method: "DELETE",

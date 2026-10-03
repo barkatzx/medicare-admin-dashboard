@@ -499,7 +499,16 @@ export default function NotificationsPage() {
               </optgroup>
               <optgroup label="Customers">
                 {users
-                  .filter((u) => u.role !== "admin")
+                  .filter((u) => u.role === "customer")
+                  .map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </option>
+                  ))}
+              </optgroup>
+              <optgroup label="TSRs">
+                {users
+                  .filter((u) => u.role === "TSR")
                   .map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name} ({user.email})

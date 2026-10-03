@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { api } from "@/config/api";
-import { fetchUsers, deleteUser } from "@/store/slices/userSlice";
+import {
+  fetchUsers,
+  deleteUser,
+  promoteUserToTSR,
+} from "@/store/slices/userSlice";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import toast from "react-hot-toast";
@@ -16,6 +20,7 @@ import {
   Search,
   Users as UsersIcon,
   UserCheck,
+  ArrowUpRight,
   Trash2,
   AlertTriangle,
   ChevronLeft,
@@ -24,7 +29,12 @@ import {
 
 export default function UsersPage() {
   const dispatch = useAppDispatch();
-  const { users, loading, pagination } = useAppSelector((state) => state.users);
+  const {
+    users,
+    loading,
+    pagination,
+    promotionLoadingIds,
+  } = useAppSelector((state) => state.users);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -94,6 +104,19 @@ export default function UsersPage() {
 
   const handlePageChange = (newPage: number) => {
     dispatch(fetchUsers({ page: newPage, limit: pagination.limit }));
+  };
+
+  const handlePromote = async (userId: string) => {
+    try {
+      await dispatch(promoteUserToTSR(userId)).unwrap();
+      toast.success("User promoted to TSR");
+      setCountRefresh((count) => count + 1);
+      window.dispatchEvent(new Event("usersUpdated"));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to promote user to TSR",
+      );
+    }
   };
 
   const handleDeleteClick = (user: any) => {
@@ -277,6 +300,21 @@ export default function UsersPage() {
 
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
+                        {user.role === "customer" && (
+                          <button
+                            onClick={() => handlePromote(user.id)}
+                            disabled={promotionLoadingIds.includes(user.id)}
+                            className="inline-flex h-8 items-center gap-1 rounded-lg bg-blue-50 px-2.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            title="Promote customer to TSR"
+                          >
+                            {promotionLoadingIds.includes(user.id) ? (
+                              <RefreshCw size={13} className="animate-spin" />
+                            ) : (
+                              <ArrowUpRight size={13} />
+                            )}
+                            Promote to TSR
+                          </button>
+                        )}
                         <button
                           onClick={() => handleDeleteClick(user)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100"

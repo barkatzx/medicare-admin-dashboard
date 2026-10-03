@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Truck,
   UserCheck,
+  UserIcon,
   Users,
   XCircle,
 } from "lucide-react";
@@ -83,6 +84,14 @@ const userSubItems = [
     href: "/dashboard/users",
     icon: UserCheck,
     description: "Manage customers",
+    color: "text-emerald-500",
+    bg: "bg-emerald-50",
+  },
+  {
+    name: "TSR's",
+    href: "/dashboard/tsr",
+    icon: UserIcon,
+    description: "Manage TSRs",
     color: "text-emerald-500",
     bg: "bg-emerald-50",
   },
@@ -260,7 +269,7 @@ export default function Sidebar() {
         const pageSize = 100;
         const firstPage = await api.getUsers(1, pageSize);
         let count = firstPage.users.filter(
-          (user) => !user.isApproved && user.role !== "admin",
+          (user) => !user.isApproved && user.role === "customer",
         ).length;
 
         for (
@@ -284,7 +293,7 @@ export default function Sidebar() {
             (total, page) =>
               total +
               page.users.filter(
-                (user) => !user.isApproved && user.role !== "admin",
+                (user) => !user.isApproved && user.role === "customer",
               ).length,
             0,
           );

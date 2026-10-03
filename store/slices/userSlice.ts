@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { api, User } from "@/config/api";
+import { api } from "@/config/api";
+import type { User, UserRole } from "@/config/api";
 import toast from "react-hot-toast";
 
 interface Pagination {
@@ -15,6 +16,7 @@ interface UserState {
   users: User[];
   loading: boolean;
   error: string | null;
+  promotionLoadingIds: string[];
   pagination: Pagination;
 }
 
@@ -22,6 +24,7 @@ const initialState: UserState = {
   users: [],
   loading: false,
   error: null,
+  promotionLoadingIds: [],
   pagination: {
     page: 1,
     limit: 20,
@@ -34,9 +37,50 @@ const initialState: UserState = {
 
 export const fetchUsers = createAsyncThunk(
   "users/fetchAll",
-  async ({ page = 1, limit = 20 }: { page?: number; limit?: number } = {}) => {
-    const response = await api.getUsers(page, limit);
-    return response; // { users, pagination }
+  async ({
+    page = 1,
+    limit = 20,
+    role,
+  }: { page?: number; limit?: number; role?: UserRole } = {}) => {
+    if (!role) {
+      return api.getUsers(page, limit);
+    }
+
+    const pageSize = 100;
+    const firstPage = await api.getUsers(1, pageSize);
+    const totalPages = Number(firstPage.pagination?.pages);
+    if (!Number.isInteger(totalPages) || totalPages < 1) {
+      throw new Error("Unable to load users because pagination data is invalid.");
+    }
+
+    const allUsers = [...firstPage.users];
+    for (let firstPageNumber = 2; firstPageNumber <= totalPages; firstPageNumber += 5) {
+      const pageNumbers = Array.from(
+        {
+          length: Math.min(5, totalPages - firstPageNumber + 1),
+        },
+        (_, index) => firstPageNumber + index,
+      );
+      const pages = await Promise.all(
+        pageNumbers.map((pageNumber) => api.getUsers(pageNumber, pageSize)),
+      );
+      allUsers.push(...pages.flatMap((result) => result.users));
+    }
+
+    const matchingUsers = allUsers.filter((user) => user.role === role);
+    const matchingPages = Math.max(1, Math.ceil(matchingUsers.length / limit));
+
+    return {
+      users: matchingUsers,
+      pagination: {
+        page: 1,
+        limit,
+        total: matchingUsers.length,
+        pages: matchingPages,
+        hasNextPage: matchingPages > 1,
+        hasPrevPage: false,
+      },
+    };
   },
 );
 
@@ -46,6 +90,11 @@ export const approveUser = createAsyncThunk(
     const response = await api.approveUser(userId);
     return response;
   },
+);
+
+export const promoteUserToTSR = createAsyncThunk(
+  "users/promoteToTSR",
+  async (userId: string) => api.promoteUserToTSR(userId),
 );
 
 export const deleteUser = createAsyncThunk(
@@ -95,6 +144,23 @@ const userSlice = createSlice({
         state.loading = false;
         state.error = action.error.message || "Failed to approve user";
         toast.error("Failed to approve user");
+      })
+
+      .addCase(promoteUserToTSR.pending, (state, action) => {
+        state.promotionLoadingIds.push(action.meta.arg);
+      })
+      .addCase(promoteUserToTSR.fulfilled, (state, action) => {
+        state.promotionLoadingIds = state.promotionLoadingIds.filter(
+          (userId) => userId !== action.payload.id,
+        );
+        const index = state.users.findIndex((user) => user.id === action.payload.id);
+        if (index !== -1) state.users[index] = action.payload;
+      })
+      .addCase(promoteUserToTSR.rejected, (state, action) => {
+        state.promotionLoadingIds = state.promotionLoadingIds.filter(
+          (userId) => userId !== action.meta.arg,
+        );
+        state.error = action.error.message || "Failed to promote user to TSR";
       })
 
       .addCase(deleteUser.pending, (state) => {

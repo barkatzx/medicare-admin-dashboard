@@ -37,7 +37,7 @@ export default function DashboardPage() {
         ]);
 
         const users: User[] = firstUsersPage.users.filter(
-          (user) => !user.isApproved && user.role !== "admin",
+          (user) => !user.isApproved && user.role === "customer",
         );
         const totalUserPages = Number(firstUsersPage.pagination?.pages) || 1;
 
@@ -58,7 +58,7 @@ export default function DashboardPage() {
           users.push(
             ...pages.flatMap((page) =>
               page.users.filter(
-                (user) => !user.isApproved && user.role !== "admin",
+                (user) => !user.isApproved && user.role === "customer",
               ),
             ),
           );
