@@ -38,7 +38,7 @@ export default function DashboardLayout({
     <ProtectedRoute>
       <div className="flex">
         <Sidebar />
-        <div className="flex-1 bg-white rounded-xl m-3 flex flex-col overflow-hidden">
+        <div className="flex-1 bg-[#F9FAFB] rounded-xl m-3 flex flex-col overflow-hidden">
           <Header />
           <main className="flex-1 overflow-y-auto p-6">{children}</main>
         </div>

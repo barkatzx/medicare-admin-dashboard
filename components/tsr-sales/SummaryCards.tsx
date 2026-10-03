@@ -3,7 +3,10 @@ import {
   type TSRPerformance,
   type TsrOrderStatus,
 } from "@/config/api";
-import { formatSalesCurrency, formatSalesNumber } from "@/components/sales/salesFormatters";
+import {
+  formatSalesCurrency,
+  formatSalesNumber,
+} from "@/components/sales/salesFormatters";
 import { getStatusCount, getStatusValue, statusLabels } from "./metrics";
 
 interface SummaryCardsProps {

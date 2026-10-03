@@ -184,7 +184,7 @@ export default function TsrSalesPage() {
             </div>
           )}
 
-          <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
             <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">

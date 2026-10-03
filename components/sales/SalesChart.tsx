@@ -161,7 +161,7 @@ export default function SalesChart() {
   const isLoading = loading && !chartData.length;
 
   return (
-    <div className="rounded-2xl border border-gray-100 p-6 space-y-8">
+    <div className="rounded-2xl bg-white border border-gray-100 p-6 space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

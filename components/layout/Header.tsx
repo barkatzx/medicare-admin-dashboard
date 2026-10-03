@@ -210,7 +210,7 @@ export default function Header() {
 
   return (
     <>
-      <header>
+      <header className="bg-[#F9FAFB]">
         <div className="flex items-center justify-between px-6 py-3">
           {/* Left Section - Welcome Message */}
           <div className="flex-1">
