@@ -12,20 +12,21 @@ import type {
   TSRPerformance,
 } from "@/config/api";
 import { TSR_ORDER_STATUSES } from "@/config/api";
-import { formatSalesCurrency, formatSalesNumber } from "@/components/sales/salesFormatters";
-import SummaryCards from "@/components/tsr-sales/SummaryCards";
 import {
-  getStatusCount,
-  getStatusValue,
-  statusLabels,
-} from "@/components/tsr-sales/metrics";
+  formatSalesCurrency,
+  formatSalesNumber,
+} from "@/components/sales/salesFormatters";
+import SummaryCards from "@/components/tsr-sales/SummaryCards";
+import { getStatusCount, getStatusValue } from "@/components/tsr-sales/metrics";
 
 function territoryFor(tsr: TSRPerformance): Territory {
-  return tsr.territory ?? {
-    division: tsr.division,
-    district: tsr.district,
-    upazila: tsr.upazila,
-  };
+  return (
+    tsr.territory ?? {
+      // division: tsr.division,
+      // district: tsr.district,
+      upazila: tsr.upazila,
+    }
+  );
 }
 
 function territoryName(area: TerritoryArea | null | undefined): string {
@@ -35,8 +36,8 @@ function territoryName(area: TerritoryArea | null | undefined): string {
 function territoryText(tsr: TSRPerformance): string {
   const territory = territoryFor(tsr);
   return [
-    territoryName(territory.division),
-    territoryName(territory.district),
+    // territoryName(territory.division),
+    // territoryName(territory.district),
     territoryName(territory.upazila),
   ].join(" → ");
 }
@@ -159,42 +160,13 @@ export default function TsrSalesPage() {
 
   const query = search.trim().toLowerCase();
   const filteredTsrs = tsrs.filter((tsr) =>
-    [
-      tsr.name,
-      tsr.email,
-      tsr.phone_number,
-      tsr.phone,
-      territoryText(tsr),
-    ]
+    [tsr.name, tsr.email, tsr.phone_number, tsr.phone, territoryText(tsr)]
       .filter(Boolean)
       .some((value) => value?.toLowerCase().includes(query)),
   );
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-            Sales management
-          </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
-            TSR Sales
-          </h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Review order performance across TSR territories.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => void loadData()}
-          disabled={loading}
-          className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-60 sm:self-auto"
-        >
-          <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </button>
-      </header>
-
       {error ? (
         <ErrorState message={error} onRetry={() => void loadData()} />
       ) : (
@@ -241,6 +213,18 @@ export default function TsrSalesPage() {
                   className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-50"
                 />
               </label>
+              <button
+                type="button"
+                onClick={() => void loadData()}
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-60 sm:self-auto"
+              >
+                <RefreshCw
+                  size={15}
+                  className={loading ? "animate-spin" : ""}
+                />
+                Refresh
+              </button>
             </div>
 
             {loading ? (
@@ -256,7 +240,7 @@ export default function TsrSalesPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1550px] text-left">
+                <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                       <th className="px-5 py-3">TSR</th>
@@ -265,11 +249,6 @@ export default function TsrSalesPage() {
                       <th className="px-5 py-3">Territory</th>
                       <th className="px-5 py-3 text-right">Total Orders</th>
                       <th className="px-5 py-3 text-right">Total Value</th>
-                      {TSR_ORDER_STATUSES.map((status) => (
-                        <th key={status} className="px-4 py-3 text-right">
-                          {statusLabels[status]}
-                        </th>
-                      ))}
                       <th className="px-5 py-3 text-right">Action</th>
                     </tr>
                   </thead>
@@ -299,14 +278,6 @@ export default function TsrSalesPage() {
                         <td className="px-5 py-4 text-right text-sm font-semibold tabular-nums text-gray-700">
                           {currency(tsr.totalOrderValue)}
                         </td>
-                        {TSR_ORDER_STATUSES.map((status) => (
-                          <td
-                            key={status}
-                            className="px-4 py-4 text-right text-sm tabular-nums text-gray-600"
-                          >
-                            {formatSalesNumber(getStatusCount(tsr, status))}
-                          </td>
-                        ))}
                         <td className="px-5 py-4 text-right">
                           <Link
                             href={`/admin/tsr-sales/${encodeURIComponent(tsr.id)}`}

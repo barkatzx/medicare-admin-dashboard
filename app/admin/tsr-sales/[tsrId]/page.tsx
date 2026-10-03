@@ -26,10 +26,16 @@ import type {
   Pagination,
   TSRDetailResponse,
 } from "@/config/api";
-import { formatSalesCurrency, formatSalesNumber } from "@/components/sales/salesFormatters";
+import {
+  formatSalesCurrency,
+  formatSalesNumber,
+} from "@/components/sales/salesFormatters";
 import { formatDateTime } from "@/components/utils/formatters";
 import SummaryCards from "@/components/tsr-sales/SummaryCards";
-import { formatMetricCurrency, statusLabels } from "@/components/tsr-sales/metrics";
+import {
+  formatMetricCurrency,
+  statusLabels,
+} from "@/components/tsr-sales/metrics";
 
 const PAGE_SIZE = 20;
 const ORDER_STATUSES: Array<TsrOrderStatus | "all"> = [
@@ -42,11 +48,13 @@ function areaName(area: TerritoryArea | null | undefined): string {
 }
 
 function getTerritory(person: TSRDetail): Territory {
-  return person.territory ?? {
-    division: person.division,
-    district: person.district,
-    upazila: person.upazila,
-  };
+  return (
+    person.territory ?? {
+      division: person.division,
+      district: person.district,
+      upazila: person.upazila,
+    }
+  );
 }
 
 function currency(value: number | string | null | undefined): string {
@@ -114,9 +122,7 @@ function isTsrOrderStatus(value: string): value is TsrOrderStatus {
   return TSR_ORDER_STATUSES.some((status) => status === value);
 }
 
-function locationLine(
-  area: TerritoryArea | null | undefined,
-): string {
+function locationLine(area: TerritoryArea | null | undefined): string {
   return area?.name?.trim() || "—";
 }
 
@@ -227,7 +233,10 @@ export default function TsrSalesDetailPage() {
     if (page > lastPage) setPage(lastPage);
   }, [page, pagination]);
 
-  const reloadOrders = useCallback(() => setOrdersReload((current) => current + 1), []);
+  const reloadOrders = useCallback(
+    () => setOrdersReload((current) => current + 1),
+    [],
+  );
   const territory = profile ? getTerritory(profile) : {};
   const currentPage = pagination?.page ?? page;
   const totalPages = pagination ? Math.max(1, pagination.totalPages) : 1;
@@ -244,24 +253,6 @@ export default function TsrSalesDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/admin/tsr-sales"
-          className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 transition hover:text-emerald-700"
-        >
-          <ArrowLeft size={16} />
-          Back to TSR Sales
-        </Link>
-        <div className="mt-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-            TSR performance
-          </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
-            {profile?.name?.trim() || "TSR Details"}
-          </h1>
-        </div>
-      </div>
-
       {profileError ? (
         <ErrorPanel
           message={profileError}
@@ -290,7 +281,10 @@ export default function TsrSalesDetailPage() {
                     {profile.phone_number || profile.phone || "—"}
                   </p>
                   <p className="flex items-start gap-2">
-                    <MapPin size={15} className="mt-0.5 shrink-0 text-gray-400" />
+                    <MapPin
+                      size={15}
+                      className="mt-0.5 shrink-0 text-gray-400"
+                    />
                     <span>
                       {profile.fullAddress?.trim() ||
                         territory?.fullAddress?.trim() ||
@@ -413,14 +407,14 @@ export default function TsrSalesDetailPage() {
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Pharmacy</th>
                   <th className="px-4 py-3">Phone</th>
+                  <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Address</th>
-                  <th className="px-4 py-3">Division</th>
+                  {/* <th className="px-4 py-3">Division</th>
                   <th className="px-4 py-3">District</th>
-                  <th className="px-4 py-3">Upazila</th>
+                  <th className="px-4 py-3">Upazila</th> */}
                   <th className="px-4 py-3 text-right">Order Value</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Created At</th>
-                  <th className="px-4 py-3 text-right">Action</th>
+                  <th className="px-4 py-3">Order Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -430,9 +424,7 @@ export default function TsrSalesDetailPage() {
                   const expanded = expandedOrder === rowId;
                   return (
                     <Fragment key={rowId}>
-                      <tr
-                        className="group transition-colors hover:bg-gray-50/80"
-                      >
+                      <tr className="group transition-colors hover:bg-gray-50/80">
                         <td className="px-4 py-4">
                           <code className="whitespace-nowrap rounded-lg bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
                             #{order.orderId || order.id || "—"}
@@ -447,10 +439,13 @@ export default function TsrSalesDetailPage() {
                         <td className="px-4 py-4 text-sm text-gray-600">
                           {user?.phone_number || user?.phone || "—"}
                         </td>
+                        <td className="px-4 py-4 text-sm text-gray-600">
+                          {user?.email || user?.email || "—"}
+                        </td>
                         <td className="px-4 py-4">
                           <OrderAddress order={order} />
                         </td>
-                        <td className="px-4 py-4 text-xs text-gray-600">
+                        {/* <td className="px-4 py-4 text-xs text-gray-600">
                           {locationLine(user?.division)}
                         </td>
                         <td className="px-4 py-4 text-xs text-gray-600">
@@ -458,7 +453,7 @@ export default function TsrSalesDetailPage() {
                         </td>
                         <td className="px-4 py-4 text-xs text-gray-600">
                           {locationLine(user?.upazila)}
-                        </td>
+                        </td> */}
                         <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-semibold tabular-nums text-gray-700">
                           {currency(order.totalAmount ?? order.totalOrderValue)}
                         </td>
@@ -468,52 +463,9 @@ export default function TsrSalesDetailPage() {
                           </span>
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 text-xs text-gray-600">
-                          {order.createdAt
-                            ? orderDate(order.createdAt)
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedOrder(expanded ? null : rowId)
-                            }
-                            aria-expanded={expanded}
-                            className="rounded-lg px-2.5 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
-                          >
-                            {expanded ? "Hide" : "View"}
-                          </button>
+                          {order.createdAt ? orderDate(order.createdAt) : "—"}
                         </td>
                       </tr>
-                      {expanded && (
-                        <tr className="bg-gray-50/70">
-                          <td
-                            colSpan={12}
-                            className="px-5 py-4 text-xs text-gray-600"
-                          >
-                            <div className="grid gap-3 sm:grid-cols-3">
-                              <p>
-                                <span className="font-semibold text-gray-800">
-                                  Customer email:{" "}
-                                </span>
-                                {user?.email || "—"}
-                              </p>
-                              <p>
-                                <span className="font-semibold text-gray-800">
-                                  Full address:{" "}
-                                </span>
-                                {user?.fullAddress?.trim() || "—"}
-                              </p>
-                              <p>
-                                <span className="font-semibold text-gray-800">
-                                  Order ID:{" "}
-                                </span>
-                                {order.orderId || order.id || "—"}
-                              </p>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </Fragment>
                   );
                 })}
