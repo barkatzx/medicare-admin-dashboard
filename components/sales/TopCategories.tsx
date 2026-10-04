@@ -1,5 +1,7 @@
 "use client";
 
+import type { TopCategory } from "@/config/api";
+import { Boxes, Medal } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -9,8 +11,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Boxes, Medal, TrendingUp } from "lucide-react";
-import type { TopCategory } from "@/config/api";
 import { formatSalesNumber } from "./salesFormatters";
 
 interface TopCategoriesProps {

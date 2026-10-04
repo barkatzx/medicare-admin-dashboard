@@ -58,8 +58,6 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
               -webkit-font-smoothing: antialiased;
             }
             header {
-              margin-bottom: 20px;
-              padding-bottom: 16px;
               border-bottom: 1px solid #e5e7eb;
               text-align: center;
             }
@@ -122,8 +120,7 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
         </head>
         <body>
           <header>
-            <h1>MediCarePLC — Ordered Products</h1>
-            <p>Printed ${escapeHtml(new Date().toLocaleString())}</p>
+            <h1>MediCarePLC</h1>
           </header>
           <table>
             <thead>

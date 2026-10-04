@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
+  CircleUser,
   Clock,
   Grid3X3,
   HelpCircle,
@@ -20,7 +21,6 @@ import {
   Package,
   Settings,
   ShoppingBag,
-  Sparkles,
   Star,
   TrendingUp,
   Truck,
@@ -204,6 +204,11 @@ const isOrdersPath = (pathname: string) =>
     (sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"),
   );
 
+const isTsrPath = (pathname: string) =>
+  tsrSubItems.some(
+    (sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"),
+  );
+
 export default function Sidebar() {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
@@ -219,9 +224,7 @@ export default function Sidebar() {
     isProductsPath(pathname),
   );
   const [usersOpen, setUsersOpen] = useState(() => isUsersPath(pathname));
-  const [tsrOpen, setTsrOpen] = useState(() =>
-    pathname.startsWith("/admin/tsr-sales"),
-  );
+  const [tsrOpen, setTsrOpen] = useState(() => isTsrPath(pathname));
   const [ordersOpen, setOrdersOpen] = useState(() => isOrdersPath(pathname));
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -230,7 +233,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (isProductsPath(pathname)) setProductsOpen(true);
     if (isUsersPath(pathname)) setUsersOpen(true);
-    if (pathname.startsWith("/admin/tsr-sales")) setTsrOpen(true);
+    if (isTsrPath(pathname)) setTsrOpen(true);
     if (isOrdersPath(pathname)) setOrdersOpen(true);
   }, [pathname]);
 
@@ -357,7 +360,7 @@ export default function Sidebar() {
   const sidebarWidth = isCollapsed ? "w-20" : "w-64";
   const productsActive = isProductsPath(pathname);
   const usersActive = isUsersPath(pathname);
-  const tsrActive = pathname.startsWith("/admin/tsr-sales");
+  const tsrActive = isTsrPath(pathname);
   const ordersActive = isOrdersPath(pathname);
 
   return (
@@ -422,6 +425,7 @@ export default function Sidebar() {
                     <Link
                       key={item.href}
                       href={item.href}
+                      scroll={false}
                       className={`
                         group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
                         transition-all duration-200
@@ -458,14 +462,14 @@ export default function Sidebar() {
                       ${tsrActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}
                     `}
                   >
-                    <CircleDollarSign
+                    <CircleUser
                       size={20}
                       className={`flex-shrink-0 transition-all duration-200 ${tsrActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
                     />
                     {showText && (
                       <>
                         <span className="text-sm font-medium whitespace-nowrap flex-1 text-left">
-                          TSR
+                          TSR's
                         </span>
                         <span
                           className={`transition-transform duration-300 ${tsrOpen ? "rotate-90" : "rotate-0"}`}
@@ -514,6 +518,7 @@ export default function Sidebar() {
                           <Link
                             key={sub.name}
                             href={sub.href}
+                            scroll={false}
                             className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
                           >
                             {itemContent}

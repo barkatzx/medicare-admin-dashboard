@@ -1,36 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Crown, Package, TrendingUp } from "lucide-react";
 import type { TopSalesProduct } from "@/config/api";
+import { Crown, Package } from "lucide-react";
+import Image from "next/image";
+import { useState } from "react";
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { formatSalesCurrency, formatSalesNumber } from "./salesFormatters";
 
 interface TopProductsProps {
   products: TopSalesProduct[];
 }
 
-const BAR_COLORS = [
-  "#3b82f6", // blue-500 — leader
-  "#60a5fa", // blue-400
-  "#93c5fd", // blue-300
-  "#bfdbfe", // blue-200
-  "#dbeafe", // blue-100
-  "#e0e7ff", // indigo-100
+const SLICE_COLORS = [
+  "#22d3ee", // cyan — leader
+  "#a78bfa", // violet
+  "#f472b6", // pink
+  "#fbbf24", // amber
+  "#34d399", // emerald
+  "#60a5fa", // sky
 ];
 
 export default function TopProducts({ products }: TopProductsProps) {
   const maxSold = Math.max(0, ...products.map((product) => product.totalSold));
   const leader = products[0];
+  const totalSold = products.reduce(
+    (sum, product) => sum + product.totalSold,
+    0,
+  );
 
   // Reverse so leader renders at the top of the horizontal bar chart
   const chartData = [...products]
@@ -40,110 +36,44 @@ export default function TopProducts({ products }: TopProductsProps) {
       sold: product.totalSold,
       price: Number(product.price),
       rank: index + 1,
-      color: BAR_COLORS[Math.min(index, BAR_COLORS.length - 1)],
+      color: SLICE_COLORS[Math.min(index, SLICE_COLORS.length - 1)],
     }))
     .reverse();
 
-  return (
-    <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-      {/* Header */}
+  // Ranked order (leader first) for the list
+  const rankedData = [...chartData].reverse();
 
+  return (
+    <section className="overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 text-gray-900 sm:p-8">
       {products.length === 0 ? (
-        <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-4 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
-            <Package size={22} className="text-gray-300" />
+        <div className="mt-6 flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-gray-100 bg-gray-50/50 px-4 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white ring-1 ring-gray-100">
+            <Package size={22} className="text-gray-400" />
           </div>
-          <p className="mt-4 text-sm font-medium text-gray-500">
+          <p className="mt-4 text-sm font-medium text-gray-700">
             No top products available
           </p>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-gray-500">
             Rankings will appear once sales are recorded
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
-          {/* Leader spotlight */}
-          {leader && (
-            <article className="relative overflow-hidden rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 via-white to-orange-50/40 p-5">
-              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-amber-100/60 blur-2xl" />
-              <div className="relative flex items-center justify-between gap-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
-                    <Crown size={18} strokeWidth={2.25} />
-                  </span>
-
-                  <ProductImage
-                    imageUrl={leader.images?.[0]?.url}
-                    name={leader.name}
-                    size={44}
-                  />
-
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-600">
-                      Best seller
-                    </p>
-                    <p className="mt-0.5 truncate text-base font-semibold tracking-tight text-gray-900">
-                      {leader.name}
-                    </p>
-                    <p className="mt-0.5 text-[11px] font-medium tabular-nums text-gray-500">
-                      {Number.isFinite(Number(leader.price))
-                        ? formatSalesCurrency(Number(leader.price))
-                        : "Price unavailable"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="shrink-0 text-right">
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-gray-900">
-                    {formatSalesNumber(leader.totalSold)}
-                  </p>
-                  <p className="mt-0.5 text-[11px] font-medium text-gray-400">
-                    units sold
-                  </p>
-                </div>
-              </div>
-
-              <div className="relative mt-4 flex items-center gap-3">
-                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/70 ring-1 ring-inset ring-amber-100">
-                  <div className="h-full w-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500" />
-                </div>
-                <span className="shrink-0 text-[11px] font-semibold tabular-nums text-amber-600">
-                  #1 of {products.length}
-                </span>
-              </div>
-            </article>
-          )}
-
-          {/* Recharts horizontal bar chart */}
-          <div className="h-[320px] w-full">
+        <div className="mt-8 grid items-center gap-8 lg:grid-cols-[440px_1fr]">
+          {/* Recharts donut */}
+          <div className="relative mx-auto h-[420px] w-full max-w-[440px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                layout="vertical"
-                margin={{ top: 4, right: 52, bottom: 4, left: 4 }}
-                barCategoryGap="22%"
-              >
-                <XAxis type="number" hide domain={[0, maxSold || 1]} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={130}
-                  tick={{ fontSize: 11, fill: "#374151", fontWeight: 500 }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(value: string) =>
-                    value.length > 20 ? `${value.slice(0, 19)}…` : value
-                  }
-                />
+              <PieChart>
                 <Tooltip
-                  cursor={{ fill: "rgba(59, 130, 246, 0.06)" }}
                   contentStyle={{
                     borderRadius: 12,
-                    border: "1px solid #f1f5f9",
+                    border: "1px solid #f3f4f6",
+                    background: "#ffffff",
+                    color: "#111827",
                     boxShadow: "0 4px 12px rgba(16,24,40,0.08)",
                     fontSize: 12,
                     padding: "8px 12px",
                   }}
+                  itemStyle={{ color: "#374151" }}
                   formatter={(value, _name, payload) => {
                     const rank = payload?.payload?.rank ?? 0;
                     const price = payload?.payload?.price;
@@ -156,25 +86,90 @@ export default function TopProducts({ products }: TopProductsProps) {
                     ];
                   }}
                 />
-                <Bar
+                <Pie
+                  data={rankedData}
                   dataKey="sold"
-                  radius={[0, 6, 6, 0]}
-                  maxBarSize={22}
-                  label={{
-                    position: "right",
-                    formatter: (value: number) => formatSalesNumber(value),
-                    fill: "#6b7280",
-                    fontSize: 11,
-                    fontWeight: 600,
-                  }}
+                  nameKey="name"
+                  innerRadius={130}
+                  outerRadius={190}
+                  paddingAngle={3}
+                  cornerRadius={8}
+                  startAngle={90}
+                  endAngle={-270}
+                  stroke="none"
                 >
-                  {chartData.map((entry) => (
+                  {rankedData.map((entry) => (
                     <Cell key={entry.id} fill={entry.color} />
                   ))}
-                </Bar>
-              </BarChart>
+                </Pie>
+              </PieChart>
             </ResponsiveContainer>
+
+            {/* Donut center */}
+            {leader && (
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                <Crown size={22} className="text-cyan-500" />
+                <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-gray-900">
+                  {formatSalesNumber(leader.totalSold)}
+                </p>
+                <p className="mt-1 max-w-[160px] truncate text-sm text-gray-500">
+                  {leader.name}
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Ranked list */}
+          <ol className="space-y-2 rounded-2xl bg-gray-50 p-3">
+            {rankedData.map((entry, index) => {
+              const product = products[index];
+              const widthPct = maxSold > 0 ? (entry.sold / maxSold) * 100 : 0;
+              return (
+                <li
+                  key={entry.id}
+                  className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3"
+                >
+                  <span
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums text-white"
+                    style={{ backgroundColor: entry.color }}
+                  >
+                    {entry.rank}
+                  </span>
+                  <ProductImage
+                    imageUrl={product?.images?.[0]?.url}
+                    name={entry.name}
+                    size={40}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="truncate text-sm font-medium text-gray-900">
+                        {entry.name}
+                      </p>
+                      <p className="shrink-0 text-sm font-semibold tabular-nums text-gray-900">
+                        {formatSalesNumber(entry.sold)}
+                      </p>
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-3">
+                      <div className="h-1 flex-1 overflow-hidden rounded-full bg-gray-100">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${widthPct}%`,
+                            backgroundColor: entry.color,
+                          }}
+                        />
+                      </div>
+                      <p className="shrink-0 text-xs tabular-nums text-gray-500">
+                        {Number.isFinite(entry.price)
+                          ? formatSalesCurrency(entry.price)
+                          : "Price unavailable"}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </div>
       )}
     </section>

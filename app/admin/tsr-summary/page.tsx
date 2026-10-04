@@ -1,17 +1,16 @@
 "use client";
 
-import { api } from "@/config/api";
+import {
+  formatSalesCurrency,
+  formatSalesNumber,
+} from "@/components/sales/salesFormatters";
 import type {
   TsrSalesAllSummary,
   TsrSalesBestPerformance,
   TsrSalesSummaryEntry,
   TsrSalesSummaryPeriod,
 } from "@/config/api";
-import {
-  formatSalesCurrency,
-  formatSalesNumber,
-} from "@/components/sales/salesFormatters";
-import { useEffect, useState } from "react";
+import { api } from "@/config/api";
 import {
   AreaChart,
   Award,
@@ -20,6 +19,7 @@ import {
   Search,
   ShoppingBag,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 type SummaryPeriodKey = "today" | "weekly" | "monthly" | "yearly";
 
@@ -118,16 +118,12 @@ function BestTsrCard({
     <article className="rounded-xl border border-gray-100 bg-gray-50 p-4">
       <div className="flex items-center gap-2 text-amber-600">
         <Award size={16} />
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          {title}
-        </h3>
+        <h3 className="text-sm text-gray-600">{title}</h3>
       </div>
       {tsr ? (
         <div className="mt-3 flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-gray-900">
-              {tsr.tsrName || "—"}
-            </p>
+            <p className="text-sm text-gray-700">{tsr.tsrName || "—"}</p>
             <p className="mt-1 text-xs tabular-nums text-gray-500">
               {metric === "orders"
                 ? currency(tsr.totalOrderValue)
@@ -242,7 +238,7 @@ function BestPerformanceSection({
               key={key}
               className="space-y-3 rounded-2xl border border-gray-100 bg-white p-4"
             >
-              <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+              <h3 className="text-sm text-gray-900">{title}</h3>
               <BestTsrCard
                 title="Most Orders"
                 tsr={performance[key].bestTsrByOrderCount}

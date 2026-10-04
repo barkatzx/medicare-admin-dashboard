@@ -241,7 +241,7 @@ export default function FeaturedProductsPage() {
                               )}
                             </div>
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-gray-900">
+                              <p className="text-sm text-gray-900">
                                 {product.name}
                               </p>
                             </div>

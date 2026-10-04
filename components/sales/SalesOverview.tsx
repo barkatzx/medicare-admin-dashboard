@@ -1,3 +1,4 @@
+import type { SalesOverviewData } from "@/config/api";
 import {
   BarChart3,
   Boxes,
@@ -6,7 +7,6 @@ import {
   Tag,
   Users,
 } from "lucide-react";
-import type { SalesOverviewData } from "@/config/api";
 import { formatSalesCurrency, formatSalesNumber } from "./salesFormatters";
 
 interface SalesOverviewProps {
@@ -43,13 +43,13 @@ export default function SalesOverview({ summary }: SalesOverviewProps) {
       tone: "bg-emerald-50 text-emerald-600",
       accent: "bg-emerald-500",
     },
-    // {
-    //   label: "Total discounts",
-    //   value: formatSalesCurrency(summary.totalDiscounts),
-    //   icon: Tag,
-    //   tone: "bg-amber-50 text-amber-600",
-    //   accent: "bg-amber-500",
-    // },
+    {
+      label: "Total discounts",
+      value: formatSalesCurrency(summary.totalDiscounts),
+      icon: Tag,
+      tone: "bg-amber-50 text-amber-600",
+      accent: "bg-amber-500",
+    },
     {
       label: "Active customers",
       value: formatSalesNumber(summary.totalCustomers),
