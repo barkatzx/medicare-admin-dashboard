@@ -1,5 +1,5 @@
 import { apiClient, API_BASE_URL } from "../client";
-import type { Product } from "./products.types";
+import type { Product, ProductPage, ProductPagination } from "./products.types";
 
 export async function getAllProducts(
   page: number = 1,
@@ -97,23 +97,56 @@ export async function getLowStockProducts(threshold: number = 10): Promise<Produ
   return [];
 }
 
-export async function getFeaturedProducts(): Promise<Product[]> {
+function normalizeProductPage(
+  response: any,
+  page: number,
+  endpoint: string,
+): ProductPage {
+  const data = response?.data ?? response;
+
+  if (Array.isArray(data)) {
+    return {
+      products: data,
+      pagination: {
+        total: data.length,
+        totalPages: data.length ? 1 : 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
+  }
+
+  if (data?.products && Array.isArray(data.products)) {
+    const metadata = data.pagination ?? data;
+    const pagination: ProductPagination = {
+      total: Number(metadata.total),
+      totalPages: Number(metadata.totalPages),
+      hasNextPage: metadata.hasNextPage,
+      hasPrevPage: metadata.hasPrevPage,
+    };
+
+    if (
+      !Number.isInteger(pagination.total) ||
+      pagination.total < 0 ||
+      !Number.isInteger(pagination.totalPages) ||
+      pagination.totalPages < 0 ||
+      typeof pagination.hasNextPage !== "boolean" ||
+      typeof pagination.hasPrevPage !== "boolean"
+    ) {
+      throw new Error(`Invalid pagination metadata from ${endpoint}`);
+    }
+
+    return { products: data.products, pagination };
+  }
+
+  console.warn(`Unexpected response structure from ${endpoint}:`, response);
+  throw new Error(`Invalid product response from ${endpoint} for page ${page}`);
+}
+
+export async function getFeaturedProducts(page: number = 1): Promise<ProductPage> {
   try {
-    const response = await apiClient.request("/products/featured");
-
-    if (Array.isArray(response)) {
-      return response;
-    }
-
-    if (response && response.products && Array.isArray(response.products)) {
-      return response.products;
-    }
-
-    console.warn(
-      "Unexpected response structure from featured products:",
-      response,
-    );
-    return [];
+    const response = await apiClient.request(`/products/featured?page=${page}`);
+    return normalizeProductPage(response, page, "featured products");
   } catch (error) {
     console.error("Error in getFeaturedProducts:", error);
     throw error;
@@ -130,26 +163,10 @@ export async function updateProductFeaturedStatus(
   });
 }
 
-export async function getTrendingProducts(): Promise<Product[]> {
+export async function getTrendingProducts(page: number = 1): Promise<ProductPage> {
   try {
-    // Use apiClient.request to automatically handle response format parsing
-    const response = await apiClient.request("/products/trending");
-
-    // If the response is already the array of products (handled by apiClient.request logic)
-    if (Array.isArray(response)) {
-      return response;
-    }
-
-    // If it returned the raw data for some reason
-    if (response && response.products && Array.isArray(response.products)) {
-      return response.products;
-    }
-
-    console.warn(
-      "Unexpected response structure from trending products:",
-      response,
-    );
-    return [];
+    const response = await apiClient.request(`/products/trending?page=${page}`);
+    return normalizeProductPage(response, page, "trending products");
   } catch (error) {
     console.error("Error in getTrendingProducts:", error);
     throw error;

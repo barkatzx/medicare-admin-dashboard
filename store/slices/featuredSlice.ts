@@ -1,16 +1,24 @@
 // src/store/slices/featuredSlice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api, Product } from "@/config/api";
+import type { ProductPagination } from "@/config/api";
 import toast from "react-hot-toast";
 
 interface FeaturedState {
   featuredProducts: Product[];
+  pagination: ProductPagination;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: FeaturedState = {
   featuredProducts: [],
+  pagination: {
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  },
   loading: false,
   error: null,
 };
@@ -18,9 +26,9 @@ const initialState: FeaturedState = {
 // Fetch featured products
 export const fetchFeaturedProducts = createAsyncThunk(
   "featured/fetchAll",
-  async (_, { rejectWithValue }) => {
+  async (page: number | undefined, { rejectWithValue }) => {
     try {
-      const response = await api.getFeaturedProducts();
+      const response = await api.getFeaturedProducts(page ?? 1);
       return response;
     } catch (error: any) {
       console.error("Fetch featured products error:", error);
@@ -83,8 +91,9 @@ const featuredSlice = createSlice({
       })
       .addCase(fetchFeaturedProducts.fulfilled, (state, action) => {
         state.loading = false;
-        state.featuredProducts = action.payload;
-        if (action.payload.length === 0) {
+        state.featuredProducts = action.payload.products;
+        state.pagination = action.payload.pagination;
+        if (action.payload.products.length === 0) {
           console.log("No featured products found");
         }
       })

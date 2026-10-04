@@ -1,34 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/index";
 import {
   fetchFeaturedProducts,
   updateFeaturedStatus,
 } from "@/store/slices/featuredSlice";
-import Image from "next/image";
-import toast from "react-hot-toast";
 import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
   Heart,
   Loader2,
   Package,
-  AlertCircle,
-  TrendingUp,
-  Shield,
   RefreshCw,
+  Shield,
+  TrendingUp,
 } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function FeaturedProductsPage() {
   const dispatch = useDispatch();
-  const { featuredProducts, loading, error } = useSelector(
+  const { featuredProducts, pagination, loading, error } = useSelector(
     (state: RootState) => state.featured,
   );
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    dispatch(fetchFeaturedProducts() as any);
-  }, [dispatch]);
+    dispatch(fetchFeaturedProducts(currentPage) as any);
+  }, [dispatch, currentPage]);
 
   const handleRemoveFeatured = async (productId: string) => {
     setUpdatingId(productId);
@@ -57,8 +60,8 @@ export default function FeaturedProductsPage() {
           </p>
           <p className="mb-5 text-xs text-gray-400">{error}</p>
           <button
-            onClick={() => dispatch(fetchFeaturedProducts() as any)}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)] transition-all hover:bg-blue-700"
+            onClick={() => dispatch(fetchFeaturedProducts(currentPage) as any)}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-blue-700"
           >
             <RefreshCw size={15} />
             Try again
@@ -78,7 +81,7 @@ export default function FeaturedProductsPage() {
   const stats = [
     {
       label: "Total featured",
-      value: featuredProducts.length,
+      value: pagination.total,
       icon: Heart,
       accent: "bg-pink-500",
       iconTone: "bg-pink-50 text-pink-600",
@@ -135,7 +138,7 @@ export default function FeaturedProductsPage() {
       </div>
 
       {/* ─── Featured Products Table ─────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-50 text-pink-600">
@@ -146,8 +149,8 @@ export default function FeaturedProductsPage() {
                 Featured products
               </h2>
               <p className="text-[11px] text-gray-500">
-                {featuredProducts.length}{" "}
-                {featuredProducts.length === 1 ? "product" : "products"}
+                {pagination.total}{" "}
+                {pagination.total === 1 ? "product" : "products"}
               </p>
             </div>
           </div>
@@ -179,7 +182,7 @@ export default function FeaturedProductsPage() {
               <table className="w-full min-w-[1000px] text-left">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                    <th className="w-14 px-6 py-3">#</th>
+                    {/* <th className="w-14 px-6 py-3">#</th> */}
                     <th className="px-6 py-3">Product</th>
                     <th className="px-6 py-3">Category</th>
                     <th className="px-6 py-3 text-right">Price</th>
@@ -202,7 +205,7 @@ export default function FeaturedProductsPage() {
                         key={product.id}
                         className="group transition-colors hover:bg-gray-50/80"
                       >
-                        <td className="px-6 py-4">
+                        {/* <td className="px-6 py-4">
                           <span
                             className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-bold tabular-nums transition-transform duration-200 group-hover:scale-105 ${
                               isTop
@@ -214,7 +217,7 @@ export default function FeaturedProductsPage() {
                           >
                             {index + 1}
                           </span>
-                        </td>
+                        </td> */}
 
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -320,6 +323,77 @@ export default function FeaturedProductsPage() {
             </div>
           )}
         </div>
+        {pagination.totalPages > 1 && (
+          <div className="border-t border-gray-100 bg-gray-50/60 px-6 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <p className="text-xs font-medium tabular-nums text-gray-500">
+                Page{" "}
+                <span className="font-semibold text-gray-700">
+                  {currentPage}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-gray-700">
+                  {pagination.totalPages}
+                </span>{" "}
+                <span className="text-gray-400">
+                  ({pagination.total} products)
+                </span>
+              </p>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={loading || !pagination.hasPrevPage}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+
+                {Array.from(
+                  { length: Math.min(5, pagination.totalPages) },
+                  (_, index) => {
+                    const firstPage = Math.max(
+                      1,
+                      Math.min(currentPage - 2, pagination.totalPages - 4),
+                    );
+                    const page = firstPage + index;
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        disabled={loading}
+                        className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
+                          page === currentPage
+                            ? "bg-pink-600 text-white shadow-[0_1px_2px_rgba(219,39,119,0.3)]"
+                            : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                        }`}
+                        aria-current={page === currentPage ? "page" : undefined}
+                      >
+                        {page}
+                      </button>
+                    );
+                  },
+                )}
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((page) =>
+                      Math.min(pagination.totalPages, page + 1),
+                    )
+                  }
+                  disabled={loading || !pagination.hasNextPage}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

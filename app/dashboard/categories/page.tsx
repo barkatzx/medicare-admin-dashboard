@@ -1,33 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  fetchCategories,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-} from "@/store/slices/categorySlice";
-import { api } from "@/config/api";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import { api } from "@/config/api";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  Plus,
-  FolderTree,
-  Edit,
-  Trash2,
-  Search,
-  RefreshCw,
+  createCategory,
+  deleteCategory,
+  fetchCategories,
+  updateCategory,
+} from "@/store/slices/categorySlice";
+import {
+  AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Folder,
-  AlertCircle,
-  Package,
-  Layers,
-  Clock,
-  TrendingUp,
+  Edit,
   Feather,
+  Folder,
+  Layers,
+  Package,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 export default function CategoriesPage() {
@@ -48,7 +45,7 @@ export default function CategoriesPage() {
   const [categoryDesc, setCategoryDesc] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -241,7 +238,7 @@ export default function CategoriesPage() {
                 <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
               </div>
               <div
-                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg transform transition-transform duration-300`}
+                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center transform transition-transform duration-300`}
               >
                 <Icon size={22} className="text-white" />
               </div>
@@ -265,7 +262,7 @@ export default function CategoriesPage() {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
+            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
           />
         </div>
         <button
@@ -277,7 +274,7 @@ export default function CategoriesPage() {
         </button>
         <Button
           onClick={handleOpenCreateModal}
-          className="flex items-center gap-2 bg-blue-600 shadow-lg"
+          className="flex items-center gap-2 bg-blue-600"
         >
           <Plus size={16} className="mr-2" />
           Add Category
@@ -453,7 +450,11 @@ export default function CategoriesPage() {
                             <button
                               key={pageNum}
                               onClick={() => setCurrentPage(pageNum)}
-                              className={`px-3 py-1 rounded-lg transition-colors ${currentPage === pageNum ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md" : "hover:bg-gray-100 text-gray-600"}`}
+                              className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                                currentPage === pageNum
+                                  ? "bg-blue-600 text-white border border-blue-600"
+                                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                              }`}
                             >
                               {pageNum}
                             </button>

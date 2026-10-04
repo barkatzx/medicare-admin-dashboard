@@ -1,16 +1,24 @@
 // src/store/slices/trendingSlice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api, Product } from "@/config/api";
+import type { ProductPagination } from "@/config/api";
 import toast from "react-hot-toast";
 
 interface TrendingState {
   trendingProducts: Product[];
+  pagination: ProductPagination;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: TrendingState = {
   trendingProducts: [],
+  pagination: {
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  },
   loading: false,
   error: null,
 };
@@ -18,9 +26,9 @@ const initialState: TrendingState = {
 // Fetch trending products
 export const fetchTrendingProducts = createAsyncThunk(
   "trending/fetchAll",
-  async (_, { rejectWithValue }) => {
+  async (page: number | undefined, { rejectWithValue }) => {
     try {
-      const response = await api.getTrendingProducts();
+      const response = await api.getTrendingProducts(page ?? 1);
       return response;
     } catch (error: any) {
       console.error("Fetch trending products error:", error);
@@ -83,8 +91,9 @@ const trendingSlice = createSlice({
       })
       .addCase(fetchTrendingProducts.fulfilled, (state, action) => {
         state.loading = false;
-        state.trendingProducts = action.payload;
-        if (action.payload.length === 0) {
+        state.trendingProducts = action.payload.products;
+        state.pagination = action.payload.pagination;
+        if (action.payload.products.length === 0) {
           console.log("No trending products found");
         }
       })

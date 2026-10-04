@@ -1,44 +1,43 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { formatSalesCurrency } from "@/components/sales/salesFormatters";
+import Button from "@/components/ui/Button";
+import Modal from "@/components/ui/Modal";
+import { Product } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchCategories } from "@/store/slices/categorySlice";
 import {
-  fetchProducts,
+  fetchFeaturedProducts,
+  updateFeaturedStatus,
+} from "@/store/slices/featuredSlice";
+import {
   deleteProduct,
   fetchInventoryStats,
+  fetchProducts,
 } from "@/store/slices/productSlice";
-import { fetchCategories } from "@/store/slices/categorySlice";
-import Button from "@/components/ui/Button";
 import {
-  Plus,
-  Edit,
-  Trash2,
-  Package,
-  Search,
-  AlertTriangle,
-  RefreshCw,
-  DollarSign,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Pencil,
-  Star,
-  Heart,
-} from "lucide-react";
-import {
-  updateTrendingStatus,
   fetchTrendingProducts,
+  updateTrendingStatus,
 } from "@/store/slices/trendingSlice";
 import {
-  updateFeaturedStatus,
-  fetchFeaturedProducts,
-} from "@/store/slices/featuredSlice";
-import Modal from "@/components/ui/Modal";
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  Heart,
+  Package,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import ProductForm from "../../../components/products/ProductForm";
 import StockManagementModal from "../../../components/products/StockManagementModal";
-import { Product } from "@/config/api";
-import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 
 export default function ProductsPage() {
   const dispatch = useAppDispatch();
@@ -148,7 +147,7 @@ export default function ProductsPage() {
       label: "Total Products",
       value: pagination?.total ?? products.length,
       icon: Package,
-      color: "from-blue-500 to-indigo-600",
+      color: "from-blue-500 to-indigo-500",
     },
     {
       label: "Low Stock",
@@ -223,7 +222,7 @@ export default function ProductsPage() {
             placeholder="Search products by name or description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-10 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+            className="w-full pl-12 pr-10 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           />
           {searchTerm && (
             <button
@@ -241,7 +240,7 @@ export default function ProductsPage() {
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="px-3 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+          className="px-3 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="all">All Categories</option>
           {categories.map((cat) => (
@@ -253,9 +252,9 @@ export default function ProductsPage() {
 
         <button
           onClick={() => setShowLowStock(!showLowStock)}
-          className={`px-5 py-3 rounded-xl text-sm font-medium flex items-center gap-2 shadow-sm transition-all duration-200 ${
+          className={`px-5 py-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-all duration-200 ${
             showLowStock
-              ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-red-200"
+              ? "bg-gradient-to-r from-red-600 to-rose-600 text-white "
               : "bg-white text-gray-600 hover:bg-gray-50 border border-gray-200"
           }`}
         >
@@ -296,7 +295,7 @@ export default function ProductsPage() {
 
       {/* Table */}
       <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-100 bg-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-blue-100 rounded-lg">
               <Package size={16} className="text-blue-600" />
@@ -308,7 +307,7 @@ export default function ProductsPage() {
           </div>
           <button
             onClick={loadProducts}
-            className={`p-2 hover:bg-gray-100 rounded-xl transition-colors ${loading ? "animate-spin" : ""}`}
+            className={`p-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors ${loading ? "animate-spin" : ""}`}
           >
             <RefreshCw size={16} className="text-gray-500" />
           </button>
@@ -578,8 +577,8 @@ export default function ProductsPage() {
                   disabled={loading}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     currentPage === pageNum
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-                      : "hover:bg-gray-100 text-gray-600 disabled:opacity-50"
+                      ? "bg-blue-600 text-white border border-blue-600"
+                      : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   }`}
                 >
                   {pageNum}
@@ -591,7 +590,7 @@ export default function ProductsPage() {
                   setCurrentPage((p) => Math.min(pagination.pages, p + 1))
                 }
                 disabled={currentPage === pagination.pages || loading}
-                className="p-2 rounded-xl border border-gray-200 disabled:opacity-50 hover:bg-white transition-colors"
+                className="p-2 rounded-lg border border-gray-200 disabled:opacity-50 hover:bg-white transition-colors"
               >
                 <ChevronRight size={16} />
               </button>

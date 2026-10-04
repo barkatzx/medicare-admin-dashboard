@@ -31,3 +31,15 @@ export interface Product {
   discountBadge?: string;
   primaryImageId?: string;
 }
+
+export interface ProductPagination {
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface ProductPage {
+  products: Product[];
+  pagination: ProductPagination;
+}

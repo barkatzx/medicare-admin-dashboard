@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowRight, Clock3, Package, Users } from "lucide-react";
-import { api, type Order, type User } from "@/config/api";
 import SalesChart from "@/components/sales/SalesChart";
+import { api, type Order, type User } from "@/config/api";
+import { Clock3, Package, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const PAGE_SIZE = 100;
 const DISPLAY_LIMIT = 5;
@@ -91,7 +90,7 @@ export default function DashboardPage() {
       <SalesChart />
       <div className="flex flex-col gap-5 lg:flex-row">
         {/* ─── Pending Orders ──────────────────────────────────────── */}
-        <section className="min-w-0 flex-1 rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <section className="min-w-0 flex-1 rounded-2xl border border-gray-100 bg-white">
           <header className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
             <div className="flex items-center gap-2.5">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
@@ -172,7 +171,7 @@ export default function DashboardPage() {
         </section>
 
         {/* ─── Pending Users ───────────────────────────────────────── */}
-        <section className="min-w-0 flex-1 rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <section className="min-w-0 flex-1 rounded-2xl border border-gray-100 bg-white">
           <header className="flex items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
             <div className="flex items-center gap-2.5">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">

@@ -1,27 +1,24 @@
 // src/components/layout/Header.tsx
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import SearchModal from "@/components/ui/SearchModal";
+import { useAppSelector } from "@/store/hooks";
 import {
-  Search,
-  X,
-  Bell,
   ArrowRight,
-  LayoutDashboard,
-  Users,
-  Package,
-  FolderTree,
-  ShoppingCart,
   BarChart3,
-  Settings,
+  Bell,
+  FolderTree,
   HelpCircle,
-  User,
-  ChevronDown,
+  LayoutDashboard,
+  Package,
+  Search,
+  Settings,
+  ShoppingCart,
+  Users,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useAppSelector } from "@/store/hooks";
-import SearchModal from "@/components/ui/SearchModal";
-import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface SearchItem {
   name: string;
@@ -323,7 +320,7 @@ export default function Header() {
 
           {/* Right Section - User Avatar, Name & Role */}
           <div className="flex-1 flex justify-end" ref={profileRef}>
-            <div className="relative">
+            <div className="relative bg-white rounded-xl border border-gray-100">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-all duration-200 group"

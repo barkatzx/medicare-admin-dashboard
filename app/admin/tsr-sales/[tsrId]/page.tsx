@@ -1,11 +1,27 @@
 "use client";
 
-import { Fragment } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 import {
-  ArrowLeft,
+  formatSalesCurrency,
+  formatSalesNumber,
+} from "@/components/sales/salesFormatters";
+import SummaryCards from "@/components/tsr-sales/SummaryCards";
+import {
+  formatMetricCurrency,
+  statusLabels,
+} from "@/components/tsr-sales/metrics";
+import { formatDateTime } from "@/components/utils/formatters";
+import type {
+  Pagination,
+  SummaryResponse,
+  Territory,
+  TerritoryArea,
+  TSRDetail,
+  TSRDetailResponse,
+  TsrOrderStatus,
+  TsrSalesOrder,
+} from "@/config/api";
+import { api, TSR_ORDER_STATUSES } from "@/config/api";
+import {
   ChevronLeft,
   ChevronRight,
   Mail,
@@ -15,27 +31,8 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-import { api, TSR_ORDER_STATUSES } from "@/config/api";
-import type {
-  SummaryResponse,
-  Territory,
-  TerritoryArea,
-  TSRDetail,
-  TsrOrderStatus,
-  TsrSalesOrder,
-  Pagination,
-  TSRDetailResponse,
-} from "@/config/api";
-import {
-  formatSalesCurrency,
-  formatSalesNumber,
-} from "@/components/sales/salesFormatters";
-import { formatDateTime } from "@/components/utils/formatters";
-import SummaryCards from "@/components/tsr-sales/SummaryCards";
-import {
-  formatMetricCurrency,
-  statusLabels,
-} from "@/components/tsr-sales/metrics";
+import { useParams } from "next/navigation";
+import { Fragment, useCallback, useEffect, useState } from "react";
 
 const PAGE_SIZE = 20;
 const ORDER_STATUSES: Array<TsrOrderStatus | "all"> = [
@@ -317,7 +314,7 @@ export default function TsrSalesDetailPage() {
         </>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
         <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
@@ -400,7 +397,7 @@ export default function TsrSalesDetailPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1750px] text-left">
+            <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                   <th className="px-4 py-3">Order ID</th>

@@ -1,8 +1,8 @@
 "use client";
 
-import { Printer } from "lucide-react";
-import type { OrderedProduct } from "@/config/api";
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
+import type { OrderedProduct } from "@/config/api";
+import { Printer } from "lucide-react";
 
 interface ShipmentPDFProps {
   products: OrderedProduct[];
@@ -46,7 +46,6 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
       <!DOCTYPE html>
       <html lang="en">
         <head>
-          <title>Ordered Products</title>
           <meta charset="utf-8" />
           <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
           <style>
