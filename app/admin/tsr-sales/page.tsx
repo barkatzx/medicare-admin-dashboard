@@ -8,11 +8,25 @@ import type {
   Territory,
   TerritoryArea,
   TSRPerformance,
+  TsrOrderStatus,
 } from "@/config/api";
 import {
   formatSalesCurrency,
   formatSalesNumber,
 } from "@/components/sales/salesFormatters";
+import {
+  getStatusCount,
+  getStatusValue,
+  statusLabels,
+} from "@/components/tsr-sales/metrics";
+
+const SUMMARY_STATUSES: TsrOrderStatus[] = [
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
 
 function territoryFor(tsr: TSRPerformance): Territory {
   return (
@@ -46,6 +60,27 @@ function currency(value: number | string | null | undefined): string {
 function orderCount(value: number | null | undefined): string {
   const count = Number(value);
   return formatSalesNumber(Number.isFinite(count) ? count : 0);
+}
+
+function sumMetric(
+  records: TSRPerformance[],
+  getValue: (record: TSRPerformance) => number | string | null | undefined,
+): number | null {
+  let total = 0;
+  let foundValue = false;
+
+  for (const record of records) {
+    const value = getValue(record);
+    if (value === null || value === undefined || value === "") continue;
+
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) continue;
+
+    total += amount;
+    foundValue = true;
+  }
+
+  return foundValue ? total : null;
 }
 
 function ErrorState({
@@ -118,6 +153,13 @@ export default function TsrSalesPage() {
       .filter(Boolean)
       .some((value) => value?.toLowerCase().includes(query)),
   );
+  const totalOrders = sumMetric(tsrs, (tsr) => tsr.totalOrders) ?? 0;
+  const totalOrderValue = sumMetric(tsrs, (tsr) => tsr.totalOrderValue);
+  const statusTotals = SUMMARY_STATUSES.map((status) => ({
+    status,
+    count: sumMetric(tsrs, (tsr) => getStatusCount(tsr, status)) ?? 0,
+    value: sumMetric(tsrs, (tsr) => getStatusValue(tsr, status)),
+  }));
 
   return (
     <div className="space-y-6">
@@ -125,6 +167,48 @@ export default function TsrSalesPage() {
         <ErrorState message={error} onRetry={() => void loadData()} />
       ) : (
         <>
+          {!loading && (
+            <section
+              aria-label="TSR order summary"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            >
+              <article className="rounded-2xl border border-gray-100 bg-white p-5">
+                <p className="text-sm font-medium text-gray-500">
+                  Total TSR Orders
+                </p>
+                <p className="mt-3 text-2xl font-bold tabular-nums text-gray-900">
+                  {orderCount(totalOrders)}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">Across all TSRs</p>
+              </article>
+              <article className="rounded-2xl border border-gray-100 bg-white p-5">
+                <p className="text-sm font-medium text-gray-500">
+                  Total TSR Order Value
+                </p>
+                <p className="mt-3 truncate text-2xl font-bold tabular-nums text-gray-900">
+                  {currency(totalOrderValue)}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">Across all TSRs</p>
+              </article>
+              {statusTotals.map(({ status, count, value }) => (
+                <article
+                  key={status}
+                  className="rounded-2xl border border-gray-100 bg-white p-5"
+                >
+                  <p className="text-sm font-medium text-gray-500">
+                    {statusLabels[status]} Orders
+                  </p>
+                  <p className="mt-3 text-2xl font-bold tabular-nums text-gray-900">
+                    {orderCount(count)}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold tabular-nums text-gray-600">
+                    {currency(value)}
+                  </p>
+                </article>
+              ))}
+            </section>
+          )}
+
           <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
             <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <div className="flex items-center gap-2.5">
