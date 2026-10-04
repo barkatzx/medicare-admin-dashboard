@@ -3,6 +3,8 @@ import type {
   Pagination,
   SummaryResponse,
   TSRDetailResponse,
+  TsrSalesAllSummary,
+  TsrSalesBestPerformance,
   TSROrdersResponse,
   TSRPerformance,
   TsrOrderStatus,
@@ -37,6 +39,19 @@ function requirePagination(value: unknown): Pagination {
 
 export async function getTsrSalesSummary(): Promise<SummaryResponse> {
   return apiClient.request("/admin/tsr-sales/summary");
+}
+
+export async function getTsrSalesAllSummary(
+  tsrId: string,
+): Promise<TsrSalesAllSummary> {
+  const params = new URLSearchParams({ tsrId });
+  return apiClient.request(
+    `/admin/tsr-sales/allsummary?${params.toString()}`,
+  );
+}
+
+export async function getTsrSalesBestPerformance(): Promise<TsrSalesBestPerformance> {
+  return apiClient.request("/admin/tsr-sales/best-performance");
 }
 
 export async function getTsrSalesTsrs(): Promise<TSRPerformance[]> {

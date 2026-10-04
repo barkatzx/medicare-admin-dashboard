@@ -63,6 +63,49 @@ export type TSRPerformance = TSR & {
 
 export interface SummaryResponse extends TSRPerformance {}
 
+export interface TsrSalesSummaryEntry {
+  tsrId: string;
+  tsrName: string | null;
+  totalOrders: number;
+  totalOrderValue: number | string;
+}
+
+export interface TsrSalesSummaryStatus {
+  count: number;
+  value: number | string;
+}
+
+export interface TsrSalesSummaryPeriod {
+  totalOrders: number;
+  totalOrderValue: number | string;
+  pending?: TsrSalesSummaryStatus;
+  confirmed?: TsrSalesSummaryStatus;
+  shipped?: TsrSalesSummaryStatus;
+  delivered?: TsrSalesSummaryStatus;
+  tsrs: TsrSalesSummaryEntry[];
+  bestTsrByOrderCount: TsrSalesSummaryEntry | null;
+  bestTsrByOrderValue: TsrSalesSummaryEntry | null;
+}
+
+export interface TsrSalesAllSummary {
+  today: TsrSalesSummaryPeriod;
+  weekly: TsrSalesSummaryPeriod;
+  monthly: TsrSalesSummaryPeriod;
+  yearly: TsrSalesSummaryPeriod;
+}
+
+export interface TsrSalesBestPerformancePeriod {
+  bestTsrByOrderCount: TsrSalesSummaryEntry | null;
+  bestTsrByOrderValue: TsrSalesSummaryEntry | null;
+}
+
+export interface TsrSalesBestPerformance {
+  today: TsrSalesBestPerformancePeriod;
+  weekly: TsrSalesBestPerformancePeriod;
+  monthly: TsrSalesBestPerformancePeriod;
+  yearly: TsrSalesBestPerformancePeriod;
+}
+
 export interface TSRDetail extends TSRPerformance {}
 
 export type TSRDetailResponse =

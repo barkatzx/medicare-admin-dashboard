@@ -98,6 +98,26 @@ const userSubItems = [
   },
 ];
 
+// TSR submenu items
+const tsrSubItems = [
+  {
+    name: "Analytics",
+    href: "/admin/tsr-summary",
+    icon: AreaChart,
+    description: "TSR analytics",
+    color: "text-blue-600",
+    bg: "bg-blue-100",
+  },
+  {
+    name: "Summary",
+    href: "/admin/tsr-sales",
+    icon: CircleDollarSign,
+    description: "TSR sales summary",
+    color: "text-emerald-500",
+    bg: "bg-emerald-50",
+  },
+];
+
 // Orders submenu items
 const orderSubItems = [
   {
@@ -199,6 +219,9 @@ export default function Sidebar() {
     isProductsPath(pathname),
   );
   const [usersOpen, setUsersOpen] = useState(() => isUsersPath(pathname));
+  const [tsrOpen, setTsrOpen] = useState(() =>
+    pathname.startsWith("/admin/tsr-sales"),
+  );
   const [ordersOpen, setOrdersOpen] = useState(() => isOrdersPath(pathname));
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -207,6 +230,7 @@ export default function Sidebar() {
   useEffect(() => {
     if (isProductsPath(pathname)) setProductsOpen(true);
     if (isUsersPath(pathname)) setUsersOpen(true);
+    if (pathname.startsWith("/admin/tsr-sales")) setTsrOpen(true);
     if (isOrdersPath(pathname)) setOrdersOpen(true);
   }, [pathname]);
 
@@ -333,6 +357,7 @@ export default function Sidebar() {
   const sidebarWidth = isCollapsed ? "w-20" : "w-64";
   const productsActive = isProductsPath(pathname);
   const usersActive = isUsersPath(pathname);
+  const tsrActive = pathname.startsWith("/admin/tsr-sales");
   const ordersActive = isOrdersPath(pathname);
 
   return (
@@ -370,7 +395,7 @@ export default function Sidebar() {
             </div>
             <button
               onClick={handleToggle}
-              className={`absolute -right-3 top-6 bg-white border border-gray-200 rounded-full p-1.5 shadow-md hover:shadow-lg transition-all duration-200 hover:bg-gray-50 ${
+              className={`absolute -right-3 top-6 bg-white border border-gray-100 rounded-full p-1.5 shadow-md hover:shadow-lg transition-all duration-200 hover:bg-gray-50 ${
                 isCollapsed ? "rotate-180" : ""
               }`}
             >
@@ -420,23 +445,92 @@ export default function Sidebar() {
                   );
                 })}
 
-                <Link
-                  href="/admin/tsr-sales"
-                  className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${isCollapsed ? "justify-center" : ""} ${pathname.startsWith("/admin/tsr-sales") ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}`}
-                >
-                  <CircleDollarSign
-                    size={20}
-                    className={`flex-shrink-0 transition-all duration-200 ${pathname.startsWith("/admin/tsr-sales") ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
-                  />
-                  {showText && (
-                    <span className="text-sm font-medium whitespace-nowrap">
-                      TSR Sales
-                    </span>
-                  )}
-                  {pathname.startsWith("/admin/tsr-sales") && showText && (
-                    <div className="absolute left-0 h-8 w-1 rounded-r-full bg-gradient-to-b from-blue-500 to-blue-600" />
-                  )}
-                </Link>
+                {/* ── TSR Dropdown ── */}
+                <div>
+                  <button
+                    onClick={() => {
+                      if (!isCollapsed || isHovered) setTsrOpen((v) => !v);
+                    }}
+                    className={`
+                      group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+                      transition-all duration-200
+                      ${isCollapsed ? "justify-center" : ""}
+                      ${tsrActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}
+                    `}
+                  >
+                    <CircleDollarSign
+                      size={20}
+                      className={`flex-shrink-0 transition-all duration-200 ${tsrActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
+                    />
+                    {showText && (
+                      <>
+                        <span className="text-sm font-medium whitespace-nowrap flex-1 text-left">
+                          TSR
+                        </span>
+                        <span
+                          className={`transition-transform duration-300 ${tsrOpen ? "rotate-90" : "rotate-0"}`}
+                        >
+                          <ChevronRight
+                            size={14}
+                            className={
+                              tsrActive ? "text-blue-500" : "text-gray-400"
+                            }
+                          />
+                        </span>
+                      </>
+                    )}
+                    {tsrActive && showText && (
+                      <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
+                    )}
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-300 ease-in-out ${tsrOpen && showText ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}
+                  >
+                    <div className="mt-0.5 mb-1 space-y-0.5">
+                      {tsrSubItems.map((sub) => {
+                        const isActive = Boolean(
+                          sub.href && pathname === sub.href,
+                        );
+                        const Icon = sub.icon;
+                        const itemContent = (
+                          <>
+                            <span
+                              className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 ${isActive ? "bg-blue-100" : `${sub.bg} group-hover:scale-110`}`}
+                            >
+                              <Icon
+                                size={12}
+                                className={
+                                  isActive ? "text-blue-600" : sub.color
+                                }
+                              />
+                            </span>
+                            <span className="text-sm font-medium whitespace-nowrap">
+                              {sub.name}
+                            </span>
+                          </>
+                        );
+
+                        return sub.href ? (
+                          <Link
+                            key={sub.name}
+                            href={sub.href}
+                            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
+                          >
+                            {itemContent}
+                          </Link>
+                        ) : (
+                          <div
+                            key={sub.name}
+                            aria-disabled="true"
+                            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 cursor-not-allowed"
+                          >
+                            {itemContent}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
 
                 {/* ── Users Dropdown ── */}
                 <div>
@@ -793,23 +887,6 @@ export default function Sidebar() {
 
       {/* Spacer for layout */}
       <div className={`${sidebarWidth} ml-3 transition-all duration-300`} />
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #a8a8a8;
-        }
-      `}</style>
     </>
   );
 }

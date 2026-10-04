@@ -5,19 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, RefreshCw, Search, Users } from "lucide-react";
 import { api } from "@/config/api";
 import type {
-  SummaryResponse,
-  StatusPerformanceMap,
   Territory,
   TerritoryArea,
   TSRPerformance,
 } from "@/config/api";
-import { TSR_ORDER_STATUSES } from "@/config/api";
 import {
   formatSalesCurrency,
   formatSalesNumber,
 } from "@/components/sales/salesFormatters";
-import SummaryCards from "@/components/tsr-sales/SummaryCards";
-import { getStatusCount, getStatusValue } from "@/components/tsr-sales/metrics";
 
 function territoryFor(tsr: TSRPerformance): Territory {
   return (
@@ -51,41 +46,6 @@ function currency(value: number | string | null | undefined): string {
 function orderCount(value: number | null | undefined): string {
   const count = Number(value);
   return formatSalesNumber(Number.isFinite(count) ? count : 0);
-}
-
-function numericValue(value: number | string | null | undefined): number {
-  if (value === null || value === undefined || value === "") return 0;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function aggregateTsrSummary(
-  tsrs: TSRPerformance[],
-  summary: SummaryResponse,
-): SummaryResponse {
-  const statusBreakdown: StatusPerformanceMap = {};
-  for (const status of TSR_ORDER_STATUSES) {
-    statusBreakdown[status] = tsrs.reduce(
-      (total, tsr) => ({
-        count: total.count + getStatusCount(tsr, status),
-        value: total.value + numericValue(getStatusValue(tsr, status)),
-      }),
-      { count: 0, value: 0 },
-    );
-  }
-
-  return {
-    ...summary,
-    totalOrders: tsrs.reduce(
-      (total, tsr) => total + numericValue(tsr.totalOrders),
-      0,
-    ),
-    totalOrderValue: tsrs.reduce(
-      (total, tsr) => total + numericValue(tsr.totalOrderValue),
-      0,
-    ),
-    statusBreakdown,
-  };
 }
 
 function ErrorState({
@@ -127,7 +87,6 @@ function TableSkeleton() {
 }
 
 export default function TsrSalesPage() {
-  const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const [tsrs, setTsrs] = useState<TSRPerformance[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -137,12 +96,7 @@ export default function TsrSalesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [summaryData, tsrData] = await Promise.all([
-        api.getTsrSalesSummary(),
-        api.getTsrSalesTsrs(),
-      ]);
-      setSummary(summaryData);
-      setTsrs(tsrData);
+      setTsrs(await api.getTsrSalesTsrs());
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -171,19 +125,6 @@ export default function TsrSalesPage() {
         <ErrorState message={error} onRetry={() => void loadData()} />
       ) : (
         <>
-          {summary ? (
-            <SummaryCards summary={aggregateTsrSummary(tsrs, summary)} />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 8 }, (_, index) => (
-                <div
-                  key={index}
-                  className="h-32 animate-pulse rounded-2xl border border-gray-100 bg-white"
-                />
-              ))}
-            </div>
-          )}
-
           <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
             <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <div className="flex items-center gap-2.5">

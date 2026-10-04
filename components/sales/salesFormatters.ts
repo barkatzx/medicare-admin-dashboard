@@ -1,4 +1,7 @@
 const numberFormatter = new Intl.NumberFormat("en-US");
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+});
 const decimalFormatter = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
@@ -9,7 +12,7 @@ export function formatSalesNumber(value: number): string {
 }
 
 export function formatSalesCurrency(value: number): string {
-  return `৳${decimalFormatter.format(value)}`;
+  return `৳${currencyFormatter.format(value)}`;
 }
 
 export function formatSalesPercent(value: number): string {
