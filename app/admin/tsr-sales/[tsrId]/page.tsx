@@ -318,7 +318,7 @@ export default function TsrSalesDetailPage() {
       )}
 
       <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 sm:px-6">
+        <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
               <Package size={16} />
@@ -331,8 +331,8 @@ export default function TsrSalesDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <label className="relative min-w-0 flex-1">
+          <div className="flex flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <label className="relative min-w-0 sm:w-64">
               <Search
                 size={16}
                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
@@ -427,7 +427,7 @@ export default function TsrSalesDetailPage() {
                       <tr className="group transition-colors hover:bg-gray-50/80">
                         <td className="px-4 py-4">
                           <code className="whitespace-nowrap rounded-lg bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
-                            #{order.orderId || order.id || "—"}
+                            #{(order.orderId || order.id || "—").slice(-8)}
                           </code>
                         </td>
                         <td className="px-4 py-4 text-sm font-medium text-gray-800">
