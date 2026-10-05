@@ -271,6 +271,12 @@ const adminRoutes: ApiEndpoint[] = [
     auth: "admin",
   },
   {
+    method: "GET",
+    endpoint: "/products/admin/out-of-stock",
+    description: "Get paginated out-of-stock products",
+    auth: "admin",
+  },
+  {
     method: "POST",
     endpoint: "/products",
     description: "Create new product",

@@ -1,9 +1,11 @@
 "use client";
 
+import ProductForm from "@/components/products/ProductForm";
+import StockManagementModal from "@/components/products/StockManagementModal";
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
-import { Product } from "@/config/api";
+import { api, Product } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchCategories } from "@/store/slices/categorySlice";
 import {
@@ -36,8 +38,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import ProductForm from "../../../components/products/ProductForm";
-import StockManagementModal from "../../../components/products/StockManagementModal";
 
 export default function ProductsPage() {
   const dispatch = useAppDispatch();
@@ -62,6 +62,27 @@ export default function ProductsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [stockCounts, setStockCounts] = useState<{
+    lowStock: number | null;
+    outOfStock: number | null;
+  }>({ lowStock: null, outOfStock: null });
+
+  const loadStockCounts = useCallback(async () => {
+    try {
+      const [lowStock, outOfStock] = await Promise.all([
+        api.getLowStockProducts(1, 1),
+        api.getOutOfStockProducts(1, 1),
+      ]);
+      setStockCounts({
+        lowStock: lowStock.pagination.total,
+        outOfStock: outOfStock.pagination.total,
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to load stock counts",
+      );
+    }
+  }, []);
 
   const loadProducts = useCallback(() => {
     dispatch(
@@ -73,7 +94,8 @@ export default function ProductsPage() {
       }),
     );
     dispatch(fetchInventoryStats() as any);
-  }, [dispatch, currentPage, searchTerm, filterCategory]);
+    void loadStockCounts();
+  }, [dispatch, currentPage, searchTerm, filterCategory, loadStockCounts]);
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -129,12 +151,6 @@ export default function ProductsPage() {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   };
 
-  const lowStockCount =
-    inventoryStats?.lowStockCount ??
-    products.filter((p) => p.stock <= 20 && p.stock > 0).length;
-  const outOfStockCount =
-    inventoryStats?.outOfStockCount ??
-    products.filter((p) => p.stock === 0).length;
   const totalValue =
     inventoryStats?.totalValue ??
     products.reduce(
@@ -155,13 +171,13 @@ export default function ProductsPage() {
     },
     {
       label: "Low Stock",
-      value: lowStockCount,
+      value: stockCounts.lowStock ?? "—",
       icon: AlertTriangle,
       color: "bg-amber-100 text-amber-600",
     },
     {
       label: "Out of Stock",
-      value: outOfStockCount,
+      value: stockCounts.outOfStock ?? "—",
       icon: AlertTriangle,
       color: "bg-red-100 text-red-600",
     },

@@ -84,17 +84,22 @@ export async function deleteProduct(productId: string): Promise<void> {
   });
 }
 
-export async function getLowStockProducts(threshold: number = 10): Promise<Product[]> {
-  const result = await apiClient.request(
-    `/products/admin/low-stock?threshold=${threshold}`,
-  );
-  if (result && result.products && Array.isArray(result.products)) {
-    return result.products;
-  }
-  if (Array.isArray(result)) {
-    return result;
-  }
-  return [];
+export async function getLowStockProducts(
+  page: number = 1,
+  limit: number = 20,
+): Promise<ProductPage> {
+  const endpoint = `/products/admin/low-stock?page=${page}&limit=${limit}`;
+  const response = await apiClient.request(endpoint);
+  return normalizeProductPage(response, page, endpoint);
+}
+
+export async function getOutOfStockProducts(
+  page: number = 1,
+  limit: number = 20,
+): Promise<ProductPage> {
+  const endpoint = `/products/admin/out-of-stock?page=${page}&limit=${limit}`;
+  const response = await apiClient.request(endpoint);
+  return normalizeProductPage(response, page, endpoint);
 }
 
 function normalizeProductPage(

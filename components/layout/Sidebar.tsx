@@ -4,6 +4,7 @@ import { api } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { logout } from "@/store/slices/authSlice";
 import {
+  AlertTriangle,
   AreaChart,
   Bell,
   CheckCircle,
@@ -39,7 +40,7 @@ import { useEffect, useRef, useState } from "react";
 const productSubItems = [
   {
     name: "Products",
-    href: "/dashboard/products",
+    href: "/dashboard/products/all-products",
     icon: Grid3X3,
     description: "Full inventory",
     color: "text-blue-500",
@@ -47,7 +48,7 @@ const productSubItems = [
   },
   {
     name: "Trending",
-    href: "/dashboard/trending",
+    href: "/dashboard/products/trending",
     icon: TrendingUp,
     description: "Top performers",
     color: "text-orange-500",
@@ -55,15 +56,31 @@ const productSubItems = [
   },
   {
     name: "Featured",
-    href: "/dashboard/featured",
+    href: "/dashboard/products/featured",
     icon: Star,
     description: "Highlighted items",
     color: "text-yellow-500",
     bg: "bg-yellow-50",
   },
   {
+    name: "Low Stock",
+    href: "/dashboard/products/low-stock",
+    icon: AlertTriangle,
+    description: "Items running low",
+    color: "text-amber-500",
+    bg: "bg-amber-50",
+  },
+  {
+    name: "Out of Stock",
+    href: "/dashboard/products/out-of-stock",
+    icon: XCircle,
+    description: "Low inventory items",
+    color: "text-red-500",
+    bg: "bg-red-50",
+  },
+  {
     name: "Categories",
-    href: "/dashboard/categories",
+    href: "/dashboard/products/categories",
     icon: Layers2,
     description: "Organize products",
     color: "text-purple-500",
@@ -71,7 +88,7 @@ const productSubItems = [
   },
   {
     name: "Distributors",
-    href: "/dashboard/distributors",
+    href: "/dashboard/products/distributors",
     icon: Store,
     description: "Manage distributors",
     color: "text-purple-500",
