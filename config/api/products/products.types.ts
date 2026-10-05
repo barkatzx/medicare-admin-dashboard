@@ -1,4 +1,5 @@
 import type { Category } from "../categories/categories.types";
+import type { Distributor } from "../distributors/distributors.types";
 
 export interface ProductImage {
   id: string;
@@ -18,6 +19,9 @@ export interface Product {
   discountPercent: number;
   stock: number;
   distributor: string | null;
+  distributorId?: string | null;
+  distributorData?: Distributor | null;
+  distributorName?: string | null;
   tp: number | null;
   categoryId: string;
   featured?: boolean;

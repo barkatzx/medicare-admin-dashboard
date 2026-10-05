@@ -5,6 +5,7 @@ import * as sales from "./sales";
 import * as tsrSales from "./tsr-sales";
 import * as products from "./products";
 import * as categories from "./categories";
+import * as distributors from "./distributors";
 import { apiClient } from "./client";
 import type { User } from "./user/user.types";
 
@@ -15,6 +16,7 @@ export * from "./sales";
 export * from "./tsr-sales";
 export * from "./products";
 export * from "./categories";
+export * from "./distributors";
 
 export const api = {
   ...auth,
@@ -24,6 +26,7 @@ export const api = {
   ...tsrSales,
   ...products,
   ...categories,
+  ...distributors,
   setToken: (token: string) => apiClient.setToken(token),
   getToken: () => apiClient.getToken(),
   clearToken: () => apiClient.clearToken(),

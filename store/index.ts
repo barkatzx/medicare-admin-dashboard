@@ -4,6 +4,7 @@ import authReducer from "./slices/authSlice";
 import userReducer from "./slices/userSlice";
 import productReducer from "./slices/productSlice";
 import categoryReducer from "./slices/categorySlice";
+import distributorReducer from "./slices/distributorSlice";
 import orderReducer from "./slices/orderSlice";
 import salesReducer from "./slices/salesSlice";
 import notificationReducer from "./slices/notificationSlice";
@@ -16,6 +17,7 @@ export const store = configureStore({
     users: userReducer,
     products: productReducer,
     categories: categoryReducer,
+    distributors: distributorReducer,
     orders: orderReducer,
     sales: salesReducer,
     notifications: notificationReducer,
