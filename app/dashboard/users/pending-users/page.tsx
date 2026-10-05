@@ -255,7 +255,7 @@ export default function PendingUsersPage() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-[11px] font-bold uppercase text-white shadow-[0_1px_2px_rgba(251,146,60,0.3)]">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-[11px] font-bold uppercase text-white">
                           {user.name?.charAt(0) || "U"}
                         </span>
                         <span className="truncate text-sm font-semibold text-gray-900">
@@ -388,7 +388,7 @@ export default function PendingUsersPage() {
                         disabled={loading}
                         className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
                           pagination.page === p
-                            ? "bg-amber-500 text-white shadow-[0_1px_2px_rgba(245,158,11,0.35)]"
+                            ? "bg-amber-500 text-white"
                             : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                         }`}
                       >

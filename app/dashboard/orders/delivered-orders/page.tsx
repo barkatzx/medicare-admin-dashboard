@@ -1,85 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { isFullOrderId } from "@/components/orders/orderSearch";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { api } from "@/config/api";
+import { fetchOrders, updateOrderStatus } from "@/store/slices/orderSlice";
 import {
-  fetchOrders,
-  updateOrderStatus,
-  confirmPayment,
-} from "@/store/slices/orderSlice";
-import {
-  Package,
-  Truck,
+  Calendar,
   CheckCircle,
-  XCircle,
-  Search,
   ChevronLeft,
   ChevronRight,
-  Calendar,
-  CreditCard,
-  Clock,
+  Package,
+  Search,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import InvoicePDF from "../../../components/orders/InvoicePDF";
-import InvoiceView from "../../../components/orders/InvoiceView";
-import { isFullOrderId } from "@/components/orders/orderSearch";
+import InvoicePDF from "../../../../components/orders/InvoicePDF";
+import InvoiceView from "../../../../components/orders/InvoiceView";
 
-export default function PendingOrdersPage() {
+export default function OrdersPage() {
   const dispatch = useAppDispatch();
   const { orders, pagination, fetching, query } = useAppSelector(
     (state) => state.orders,
   );
-  const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
-  const [activeOrderTotal, setActiveOrderTotal] = useState<number | null>(null);
-  const [countRefresh, setCountRefresh] = useState(0);
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(
     null,
   );
   const searchingById = isFullOrderId(searchTerm);
 
   useEffect(() => {
-    let isCurrent = true;
-
-    const loadActiveOrderTotal = async () => {
-      try {
-        const statusCounts = await Promise.all(
-          ["pending", "confirmed", "processing", "shipped"].map((status) =>
-            api.getAllOrders(1, 1, status),
-          ),
-        );
-
-        if (isCurrent) {
-          setActiveOrderTotal(
-            statusCounts.reduce(
-              (total, response) => total + response.pagination.total,
-              0,
-            ),
-          );
-        }
-      } catch (error) {
-        console.error("Failed to load active order counts:", error);
-        if (isCurrent) {
-          toast.error("Unable to load the total active order count.");
-        }
-      }
-    };
-
-    void loadActiveOrderTotal();
-    return () => {
-      isCurrent = false;
-    };
-  }, [countRefresh]);
-
-  useEffect(() => {
     if (searchingById) return;
     dispatch(
-      fetchOrders({ page: currentPage, limit: 10, status: statusFilter }),
+      fetchOrders({ page: currentPage, limit: 20, status: "delivered" }),
     );
-  }, [dispatch, currentPage, searchingById, statusFilter]);
+  }, [dispatch, currentPage, searchingById]);
 
   useEffect(() => {
     if (!searchingById) return;
@@ -87,12 +42,12 @@ export default function PendingOrdersPage() {
       fetchOrders({
         page: 1,
         limit: 10,
-        status: statusFilter,
+        status: "delivered",
         search: searchTerm,
         orderId: searchTerm,
       }),
     );
-  }, [dispatch, searchingById, searchTerm, statusFilter]);
+  }, [dispatch, searchTerm, searchingById]);
 
   useEffect(() => {
     if (pagination && currentPage > pagination.totalPages) {
@@ -107,17 +62,15 @@ export default function PendingOrdersPage() {
         updateOrderStatus({ orderId, status: newStatus }),
       ).unwrap();
       toast.success(`Order status updated to ${newStatus}`);
-      setCountRefresh((count) => count + 1);
       dispatch(
         fetchOrders({
           page: currentPage,
           limit: 10,
-          status: statusFilter,
+          status: "delivered",
           search: searchTerm,
           orderId: isFullOrderId(searchTerm) ? searchTerm : undefined,
         }),
       );
-      window.dispatchEvent(new Event("ordersUpdated"));
     } catch {
       toast.error("Failed to update order status");
     } finally {
@@ -125,33 +78,10 @@ export default function PendingOrdersPage() {
     }
   };
 
-  const handleConfirmPayment = async (orderId: string) => {
-    setConfirmingPayment(orderId);
-    try {
-      await dispatch(confirmPayment(orderId)).unwrap();
-      toast.success("Payment confirmed successfully");
-      window.dispatchEvent(new Event("ordersUpdated"));
-    } catch {
-      toast.error("Failed to confirm payment");
-    } finally {
-      setConfirmingPayment(null);
-    }
-  };
-
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case "pending":
-        return <Package size={14} className="text-amber-600" />;
-      case "confirmed":
-        return <CheckCircle size={14} className="text-blue-600" />;
-      case "processing":
-        return <Truck size={14} className="text-violet-600" />;
-      case "shipped":
-        return <Truck size={14} className="text-cyan-600" />;
       case "delivered":
         return <CheckCircle size={14} className="text-emerald-600" />;
-      case "cancelled":
-        return <XCircle size={14} className="text-rose-600" />;
       default:
         return null;
     }
@@ -159,34 +89,16 @@ export default function PendingOrdersPage() {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "pending":
-        return "bg-amber-50 text-amber-700 ring-amber-200/60";
-      case "confirmed":
-        return "bg-blue-50 text-blue-700 ring-blue-200/60";
-      case "processing":
-        return "bg-violet-50 text-violet-700 ring-violet-200/60";
-      case "shipped":
-        return "bg-cyan-50 text-cyan-700 ring-cyan-200/60";
       case "delivered":
         return "bg-emerald-50 text-emerald-700 ring-emerald-200/60";
-      case "cancelled":
-        return "bg-rose-50 text-rose-700 ring-rose-200/60";
       default:
         return "bg-gray-50 text-gray-700 ring-gray-200/60";
     }
   };
 
   const filteredOrders = orders.filter((order) => {
-    const orderStatus = order.status.toLowerCase();
-    if (
-      statusFilter === "all"
-        ? !["pending", "confirmed", "processing", "shipped"].includes(
-            orderStatus,
-          )
-        : orderStatus !== statusFilter
-    ) {
-      return false;
-    }
+    if (order.status.toLowerCase() !== "delivered") return false;
+
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
@@ -198,7 +110,7 @@ export default function PendingOrdersPage() {
 
   const queryMatches =
     query?.page === currentPage &&
-    query.status === statusFilter &&
+    query.status === "delivered" &&
     (searchingById
       ? query.search === searchTerm && query.orderId === searchTerm
       : !query.orderId);
@@ -207,84 +119,49 @@ export default function PendingOrdersPage() {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
-          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-blue-500 border-t-transparent" />
+          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
           <p className="text-sm font-medium text-gray-500">
-            Loading pending orders…
+            Loading delivered orders…
           </p>
         </div>
       </div>
     );
   }
 
-  const statusTabs = ["all", "pending", "confirmed", "processing", "shipped"];
-
   return (
     <div className="space-y-6">
       {/* ─── Orders Table ────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <Package size={15} strokeWidth={2.25} />
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+              <CheckCircle size={15} strokeWidth={2.25} />
             </span>
             <div>
               <h2 className="text-sm font-semibold text-gray-900">
-                Pending orders
+                Delivered orders
               </h2>
               <p className="text-[11px] text-gray-500">
-                {activeOrderTotal === null
-                  ? "Total orders unavailable"
-                  : `${activeOrderTotal} ${
-                      activeOrderTotal === 1 ? "order" : "orders"
-                    }`}
+                {pagination?.total ?? 0}{" "}
+                {(pagination?.total ?? 0) === 1 ? "order" : "orders"}
               </p>
             </div>
           </div>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-            <div className="relative w-full sm:w-64">
-              <Search
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="Search by order ID, name, or email…"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
-              />
-            </div>
-            <div
-              role="tablist"
-              aria-label="Filter by status"
-              className="inline-flex w-fit items-center gap-1 self-start rounded-xl border border-gray-100 bg-gray-50/80 p-1 sm:self-auto"
-            >
-              {statusTabs.map((status) => {
-                const isActive = statusFilter === status;
-                return (
-                  <button
-                    key={status}
-                    role="tab"
-                    type="button"
-                    aria-selected={isActive}
-                    onClick={() => {
-                      setStatusFilter(status);
-                      setCurrentPage(1);
-                    }}
-                    className={`rounded-lg px-3.5 py-2 text-xs font-semibold capitalize transition-all duration-200 ${
-                      isActive
-                        ? "bg-white text-gray-900 shadow-[0_1px_2px_rgba(16,24,40,0.06)] ring-1 ring-inset ring-gray-100"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {status}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="relative w-full sm:max-w-xs">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+              size={16}
+            />
+            <input
+              type="text"
+              placeholder="Search by order ID, name, or email…"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-50"
+            />
           </div>
         </div>
 
@@ -294,10 +171,10 @@ export default function PendingOrdersPage() {
               <Package size={22} className="text-gray-300" />
             </div>
             <p className="mt-4 text-sm font-medium text-gray-500">
-              No pending orders found
+              No delivered orders found
             </p>
             <p className="mt-1 text-xs text-gray-400">
-              Try adjusting your filters or search
+              Try adjusting your search
             </p>
           </div>
         ) : (
@@ -328,7 +205,7 @@ export default function PendingOrdersPage() {
 
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[11px] font-bold uppercase text-emerald-600 ring-1 ring-inset ring-emerald-100">
                           {order.user.name?.charAt(0) ?? "?"}
                         </span>
                         <div className="min-w-0">
@@ -363,18 +240,14 @@ export default function PendingOrdersPage() {
                           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
                             order.payment?.status === "paid"
                               ? "bg-emerald-50 text-emerald-700 ring-emerald-200/60"
-                              : order.payment?.status === "pending"
-                                ? "bg-amber-50 text-amber-700 ring-amber-200/60"
-                                : "bg-rose-50 text-rose-700 ring-rose-200/60"
+                              : "bg-amber-50 text-amber-700 ring-amber-200/60"
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
                               order.payment?.status === "paid"
                                 ? "bg-emerald-500"
-                                : order.payment?.status === "pending"
-                                  ? "bg-amber-500"
-                                  : "bg-rose-500"
+                                : "bg-amber-500"
                             }`}
                           />
                           {order.payment?.status ?? "N/A"}
@@ -393,34 +266,6 @@ export default function PendingOrdersPage() {
                       <div className="flex items-center justify-end gap-2">
                         <InvoiceView order={order} />
                         <InvoicePDF order={order} />
-
-                        {order.payment?.status === "pending" &&
-                          order.payment?.method === "cod" && (
-                            <button
-                              onClick={() => handleConfirmPayment(order.id)}
-                              disabled={confirmingPayment === order.id}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-50 text-pink-600 ring-1 ring-inset ring-pink-100 transition-all hover:bg-pink-100 disabled:opacity-50"
-                              title="Confirm Payment"
-                            >
-                              <CreditCard size={14} />
-                            </button>
-                          )}
-
-                        <select
-                          value={order.status.toLowerCase()}
-                          onChange={(e) =>
-                            handleStatusUpdate(order.id, e.target.value)
-                          }
-                          disabled={updatingStatus === order.id}
-                          className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:opacity-50"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
                       </div>
                     </td>
                   </tr>
@@ -478,7 +323,7 @@ export default function PendingOrdersPage() {
                         disabled={fetching}
                         className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
                           isActive
-                            ? "bg-blue-600 text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)]"
+                            ? "bg-emerald-600 text-white"
                             : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                         }`}
                       >

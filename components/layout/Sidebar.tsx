@@ -100,7 +100,7 @@ const productSubItems = [
 const userSubItems = [
   {
     name: "Pending",
-    href: "/dashboard/pending-users",
+    href: "/dashboard/users/pending-users",
     icon: Clock,
     description: "Approve registrations",
     color: "text-amber-500",
@@ -108,7 +108,7 @@ const userSubItems = [
   },
   {
     name: "Active",
-    href: "/dashboard/users",
+    href: "/dashboard/users/active-users",
     icon: UserCheck,
     description: "Manage customers",
     color: "text-emerald-500",
@@ -116,7 +116,7 @@ const userSubItems = [
   },
   {
     name: "TSR's",
-    href: "/dashboard/tsr",
+    href: "/dashboard/users/tsr",
     icon: UserIcon,
     description: "Manage TSRs",
     color: "text-emerald-500",
@@ -128,7 +128,7 @@ const userSubItems = [
 const tsrSubItems = [
   {
     name: "Analytics",
-    href: "/admin/tsr-summary",
+    href: "/dashboard/tsr-info/tsr-summary",
     icon: AreaChart,
     description: "TSR analytics",
     color: "text-blue-600",
@@ -136,7 +136,7 @@ const tsrSubItems = [
   },
   {
     name: "Summary",
-    href: "/admin/tsr-sales",
+    href: "/dashboard/tsr-info/tsr-sales",
     icon: CircleDollarSign,
     description: "TSR sales summary",
     color: "text-emerald-500",
@@ -148,7 +148,7 @@ const tsrSubItems = [
 const orderSubItems = [
   {
     name: "Pending",
-    href: "/dashboard/pending-orders",
+    href: "/dashboard/orders/pending-orders",
     icon: Clock,
     description: "Manage active orders",
     color: "text-blue-500",
@@ -156,7 +156,7 @@ const orderSubItems = [
   },
   {
     name: "Delivered",
-    href: "/dashboard/orders",
+    href: "/dashboard/orders/delivered-orders",
     icon: CheckCircle,
     description: "Completed shipments",
     color: "text-green-500",
@@ -164,7 +164,7 @@ const orderSubItems = [
   },
   {
     name: "Cancelled",
-    href: "/dashboard/cancel-orders",
+    href: "/dashboard/orders/cancel-orders",
     icon: XCircle,
     description: "Invalidated orders",
     color: "text-red-500",

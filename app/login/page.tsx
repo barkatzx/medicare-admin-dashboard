@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import Button from "@/components/ui/Button";
+import Spinner from "@/components/ui/Spinner";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { login } from "@/store/slices/authSlice";
-import Button from "@/components/ui/Button";
 import { Eye, EyeOff, Lock, Mail, Shield } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import Spinner from "@/components/ui/Spinner";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -56,7 +56,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8 bg-white rounded-2xl p-8">
+      <div className="max-w-md w-full space-y-8 bg-white border border-gray-100 rounded-2xl p-8">
         {/* Header */}
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
@@ -64,7 +64,7 @@ export default function LoginPage() {
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Admin Login</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to access the admin dashboard
+            Sign in to access the MediCarePLC Dashboard
           </p>
         </div>
 

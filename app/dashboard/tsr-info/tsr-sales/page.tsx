@@ -1,15 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, RefreshCw, Search, Users } from "lucide-react";
-import { api } from "@/config/api";
-import type {
-  Territory,
-  TerritoryArea,
-  TSRPerformance,
-  TsrOrderStatus,
-} from "@/config/api";
 import {
   formatSalesCurrency,
   formatSalesNumber,
@@ -19,6 +9,16 @@ import {
   getStatusValue,
   statusLabels,
 } from "@/components/tsr-sales/metrics";
+import type {
+  Territory,
+  TerritoryArea,
+  TsrOrderStatus,
+  TSRPerformance,
+} from "@/config/api";
+import { api } from "@/config/api";
+import { ArrowRight, RefreshCw, Search, Users } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 
 const SUMMARY_STATUSES: TsrOrderStatus[] = [
   "pending",
@@ -305,7 +305,7 @@ export default function TsrSalesPage() {
                         </td>
                         <td className="px-5 py-4 text-right">
                           <Link
-                            href={`/admin/tsr-sales/${encodeURIComponent(tsr.id)}`}
+                            href={`/dashboard/tsr-info/tsr-sales/${encodeURIComponent(tsr.id)}`}
                             className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
                           >
                             View Details

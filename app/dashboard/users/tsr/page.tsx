@@ -327,7 +327,7 @@ const TSR = () => {
                           aria-current={page === number ? "page" : undefined}
                           className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
                             page === number
-                              ? "bg-emerald-500 text-white shadow-[0_1px_2px_rgba(16,185,129,0.35)]"
+                              ? "bg-emerald-500 text-white"
                               : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                           }`}
                         >

@@ -1,21 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { isFullOrderId } from "@/components/orders/orderSearch";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchOrders, updateOrderStatus } from "@/store/slices/orderSlice";
 import {
-  Package,
-  XCircle,
-  Search,
+  Calendar,
   ChevronLeft,
   ChevronRight,
-  Calendar,
-  AlertTriangle,
+  Package,
+  Search,
+  XCircle,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import InvoicePDF from "../../../components/orders/InvoicePDF";
-import InvoiceView from "../../../components/orders/InvoiceView";
-import { isFullOrderId } from "@/components/orders/orderSearch";
+import InvoicePDF from "../../../../components/orders/InvoicePDF";
+import InvoiceView from "../../../../components/orders/InvoiceView";
 
 export default function CancelOrdersPage() {
   const dispatch = useAppDispatch();
@@ -30,7 +29,7 @@ export default function CancelOrdersPage() {
   useEffect(() => {
     if (searchingById) return;
     dispatch(
-      fetchOrders({ page: currentPage, limit: 10, status: "cancelled" }),
+      fetchOrders({ page: currentPage, limit: 20, status: "cancelled" }),
     );
   }, [dispatch, currentPage, searchingById]);
 
@@ -130,7 +129,7 @@ export default function CancelOrdersPage() {
   return (
     <div className="space-y-6">
       {/* ─── Orders Table ────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
@@ -307,7 +306,7 @@ export default function CancelOrdersPage() {
                         disabled={fetching}
                         className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
                           isActive
-                            ? "bg-rose-600 text-white shadow-[0_1px_2px_rgba(244,63,94,0.3)]"
+                            ? "bg-rose-600 text-white"
                             : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                         }`}
                       >
