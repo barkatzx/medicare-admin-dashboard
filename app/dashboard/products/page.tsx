@@ -45,8 +45,12 @@ export default function ProductsPage() {
     (state) => state.products,
   );
   const { categories } = useAppSelector((state) => state.categories);
-  const { trendingProducts } = useAppSelector((state) => state.trending);
-  const { featuredProducts } = useAppSelector((state) => state.featured);
+  const { pagination: trendingPagination } = useAppSelector(
+    (state) => state.trending,
+  );
+  const { pagination: featuredPagination } = useAppSelector(
+    (state) => state.featured,
+  );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
@@ -147,31 +151,31 @@ export default function ProductsPage() {
       label: "Total Products",
       value: pagination?.total ?? products.length,
       icon: Package,
-      color: "from-blue-500 to-indigo-500",
+      color: "bg-blue-100 text-blue-600",
     },
     {
       label: "Low Stock",
       value: lowStockCount,
       icon: AlertTriangle,
-      color: "from-amber-500 to-orange-600",
+      color: "bg-amber-100 text-amber-600",
     },
     {
       label: "Out of Stock",
       value: outOfStockCount,
       icon: AlertTriangle,
-      color: "from-red-500 to-rose-600",
+      color: "bg-red-100 text-red-600",
     },
     {
       label: "Trending",
-      value: trendingProducts.length,
+      value: trendingPagination.total,
       icon: Star,
-      color: "from-yellow-400 to-yellow-600",
+      color: "bg-yellow-100 text-yellow-600",
     },
     {
       label: "Featured",
-      value: featuredProducts.length,
+      value: featuredPagination.total,
       icon: Heart,
-      color: "from-pink-500 to-rose-600",
+      color: "bg-pink-100 text-pink-600",
     },
   ];
 
@@ -201,9 +205,9 @@ export default function ProductsPage() {
                 <p className="text-3xl font-bold text-gray-900 mt-1">{value}</p>
               </div>
               <div
-                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center`}
+                className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center`}
               >
-                <Icon size={22} className="text-white" />
+                <Icon size={22} className="text-current" />
               </div>
             </div>
           </div>
@@ -418,8 +422,10 @@ export default function ProductsPage() {
                           )}
                         </td> */}
 
-                        <td className="py-3 px-6 text-sm text-gray-600">
-                          {product.distributor ?? "N/A"}
+                        <td className="py-3 px-6">
+                          <span className="px-2.5 py-1 bg-olive-100 text-olive-600 text-xs font-medium rounded-lg">
+                            {product.distributor ?? "N/A"}
+                          </span>
                         </td>
                         <td className="py-3 px-6 font-semibold text-gray-900">
                           {formatSalesCurrency(product.price)}

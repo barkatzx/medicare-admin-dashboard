@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { deleteUser, fetchUsers } from "@/store/slices/userSlice";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import type { User } from "@/config/api";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { deleteUser, fetchUsers } from "@/store/slices/userSlice";
 import {
   Calendar,
   CheckCircle,
@@ -19,6 +18,7 @@ import {
   Trash2,
   Users as UsersIcon,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const PAGE_SIZE = 20;
 
@@ -446,12 +446,7 @@ const TSR = () => {
                         {area?.code || "N/A"}
                       </dd>
                     </div>
-                    <div>
-                      <dt className="text-gray-400">ID</dt>
-                      <dd className="mt-0.5 break-all font-medium text-gray-700">
-                        {area?.id || id || "N/A"}
-                      </dd>
-                    </div>
+                    <div></div>
                   </dl>
                 </section>
               ))}

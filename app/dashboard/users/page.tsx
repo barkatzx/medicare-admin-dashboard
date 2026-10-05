@@ -1,40 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { api } from "@/config/api";
-import {
-  fetchUsers,
-  deleteUser,
-  promoteUserToTSR,
-} from "@/store/slices/userSlice";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
-import toast from "react-hot-toast";
+import { api } from "@/config/api";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
+  deleteUser,
+  fetchUsers,
+  promoteUserToTSR,
+} from "@/store/slices/userSlice";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  Calendar,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   Mail,
   Phone,
   RefreshCw,
-  Calendar,
   Search,
-  Users as UsersIcon,
-  UserCheck,
-  ArrowUpRight,
   Trash2,
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
+  UserCheck,
+  Users as UsersIcon,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 export default function UsersPage() {
   const dispatch = useAppDispatch();
-  const {
-    users,
-    loading,
-    pagination,
-    promotionLoadingIds,
-  } = useAppSelector((state) => state.users);
+  const { users, loading, pagination, promotionLoadingIds } = useAppSelector(
+    (state) => state.users,
+  );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -114,7 +111,9 @@ export default function UsersPage() {
       window.dispatchEvent(new Event("usersUpdated"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to promote user to TSR",
+        error instanceof Error
+          ? error.message
+          : "Failed to promote user to TSR",
       );
     }
   };
@@ -161,7 +160,7 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* ─── Active Users Table ──────────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
         <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2.5">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
@@ -247,7 +246,7 @@ export default function UsersPage() {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-[11px] font-bold uppercase text-white shadow-[0_1px_2px_rgba(16,185,129,0.3)]">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-[11px] font-bold uppercase text-white">
                           {user.name?.charAt(0) || "U"}
                         </span>
                         <div className="min-w-0">
@@ -388,7 +387,7 @@ export default function UsersPage() {
                         disabled={loading}
                         className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
                           pagination.page === p
-                            ? "bg-emerald-500 text-white shadow-[0_1px_2px_rgba(16,185,129,0.35)]"
+                            ? "bg-emerald-500 text-white"
                             : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                         }`}
                       >

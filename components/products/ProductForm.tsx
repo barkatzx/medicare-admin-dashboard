@@ -14,7 +14,7 @@ import {
 } from "@/store/slices/productSlice";
 import { createCategory, fetchCategories } from "@/store/slices/categorySlice";
 import Button from "@/components/ui/Button";
-import type { Product } from "@/config/api";
+import { api, type Distributor, type Product } from "@/config/api";
 import {
   Upload,
   X,
@@ -65,6 +65,15 @@ export default function ProductForm({
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDesc, setNewCategoryDesc] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const [distributors, setDistributors] = useState<Distributor[]>([]);
+  const [distributorsLoading, setDistributorsLoading] = useState(true);
+  const [distributorSearch, setDistributorSearch] = useState("");
+  const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] =
+    useState(false);
+  const [isCreateDistributorModalOpen, setIsCreateDistributorModalOpen] =
+    useState(false);
+  const [newDistributorName, setNewDistributorName] = useState("");
+  const [creatingDistributor, setCreatingDistributor] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -74,9 +83,38 @@ export default function ProductForm({
     discountedPrice: product?.discountedPrice || null,
     stock: product?.stock || 0,
     distributor: product?.distributor ?? "",
+    distributorId:
+      product?.distributorId ?? product?.distributorData?.id ?? "",
     tp: product?.tp ?? null,
     categoryId: product?.categoryId || "",
   });
+
+  useEffect(() => {
+    let active = true;
+
+    const loadDistributors = async () => {
+      setDistributorsLoading(true);
+      try {
+        const result = await api.getAllDistributor();
+        if (active) setDistributors(result);
+      } catch (error) {
+        if (active) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Failed to load distributors",
+          );
+        }
+      } finally {
+        if (active) setDistributorsLoading(false);
+      }
+    };
+
+    void loadDistributors();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (product?.images) {
@@ -138,6 +176,12 @@ export default function ProductForm({
   const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(categorySearch.toLowerCase()),
   );
+  const selectedDistributor = distributors.find(
+    (distributor) => distributor.id === formData.distributorId,
+  );
+  const filteredDistributors = distributors.filter((distributor) =>
+    distributor.name.toLowerCase().includes(distributorSearch.toLowerCase()),
+  );
 
   const discountPercent =
     formData.price &&
@@ -171,6 +215,47 @@ export default function ProductForm({
       toast.error(error?.message || "Failed to create category");
     } finally {
       setCreatingCategory(false);
+    }
+  };
+
+  const handleCreateDistributor = async () => {
+    if (!newDistributorName.trim()) {
+      toast.error("Distributor name is required");
+      return;
+    }
+
+    setCreatingDistributor(true);
+    try {
+      const createdDistributor = await api.createDistributor(
+        newDistributorName.trim(),
+      );
+
+      if (
+        typeof createdDistributor?.id !== "string" ||
+        typeof createdDistributor?.name !== "string"
+      ) {
+        throw new Error("Distributor creation returned invalid data");
+      }
+
+      setDistributors((current) => [
+        ...current.filter((distributor) => distributor.id !== createdDistributor.id),
+        createdDistributor,
+      ]);
+      setFormData((current) => ({
+        ...current,
+        distributorId: createdDistributor.id,
+        distributor: createdDistributor.name,
+      }));
+      toast.success("Distributor created successfully");
+      setNewDistributorName("");
+      setIsCreateDistributorModalOpen(false);
+      setIsDistributorDropdownOpen(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create distributor",
+      );
+    } finally {
+      setCreatingDistributor(false);
     }
   };
 
@@ -324,7 +409,7 @@ export default function ProductForm({
           price: formData.price,
           discountedPrice: formData.discountedPrice,
           stock: formData.stock,
-          distributor: formData.distributor || null,
+          distributorId: formData.distributorId || null,
           tp: formData.tp,
           categoryId: formData.categoryId,
         };
@@ -371,7 +456,7 @@ export default function ProductForm({
           price: formData.price,
           discountedPrice: formData.discountedPrice,
           stock: formData.stock,
-          distributor: formData.distributor || null,
+          distributorId: formData.distributorId || null,
           tp: formData.tp,
           categoryId: formData.categoryId,
         };
@@ -573,15 +658,111 @@ export default function ProductForm({
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Distributor
             </label>
-            <input
-              type="text"
-              value={formData.distributor}
-              onChange={(e) =>
-                setFormData({ ...formData, distributor: e.target.value })
-              }
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Optional"
-            />
+            <div className="relative">
+              <Layers
+                size={18}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setIsDistributorDropdownOpen(!isDistributorDropdownOpen)
+                }
+                className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left bg-white flex items-center justify-between"
+              >
+                <span
+                  className={
+                    selectedDistributor ? "text-gray-900" : "text-gray-400"
+                  }
+                >
+                  {selectedDistributor?.name || "Select Distributor"}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={`text-gray-400 transition-transform duration-200 ${isDistributorDropdownOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {isDistributorDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setIsDistributorDropdownOpen(false)}
+                  />
+                  <div className="absolute z-20 left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                    <div className="p-2 border-b border-gray-100">
+                      <div className="relative">
+                        <Search
+                          size={14}
+                          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Search distributors..."
+                          value={distributorSearch}
+                          onChange={(e) => setDistributorSearch(e.target.value)}
+                          className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDistributorDropdownOpen(false);
+                        setIsCreateDistributorModalOpen(true);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 transition-colors flex items-center gap-2 border-b border-gray-100"
+                    >
+                      <FolderPlus size={14} />
+                      <span>Create New Distributor</span>
+                    </button>
+
+                    <div className="max-h-48 overflow-y-auto">
+                      {distributorsLoading ? (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                          Loading distributors...
+                        </div>
+                      ) : filteredDistributors.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                          No distributors found
+                        </div>
+                      ) : (
+                        filteredDistributors.map((distributor) => (
+                          <button
+                            key={distributor.id}
+                            type="button"
+                            onClick={() => {
+                              setFormData({
+                                ...formData,
+                                distributorId: distributor.id,
+                                distributor: distributor.name,
+                              });
+                              setDistributorSearch("");
+                              setIsDistributorDropdownOpen(false);
+                            }}
+                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                              formData.distributorId === distributor.id
+                                ? "bg-blue-50 text-blue-600"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            <span>{distributor.name}</span>
+                            {formData.distributorId === distributor.id && (
+                              <CheckCircle
+                                size={14}
+                                className="text-blue-600"
+                              />
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -942,6 +1123,66 @@ export default function ProductForm({
                   variant="secondary"
                   onClick={() => setIsCreateCategoryModalOpen(false)}
                   className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCreateDistributorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg">
+                  <FolderPlus size={16} className="text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Create New Distributor
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateDistributorModalOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Distributor Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newDistributorName}
+                  onChange={(e) => setNewDistributorName(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., Distributor name"
+                  autoFocus
+                  disabled={creatingDistributor}
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  onClick={handleCreateDistributor}
+                  loading={creatingDistributor}
+                  className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                >
+                  <FolderPlus size={16} className="mr-2" />
+                  Create Distributor
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsCreateDistributorModalOpen(false)}
+                  className="flex-1"
+                  disabled={creatingDistributor}
                 >
                   Cancel
                 </Button>

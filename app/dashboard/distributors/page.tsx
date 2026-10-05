@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Edit,
-  Package,
+  Eye,
   Plus,
   RefreshCw,
   Search,
@@ -312,7 +312,7 @@ export default function DistributorsPage() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-right text-sm font-semibold tabular-nums text-gray-700">
+                    <td className="px-6 py-4 text-right text-sm font-semibold tabular-nums">
                       {productCountsLoading
                         ? "…"
                         : (productCounts[distributor.id] ?? "—")}
@@ -324,7 +324,7 @@ export default function DistributorsPage() {
                           href={`/dashboard/distributors/${distributor.id}`}
                           className="group/link inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-100 transition-all hover:bg-emerald-100"
                         >
-                          <Package size={13} />
+                          <Eye size={18} />
                           View products
                           <ArrowRight
                             size={12}
