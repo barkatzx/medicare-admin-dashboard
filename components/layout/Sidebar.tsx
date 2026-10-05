@@ -88,7 +88,7 @@ const productSubItems = [
   },
   {
     name: "Distributors",
-    href: "/dashboard/products/distributors",
+    href: "/dashboard/distributors",
     icon: Store,
     description: "Manage distributors",
     color: "text-purple-500",
