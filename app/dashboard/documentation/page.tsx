@@ -1,904 +1,1743 @@
-// src/app/dashboard/documentation/page.tsx
 "use client";
 
 import {
-  BarChart3,
-  BookOpen,
   Check,
-  Code,
+  ChevronDown,
   Copy,
-  Database,
-  ExternalLink,
-  Github,
-  Key,
-  Linkedin,
+  Globe,
+  KeyRound,
   Lock,
-  Mail,
-  Package,
   Search,
-  Server,
-  Shield,
-  ShoppingCart,
-  Twitter,
-  User,
-  Users,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
-interface ApiEndpoint {
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  endpoint: string;
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+type AccessLevel = "Public" | "Customer" | "Admin" | "TSR";
+type Endpoint = {
+  method: HttpMethod;
+  path: string;
+  summary: string;
+  access: AccessLevel;
+  details: string[];
+  body?: string;
+  response?: string;
+};
+type ApiGroup = {
+  id: string;
+  title: string;
   description: string;
-  auth: "public" | "customer" | "admin";
-  body?: any;
+  endpoints: Endpoint[];
+};
+
+const baseUrl = "https://medicare-server-9je0.onrender.com";
+
+// ── helpers (keep the data below short and readable) ──────────────────────
+const ep = (
+  method: HttpMethod,
+  path: string,
+  access: AccessLevel,
+  summary: string,
+  details: string[] = [],
+  body?: string,
+  response?: string,
+): Endpoint => ({ method, path, access, summary, details, body, response });
+
+const APPROVED =
+  "Access: Authenticated, approved user; admin is allowed even if unapproved.";
+const ADMIN_ONLY =
+  "Access: Admin only. Valid bearer JWT and role admin required.";
+const NONE = "No query parameters, path parameters, or request body.";
+const PG = `"pagination": { "page": 1, "limit": 20, "total": 0, "totalPages": 0, "hasNextPage": false, "hasPrevPage": false }`;
+const MSG = (m: string) => `{\n  "message": "${m}"\n}`;
+const OK = (m: string, data?: string) =>
+  `{\n  "success": true,${data ? `\n  "data": ${data},` : ""}\n  "message": "${m}"\n}`;
+const LIST = (key: string) =>
+  `{\n  "success": true,\n  "data": {\n    "${key}": [],\n    ${PG}\n  }\n}`;
+const ID = `{ "id": "...", "name": "..." }`;
+const TSR_STATUS = `{\n  "status": "confirmed | processing | shipped | delivered | cancelled"\n}`;
+const TSR_SALES = (
+  path: string,
+  summary: string,
+  details: string[],
+  response: string,
+) =>
+  ep(
+    "GET",
+    path,
+    "Admin",
+    summary,
+    [`Also available at /v1${path}.`, ...details],
+    undefined,
+    response,
+  );
+
+const apiGroups: ApiGroup[] = [
+  {
+    id: "overview",
+    title: "Overview",
+    description:
+      "Base platform behavior, security model, versioning rules, and rate limits.",
+    endpoints: [
+      ep(
+        "GET",
+        "/",
+        "Public",
+        "Health check endpoint for service availability.",
+        [
+          "No API version is inferred for the health check: its path is /.",
+          "The handler does not read a request body or query parameters.",
+        ],
+        undefined,
+        `{\n  "status": "OK",\n  "message": "Server is running"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/*",
+        "Public",
+        "Version prefix conventions and shared authentication rules.",
+        [
+          "The server uses the /v1 prefix for versioned routes, except the health check and one mount of the admin TSR-sales router.",
+          "Authentication uses Authorization: Bearer <JWT>. Successful login issues a JWT that expires in 30 days.",
+          "authenticateToken rejects missing tokens with 401, blacklisted tokens with 401, and invalid or expired tokens with 403.",
+          "authorizeApproved requires isApproved: true, except that it also permits users whose JWT role is admin. authorizeAdmin checks only for role admin.",
+          "TSR routes check for role TSR but do not use authorizeApproved. TSR order data is limited by the TSR user's division, district, and upazila.",
+          "Public routes do not require authentication. Role names are case-sensitive (admin, customer, TSR).",
+          "Registration is limited to 5 attempts per IP per 15 minutes; login is limited to 10 attempts per IP per 5 minutes.",
+        ],
+      ),
+    ],
+  },
+  {
+    id: "auth",
+    title: "Authentication",
+    description:
+      "Self-registration, sign-in, logout, and token handling rules.",
+    endpoints: [
+      ep(
+        "POST",
+        "/v1/users/register",
+        "Public",
+        "Self-register a customer account. New accounts are unapproved and cannot log in until approved by an admin.",
+        [
+          "Access: Public; no authentication. No query or path parameters.",
+          "The validator requires valid email/mobile phone, password length >= 6, and allows only customer as the optional role.",
+          "Registration attempts are rate-limited to 5 per IP per 15 minutes.",
+          "A cart is created during registration.",
+          "Response 201 includes selected user fields (id, email, phone_number, name, pharmacy_name, role, isApproved, address/location IDs, createdAt); no password is returned.",
+        ],
+        `{
+  "email": "customer@example.com",
+  "phone_number": "+15555550100",
+  "password": "string (minimum 6 characters)",
+  "name": "optional string",
+  "pharmacy_name": "optional string",
+  "fullAddress": "optional string",
+  "divisionId": "optional UUID",
+  "districtId": "optional UUID",
+  "upazilaId": "optional UUID",
+  "role": "optional; only customer"
+}`,
+        `{
+  "message": "User registered successfully",
+  "data": {
+    "user": { "id": "...", "email": "...", "phone_number": "...", "name": "...", "pharmacy_name": "...", "role": "customer", "isApproved": false },
+    "message": "Registration successful. Please wait for admin approval."
+  }
+}`,
+      ),
+      ep(
+        "POST",
+        "/v1/users/login",
+        "Public",
+        "Authenticate an approved user by email or phone number.",
+        [
+          "Access: Public; no authentication.",
+          "At least one of email or phone_number and a non-empty password are required.",
+          "Login rejects unapproved accounts.",
+          "Attempts are rate-limited to 10 per IP per 5 minutes.",
+          "Successful login returns a JWT valid for 30 days.",
+        ],
+        `{\n  "email": "optional email",\n  "phone_number": "optional mobile number",\n  "password": "string"\n}`,
+        `{
+  "message": "Login successful",
+  "data": {
+    "user": { "id": "...", "email": "...", "phone_number": "...", "role": "...", "isApproved": true, "name": "...", "pharmacy_name": "..." },
+    "token": "...",
+    "message": "Login successful"
+  }
+}`,
+      ),
+      ep(
+        "POST",
+        "/v1/users/logout",
+        "Customer",
+        "Revoke the bearer token by placing it on the Redis blacklist.",
+        [
+          "Access: Authenticated user; any role.",
+          "Valid bearer JWT required. The token is blacklisted for 24 hours.",
+          "No query parameters, path parameters, or request body.",
+        ],
+        undefined,
+        MSG("Logged out successfully"),
+      ),
+    ],
+  },
+  {
+    id: "profile",
+    title: "User profile",
+    description:
+      "Current-user data access, profile updates, and password changes.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/users/profile",
+        "Customer",
+        "Get the current user's profile, location relations, saved addresses, and up to 10 unread notifications.",
+        [
+          APPROVED,
+          "User identity comes from the JWT; users cannot request another user's profile.",
+          "No query parameters, path parameters, or request body.",
+        ],
+        undefined,
+        `{
+  "message": "Profile fetched successfully",
+  "data": {
+    "id": "...",
+    "email": "...",
+    "division": { "id": "..." },
+    "district": { "id": "..." },
+    "upazila": { "id": "..." },
+    "addresses": [],
+    "notifications": []
+  }
+}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/users/profile",
+        "Customer",
+        "Update recognized fields on the current user's profile.",
+        [
+          APPROVED,
+          "Unrecognized fields are not used by the handler.",
+          "Updates only the authenticated user's profile. The route invalidates the profile cache.",
+        ],
+        `{
+  "name": "optional string",
+  "pharmacy_name": "optional string",
+  "phone_number": "optional mobile number",
+  "fullAddress": "optional string",
+  "divisionId": "optional UUID",
+  "districtId": "optional UUID",
+  "upazilaId": "optional UUID"
+}`,
+        `{
+  "message": "Profile updated successfully",
+  "data": { "id": "...", "email": "...", "name": "...", "pharmacy_name": "...", "role": "...", "isApproved": true, "divisionId": "...", "districtId": "...", "upazilaId": "..." }
+}`,
+      ),
+      ep(
+        "POST",
+        "/v1/users/change-password",
+        "Customer",
+        "Change the current user's password after verifying the existing password.",
+        [
+          APPROVED,
+          "Only the authenticated user's password can be changed.",
+          "The handler requires both fields; no additional new-password length rule is applied here.",
+        ],
+        `{\n  "oldPassword": "string",\n  "newPassword": "string"\n}`,
+        MSG("Password changed successfully"),
+      ),
+    ],
+  },
+  {
+    id: "addresses",
+    title: "Addresses",
+    description: "Saved shipping addresses for the authenticated user.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/users/addresses",
+        "Customer",
+        "List the authenticated user's addresses, newest first.",
+        [
+          APPROVED,
+          "Only addresses owned by the authenticated user are returned.",
+        ],
+        undefined,
+        `{
+  "message": "Addresses fetched successfully",
+  "data": [
+    { "id": "...", "street": "...", "city": "...", "state": "...", "postalCode": "...", "country": "...", "isDefault": true }
+  ]
+}`,
+      ),
+      ep(
+        "POST",
+        "/v1/users/addresses",
+        "Customer",
+        "Add an address. The first address becomes default automatically; setting isDefault: true makes it the default.",
+        [
+          APPROVED,
+          "Address is attached to the authenticated user.",
+          "Related address and profile caches are invalidated.",
+        ],
+        `{
+  "street": "string (required)",
+  "city": "string (required)",
+  "state": "optional string",
+  "postalCode": "optional string",
+  "country": "string (required)",
+  "isDefault": "optional boolean"
+}`,
+        `{\n  "message": "Address added successfully",\n  "data": { "id": "...", "street": "...", "city": "...", "country": "...", "isDefault": true }\n}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/users/addresses/:addressId",
+        "Customer",
+        "Update an address owned by the authenticated user.",
+        [
+          APPROVED,
+          "An address belonging to another user is treated as not found.",
+          "If the default is unset, the oldest remaining address is made default when one exists.",
+        ],
+        `{
+  "street": "optional string",
+  "city": "optional string",
+  "state": "optional string",
+  "postalCode": "optional string",
+  "country": "optional string",
+  "isDefault": "optional boolean"
+}`,
+        `{\n  "message": "Address updated successfully",\n  "data": { "id": "...", "isDefault": false }\n}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/users/addresses/:addressId/default",
+        "Customer",
+        "Make the specified owned address the user's default address.",
+        [
+          APPROVED,
+          "Address must belong to the authenticated user.",
+          "No query parameters or request body.",
+        ],
+        undefined,
+        `{\n  "message": "Default address set successfully",\n  "data": { "id": "...", "isDefault": true }\n}`,
+      ),
+      ep(
+        "DELETE",
+        "/v1/users/addresses/:addressId",
+        "Customer",
+        "Delete an owned address.",
+        [
+          APPROVED,
+          "Address must belong to the authenticated user.",
+          "Deletion is rejected with 400 if an order uses the address.",
+          "When deleting the default, the oldest remaining address becomes default.",
+        ],
+        undefined,
+        MSG("Address deleted successfully"),
+      ),
+    ],
+  },
+  {
+    id: "admin-users",
+    title: "User & admin management",
+    description:
+      "Admin-only user listing, approval, role promotion, and deletion.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/users/all",
+        "Admin",
+        "List users, optionally filtering by role and approval state.",
+        [
+          "Access: Admin only.",
+          "Query parameters: page (default 1), limit (default 20), role (admin, customer, or TSR), isApproved (true selects approved; any other supplied value selects unapproved).",
+          "Passwords are not selected. Invalid role returns 400.",
+        ],
+        undefined,
+        `{
+  "message": "Users fetched successfully",
+  "data": {
+    "users": [],
+    "pagination": { "page": 1, "limit": 20, "total": 0, "pages": 0, "hasNextPage": false, "hasPrevPage": false }
+  }
+}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/users/approve/:userId",
+        "Admin",
+        "Approve a user and create an approval notification for them.",
+        [
+          "Access: Admin only.",
+          "Already-approved user returns 400. Unknown user returns 404.",
+          "No query parameters or request body.",
+        ],
+        undefined,
+        `{\n  "message": "User approved successfully",\n  "data": { "id": "...", "email": "...", "name": "...", "role": "...", "isApproved": true }\n}`,
+      ),
+      ep(
+        "PATCH",
+        "/v1/users/:userId/role",
+        "Admin",
+        "Promote a customer to TSR.",
+        [
+          "Access: Admin only.",
+          "Only a current customer can be promoted.",
+          "Invalid role returns 400; a non-customer returns 409; a missing user returns 404.",
+        ],
+        `{\n  "role": "TSR"\n}`,
+        `{\n  "message": "User promoted to TSR successfully",\n  "data": { "id": "...", "email": "...", "name": "...", "role": "TSR", "isApproved": true, "createdAt": "..." }\n}`,
+      ),
+      ep(
+        "DELETE",
+        "/v1/users/:userId",
+        "Admin",
+        "Delete the specified user profile.",
+        ["Access: Admin only.", "No query parameters or request body."],
+        undefined,
+        MSG("User profile deleted successfully"),
+      ),
+    ],
+  },
+  {
+    id: "notifications",
+    title: "Notifications",
+    description:
+      "Per-user notification reads, mark-as-read, and admin send operations.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/users/notifications",
+        "Customer",
+        "List the authenticated user's notifications and unread count.",
+        [
+          APPROVED,
+          "Query parameters: unreadOnly=true filters the list to unread items; page (default 1); limit (default 20).",
+          "Only the authenticated user's notifications are returned.",
+        ],
+        undefined,
+        `{
+  "message": "Notifications fetched successfully",
+  "data": {
+    "notifications": [],
+    "unreadCount": 0,
+    "pagination": { "page": 1, "limit": 20, "total": 0, "pages": 0 }
+  }
+}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/users/notifications/:notificationId",
+        "Customer",
+        "Mark one of the current user's notifications as read.",
+        [APPROVED, "Notification must belong to the authenticated user."],
+        undefined,
+        `{\n  "message": "Notification marked as read",\n  "data": { "id": "...", "isRead": true }\n}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/users/notifications/read-all",
+        "Customer",
+        "Mark all of the current user's unread notifications as read.",
+        [APPROVED, "Affects only the authenticated user's notifications."],
+        undefined,
+        `{\n  "message": "All notifications marked as read",\n  "data": { "count": 0 }\n}`,
+      ),
+      ep(
+        "POST",
+        "/v1/users/notifications/send",
+        "Admin",
+        "Create a notification for one user.",
+        ["Access: Admin only.", "userId must identify an existing user."],
+        `{\n  "userId": "string",\n  "title": "string",\n  "message": "string",\n  "type": "order | approval | system"\n}`,
+        `{\n  "message": "Notification sent successfully",\n  "data": { "id": "...", "title": "...", "type": "system" }\n}`,
+      ),
+      ep(
+        "POST",
+        "/v1/users/notifications/send-bulk",
+        "Admin",
+        "Create the same notification for each listed user.",
+        [
+          "Access: Admin only.",
+          "userIds must be a non-empty array and every ID must exist.",
+        ],
+        `{\n  "userIds": ["string"],\n  "title": "string",\n  "message": "string",\n  "type": "order | approval | system"\n}`,
+        `{\n  "message": "Notifications sent to N users successfully",\n  "data": { "count": 0, "notifications": [] }\n}`,
+      ),
+    ],
+  },
+  {
+    id: "cart",
+    title: "Cart",
+    description:
+      "Cart retrieval, item updates, and order preparation. All cart endpoints use the current user's cart and require authenticateToken plus authorizeApproved (admin bypasses approval). Cart mutations invalidate the cart cache.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/users/cart",
+        "Customer",
+        "Get cart items and calculated subtotal, savings, total, and quantity count.",
+        [
+          APPROVED,
+          "Only the authenticated user's cart is returned.",
+          "Empty carts return an empty items array and zero totals.",
+        ],
+        undefined,
+        `{
+  "success": true,
+  "data": {
+    "items": [{ "id": "...", "quantity": 1, "product": { "finalPrice": 0, "discountPercent": 0 }, "itemTotal": 0, "itemSavings": 0 }],
+    "subtotal": 0,
+    "totalSavings": 0,
+    "total": 0,
+    "itemCount": 0
+  }
+}`,
+      ),
+      ep(
+        "GET",
+        "/v1/users/cart/count",
+        "Customer",
+        "Get the sum of quantities in the current user's cart.",
+        ["Only the authenticated user's cart is counted."],
+        undefined,
+        `{\n  "success": true,\n  "message": "Cart item count fetched successfully",\n  "data": { "count": 0 }\n}`,
+      ),
+      ep(
+        "POST",
+        "/v1/users/cart/add",
+        "Customer",
+        "Add a product quantity to the cart, incrementing an existing matching cart item.",
+        [
+          "Uses only the authenticated user's cart.",
+          "Returns 404 for an unknown product and 400 for invalid quantity or insufficient stock.",
+          "quantity must be at least 1.",
+        ],
+        `{\n  "productId": "string",\n  "quantity": 1\n}`,
+        OK("Product added to cart successfully"),
+      ),
+      ep(
+        "PUT",
+        "/v1/users/cart/item/:itemId",
+        "Customer",
+        "Set a cart item's quantity.",
+        [
+          "The item must belong to the authenticated user's cart.",
+          "quantity cannot exceed current product stock.",
+          "quantity must be at least 1.",
+        ],
+        `{\n  "quantity": 1\n}`,
+        `{\n  "success": true,\n  "message": "Cart item updated successfully",\n  "data": { "id": "...", "quantity": 1, "productId": "..." }\n}`,
+      ),
+      ep(
+        "DELETE",
+        "/v1/users/cart/item/:itemId",
+        "Customer",
+        "Remove one item from the current user's cart.",
+        ["The item must belong to the authenticated user's cart."],
+        undefined,
+        OK("Item removed from cart successfully"),
+      ),
+      ep(
+        "DELETE",
+        "/v1/users/cart/clear",
+        "Customer",
+        "Remove all items from the current user's cart.",
+        ["Affects only the authenticated user's cart."],
+        undefined,
+        OK("Cart cleared successfully (N items removed)"),
+      ),
+    ],
+  },
+  {
+    id: "products",
+    title: "Products",
+    description:
+      "Public product browsing, search, and admin inventory management.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/products",
+        "Public",
+        "List products with optional filters, sorting, and pagination. Includes image, category, distributor name, and computed price/discount fields.",
+        [
+          "Query parameters: page (default 1); limit (default 20); categoryId; minPrice; maxPrice; onSale=true; inStock=true; sortBy (default createdAt); sortOrder (default desc).",
+          "The supplied sort field/order are passed to Prisma without an endpoint allowlist.",
+          "The default list does not exclude out-of-stock products unless inStock=true.",
+        ],
+        undefined,
+        `{
+  "success": true,
+  "data": {
+    "products": [{ "id": "...", "price": 0, "discountedPrice": null, "finalPrice": 0, "savings": 0, "discountBadge": "...", "discountPercent": 0, "distributor": "...", "distributorId": "...", "tp": null, "images": [], "category": {} }],
+    ${PG}
+  }
+}`,
+      ),
+      ep(
+        "GET",
+        "/v1/products/:id",
+        "Public",
+        "Fetch one product with images, category, distributor name, and computed discount fields.",
+        ["Unknown product returns 404."],
+        undefined,
+        `{\n  "success": true,\n  "data": { "id": "...", "finalPrice": 0, "savings": 0, "discountBadge": "...", "discountPercent": 0, "images": [], "category": {}, "distributor": "..." }\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/products/search",
+        "Public",
+        "Search in-stock products by case-insensitive name or description.",
+        [
+          "Query parameters: q (required); page (default 1); limit (default 20).",
+          "Missing/non-string q returns 400.",
+        ],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "products": [],\n    "pagination": { "page": 1, "limit": 20, "total": 0, "totalPages": 0 }\n  }\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/products/trending",
+        "Public",
+        "List trending, in-stock products, newest first.",
+        ["Query parameters: page (default 1; fixed page size 20)."],
+        undefined,
+        LIST("products"),
+      ),
+      ep(
+        "GET",
+        "/v1/products/featured",
+        "Public",
+        "List featured, in-stock products, newest first.",
+        [
+          "Query parameters: page (default 1; fixed page size 20).",
+          "Same envelope and product fields as GET /v1/products/trending.",
+        ],
+        undefined,
+        LIST("products"),
+      ),
+      ep(
+        "GET",
+        "/v1/products/new",
+        "Public",
+        "List in-stock products created during the last 15 days.",
+        ["Query parameters: page (default 1); limit (default 20)."],
+        undefined,
+        LIST("products"),
+      ),
+      ep(
+        "GET",
+        "/v1/products/admin/low-stock",
+        "Admin",
+        "List products with stock from 1 through 20, ordered by stock ascending.",
+        [
+          "Query parameters: page (default 1); limit (default 20, capped at 20; invalid/non-positive values use 20).",
+          ADMIN_ONLY,
+        ],
+        undefined,
+        LIST("products"),
+      ),
+      ep(
+        "GET",
+        "/v1/products/admin/out-of-stock",
+        "Admin",
+        "List products with stock exactly zero.",
+        [
+          "Query parameters: page (default 1); limit (default 20, capped at 20).",
+          ADMIN_ONLY,
+        ],
+        undefined,
+        LIST("products"),
+      ),
+      ep(
+        "POST",
+        "/v1/products",
+        "Admin",
+        "Create a product, optionally uploading product images.",
+        [
+          "Request body: multipart/form-data.",
+          "Required fields: name, description, price (> 0), categoryId.",
+          "Optional fields: discountedPrice, discountPercent, stock (defaults to 0), tp, and either distributorId or distributor (name, not both).",
+          "Image files use field name images (up to 10 files, max 5 MB each; JPEG, JPG, PNG, GIF, WebP).",
+        ],
+        undefined,
+        `{\n  "success": true,\n  "data": { "id": "...", "price": 0, "discountedPrice": null, "finalPrice": 0, "savings": 0, "images": [], "category": {}, "distributor": "...", "tp": null },\n  "message": "Product created successfully"\n}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/products/:id",
+        "Admin",
+        "Update recognized product fields and optionally append uploaded images.",
+        [
+          "Request body: multipart/form-data.",
+          "Optional fields: name, description, price, discountedPrice, discountPercent, stock, categoryId, tp, and either distributorId or distributor (not both).",
+          "Image files use images (same upload restrictions as product creation).",
+        ],
+        undefined,
+        `{\n  "success": true,\n  "data": { "id": "...", "price": 0, "finalPrice": 0, "images": [], "category": {}, "distributor": "...", "tp": null },\n  "message": "Product updated successfully"\n}`,
+      ),
+      ep(
+        "DELETE",
+        "/v1/products/:id",
+        "Admin",
+        "Delete a product and its database image records.",
+        [
+          "Deletion is rejected if the product appears in existing order items.",
+        ],
+        undefined,
+        OK("Product deleted successfully"),
+      ),
+      ep(
+        "PATCH",
+        "/v1/products/:id/stock",
+        "Admin",
+        "Set stock directly or increment/decrement the current stock.",
+        [
+          "If operation is omitted or has another value, stock is assigned directly.",
+          "A decrement below zero returns 400.",
+        ],
+        `{\n  "stock": 5,\n  "operation": "increment | decrement"\n}`,
+        `{\n  "success": true,\n  "data": { "id": "...", "stock": 0, "distributor": "...", "tp": null },\n  "message": "Stock updated successfully"\n}`,
+      ),
+      ep(
+        "PATCH",
+        "/v1/products/:id/trending",
+        "Admin",
+        "Set a product's trending flag.",
+        ["trending must be boolean."],
+        `{\n  "trending": true\n}`,
+        OK(
+          "Trending status updated successfully",
+          `{ "id": "...", "trending": true }`,
+        ),
+      ),
+      ep(
+        "PATCH",
+        "/v1/products/:id/featured",
+        "Admin",
+        "Set a product's featured flag.",
+        ["featured must be boolean."],
+        `{\n  "featured": true\n}`,
+        OK(
+          "Featured status updated successfully",
+          `{ "id": "...", "featured": true }`,
+        ),
+      ),
+      ep(
+        "POST",
+        "/v1/products/:id/images",
+        "Admin",
+        "Add images to an existing product; the first image is made default only if the product has no current default image.",
+        [
+          "Request body: multipart/form-data image files in field images (up to 10 files, max 5 MB each; JPEG/JPG/PNG/GIF/WebP).",
+        ],
+        undefined,
+        OK("Images added successfully", `{ "added": 0 }`),
+      ),
+      ep(
+        "DELETE",
+        "/v1/products/:productId/images/:imageId",
+        "Admin",
+        "Delete a product image and, if it was default, promote another image when available.",
+        ["Image must belong to the given product."],
+        undefined,
+        OK("Image deleted successfully"),
+      ),
+      ep(
+        "PATCH",
+        "/v1/products/:productId/images/:imageId/default",
+        "Admin",
+        "Make one image the default image for its product.",
+        ["Image must belong to the given product."],
+        undefined,
+        OK("Default image set successfully"),
+      ),
+    ],
+  },
+  {
+    id: "categories",
+    title: "Categories",
+    description: "Public category reads and admin category management.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/categories",
+        "Public",
+        "List categories alphabetically with product counts.",
+        [NONE],
+        undefined,
+        `{\n  "success": true,\n  "data": [{ "id": "...", "name": "...", "_count": { "products": 0 } }]\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/categories/:id",
+        "Public",
+        "Get a category and up to 20 of its in-stock products, newest first.",
+        ["Missing category returns 404."],
+        undefined,
+        `{\n  "success": true,\n  "data": { "id": "...", "name": "...", "products": [] }\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/categories/:id/products",
+        "Public",
+        "List in-stock products for one category, newest first.",
+        [
+          "Query parameters: page (default 1); limit (default 20).",
+          "Missing category returns 404.",
+        ],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "products": [],\n    "pagination": { "page": 1, "limit": 20, "total": 0, "totalPages": 0 }\n  }\n}`,
+      ),
+      ep(
+        "POST",
+        "/v1/categories",
+        "Admin",
+        "Create a category.",
+        ["A missing name or duplicate name returns 400."],
+        `{\n  "name": "string (required)",\n  "description": "optional"\n}`,
+        OK("Category created successfully", ID),
+      ),
+      ep(
+        "PUT",
+        "/v1/categories/:id",
+        "Admin",
+        "Update category name and/or description.",
+        ["Missing category returns 404.", "Duplicate name returns 400."],
+        `{\n  "name": "optional string",\n  "description": "optional string"\n}`,
+        OK("Category updated successfully", ID),
+      ),
+      ep(
+        "DELETE",
+        "/v1/categories/:id",
+        "Admin",
+        "Delete an empty category.",
+        ["Deletion is rejected if the category has products."],
+        undefined,
+        OK("Category deleted successfully"),
+      ),
+    ],
+  },
+  {
+    id: "distributors",
+    title: "Distributors",
+    description:
+      "Admin-only distributor management. The currently registered route spelling is dristributors (not distributors).",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/dristributors",
+        "Admin",
+        "List distributors alphabetically.",
+        [NONE],
+        undefined,
+        `{\n  "success": true,\n  "data": [${ID}]\n}`,
+      ),
+      ep(
+        "POST",
+        "/v1/dristributors",
+        "Admin",
+        "Create a distributor.",
+        [
+          "The handler rejects any body keys other than name.",
+          "Duplicate name returns 409.",
+        ],
+        `{\n  "name": "non-empty string"\n}`,
+        OK("Distributor created successfully", ID),
+      ),
+      ep(
+        "GET",
+        "/v1/dristributors/:id",
+        "Admin",
+        "Get one distributor.",
+        ["Missing distributor returns 404."],
+        undefined,
+        `{\n  "success": true,\n  "data": ${ID}\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/dristributors/:id/products",
+        "Admin",
+        "List a distributor's products newest first, including pricing/discount calculations.",
+        [
+          "Query parameters: page (default 1); limit (default 20).",
+          "Missing distributor returns 404.",
+        ],
+        undefined,
+        LIST("products"),
+      ),
+      ep(
+        "PATCH",
+        "/v1/dristributors/:id",
+        "Admin",
+        "Rename a distributor.",
+        [
+          "The handler rejects any body keys other than name.",
+          "Duplicate name returns 409; missing distributor returns 404.",
+        ],
+        `{\n  "name": "non-empty string"\n}`,
+        OK("Distributor updated successfully", ID),
+      ),
+      ep(
+        "DELETE",
+        "/v1/dristributors/:id",
+        "Admin",
+        "Delete a distributor without associated products.",
+        [
+          "Deletion is rejected with 409 if products reference it.",
+          "Missing distributor returns 404.",
+        ],
+        undefined,
+        OK("Distributor deleted successfully"),
+      ),
+    ],
+  },
+  {
+    id: "orders",
+    title: "Orders",
+    description: "Customer checkout flow and administrator order operations.",
+    endpoints: [
+      ep(
+        "POST",
+        "/v1/orders",
+        "Customer",
+        "Create a pending COD order from the current user's cart, decrement stock, clear the cart, create pending payment, and notify the user.",
+        [
+          "Requires approved-user access (admin bypasses approval).",
+          "The shipping address and cart are scoped to the current user.",
+          "Empty cart, unavailable address, or insufficient stock returns an error.",
+        ],
+        `{\n  "shippingAddressId": "string (required; must belong to current user)",\n  "paymentMethod": "optional; defaults to cod"\n}`,
+        `{\n  "success": true,\n  "data": { "id": "...", "status": "pending", "items": [], "payment": {}, "shippingAddress": {} },\n  "message": "Order created successfully"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/orders/my-orders",
+        "Customer",
+        "List only the current user's orders, newest first.",
+        [
+          "Query parameters: page (default 1); limit (default 10); status (passed as an order status filter without endpoint validation).",
+          "Results are restricted to the authenticated user.",
+        ],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "orders": [],\n    "pagination": { "page": 1, "limit": 10, "total": 0, "totalPages": 0 }\n  }\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/orders/my-orders/:orderId",
+        "Customer",
+        "Get one order belonging to the current user.",
+        ["Missing/not-owned order returns 404."],
+        undefined,
+        `{\n  "success": true,\n  "data": { "id": "...", "items": [], "payment": {}, "shippingAddress": {} }\n}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/orders/:orderId/cancel",
+        "Customer",
+        "Cancel the current user's pending order, restore stock, mark its payment failed, and create a notification.",
+        [
+          "Order must belong to the current user and have status pending.",
+          "Another status returns 400.",
+        ],
+        undefined,
+        OK(
+          "Order cancelled successfully",
+          `{ "id": "...", "status": "cancelled" }`,
+        ),
+      ),
+      ep(
+        "GET",
+        "/v1/orders",
+        "Admin",
+        "List all orders, newest first, with customer, item/product, payment, and shipping-address information.",
+        [
+          "Query parameters: page (default 1); limit (default 20); status (passed to the database as a status filter without endpoint validation).",
+        ],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "orders": [],\n    "pagination": { "page": 1, "limit": 20, "total": 0, "totalPages": 0 }\n  }\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/orders/:orderId",
+        "Admin",
+        "Get any order with customer, item/product/image, payment, and shipping-address details.",
+        ["Missing order returns 404."],
+        undefined,
+        `{\n  "success": true,\n  "data": { "id": "...", "user": {}, "items": [], "payment": {}, "shippingAddress": {} }\n}`,
+      ),
+      ep(
+        "PUT",
+        "/v1/orders/:orderId/status",
+        "Admin",
+        "Set an order status and notify its customer.",
+        [
+          "Status values are checked by the handler.",
+          "pending is not accepted by this endpoint.",
+        ],
+        TSR_STATUS,
+        OK(
+          "Order status updated successfully",
+          `{ "id": "...", "status": "shipped" }`,
+        ),
+      ),
+      ep(
+        "PUT",
+        "/v1/orders/:orderId/payment/confirm",
+        "Admin",
+        "Mark the order payment as paid and notify the customer.",
+        ["Unknown order returns 404.", "Already-paid payment returns 400."],
+        undefined,
+        OK(
+          "Payment confirmed successfully",
+          `{ "id": "...", "status": "paid", "paidAt": "..." }`,
+        ),
+      ),
+    ],
+  },
+  {
+    id: "tsr",
+    title: "TSR APIs",
+    description:
+      "All TSR routes are mounted at /v1/tsr. They require a valid bearer JWT and exact role TSR. Unlike approved-user routes, these routes do not check account approval. List, detail, and update operations use only orders belonging to customers whose division, district, and upazila all match the TSR's assigned territory.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/tsr/orders",
+        "TSR",
+        "List orders in the authenticated TSR's territory, newest first.",
+        [
+          "Query parameters: page (default 1); limit (default 20); status (pending, confirmed, processing, shipped, delivered, cancelled); search (order ID, customer name, pharmacy name, or phone); startDate; endDate.",
+          "Missing territory returns the same empty list with a no-territory message.",
+          "Invalid status returns 400. Date strings are parsed by the service; invalid dates are ignored there.",
+        ],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "orders": [],\n    "pagination": { "page": 1, "limit": 20, "total": 0, "totalPages": 0 }\n  },\n  "message": "TSR orders retrieved successfully"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/tsr/orders/summary",
+        "TSR",
+        "Count territory orders by status.",
+        ["No territory returns zero counts and a no-territory message."],
+        undefined,
+        `{\n  "success": true,\n  "data": { "totalOrders": 0, "pending": 0, "confirmed": 0, "processing": 0, "shipped": 0, "delivered": 0, "cancelled": 0 },\n  "message": "TSR order summary retrieved successfully"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/tsr/orders/:orderId",
+        "TSR",
+        "Get a territory order with customer/location, products, payment, and shipping details.",
+        ["Orders outside territory or unavailable territory return 404."],
+        undefined,
+        `{\n  "success": true,\n  "data": { "id": "...", "user": {}, "items": [], "payment": {}, "shippingAddress": {} }\n}`,
+      ),
+      ep(
+        "PATCH",
+        "/v1/tsr/orders/:orderId/status",
+        "TSR",
+        "Update status of an order in the TSR's territory and notify its customer.",
+        [
+          "Order must be in the authenticated TSR's territory.",
+          "Invalid status returns 400.",
+        ],
+        TSR_STATUS,
+        OK(
+          "Order status updated successfully",
+          `{ "id": "...", "status": "shipped" }`,
+        ),
+      ),
+    ],
+  },
+  {
+    id: "admin-tsr-sales",
+    title: "Admin TSR-Sales",
+    description:
+      "The same six admin-only routes are mounted at both prefixes: /admin/tsr-sales and /v1/admin/tsr-sales. Every route requires a valid bearer JWT and exact role admin.",
+    endpoints: [
+      TSR_SALES(
+        "/admin/tsr-sales/summary",
+        "Return order totals and sums grouped by status across all orders.",
+        [NONE],
+        `{\n  "success": true,\n  "data": {\n    "totalOrders": 0,\n    "totalOrderValue": 0,\n    "pending": { "count": 0, "value": 0 },\n    "confirmed": { "count": 0, "value": 0 },\n    "delivered": { "count": 0, "value": 0 },\n    "cancelled": { "count": 0, "value": 0 }\n  }\n}`,
+      ),
+      TSR_SALES(
+        "/admin/tsr-sales/allsummary",
+        "Return today, weekly, monthly, and yearly order/value summaries and TSR breakdowns/best performers.",
+        [
+          "Optional query parameter tsrId (UUID). When supplied, the summary is limited to that TSR; invalid ID returns 400, unknown TSR returns 404.",
+        ],
+        `{\n  "success": true,\n  "data": {\n    "today": { "totalOrders": 0, "totalOrderValue": 0, "tsrs": [], "bestTsrByOrderCount": {}, "bestTsrByOrderValue": {} },\n    "weekly": {},\n    "monthly": {},\n    "yearly": {}\n  }\n}`,
+      ),
+      TSR_SALES(
+        "/admin/tsr-sales/best-performance",
+        "Return best TSR by order count and order value for today, weekly, monthly, and yearly periods.",
+        ["A best TSR value can be null if there is no qualifying performer."],
+        `{\n  "success": true,\n  "data": {\n    "today": { "bestTsrByOrderCount": {}, "bestTsrByOrderValue": {} },\n    "weekly": {},\n    "monthly": {},\n    "yearly": {}\n  }\n}`,
+      ),
+      TSR_SALES(
+        "/admin/tsr-sales/tsrs",
+        "List TSR users with territory and aggregated order totals/statuses for their territories.",
+        [NONE],
+        `{\n  "success": true,\n  "data": [{ "id": "...", "name": "...", "email": "...", "division": {}, "district": {}, "upazila": {}, "totalOrders": 0, "totalOrderValue": 0 }]\n}`,
+      ),
+      TSR_SALES(
+        "/admin/tsr-sales/tsrs/:tsrId",
+        "Get TSR territory details, all-status territory totals, and the latest 20 territory orders.",
+        ["Invalid UUID returns 400; unknown/non-TSR ID returns 404."],
+        `{\n  "success": true,\n  "data": {\n    "tsr": {},\n    "totalOrders": 0,\n    "totalOrderValue": 0,\n    "territoryOrders": [],\n    "territoryOrdersPagination": { "page": 1, "limit": 20, "total": 0, "totalPages": 0 }\n  }\n}`,
+      ),
+      TSR_SALES(
+        "/admin/tsr-sales/tsrs/:tsrId/orders",
+        "Paginate/search/filter orders in a specified TSR's territory.",
+        [
+          "Query parameters: page (default 1, positive integer); limit (default 20, range 1–100); status (a database order status); search (order ID, customer name, pharmacy name, or phone); startDate; endDate (end date includes through 23:59:59.999 UTC).",
+          "Invalid filters/UUID return 400; unknown/non-TSR ID returns 404.",
+        ],
+        `{\n  "success": true,\n  "data": {\n    "orders": [],\n    "pagination": { "page": 1, "limit": 20, "total": 0, "totalPages": 0 }\n  }\n}`,
+      ),
+    ],
+  },
+  {
+    id: "sales",
+    title: "Sales reports",
+    description:
+      "Every sales endpoint requires a valid bearer JWT and exact role admin. These reports have no query or path parameters.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/sales/daily",
+        "Admin",
+        "Aggregate all pending and confirmed orders across all dates (despite the route's daily name), including item quantities and calculated discounts.",
+        [NONE],
+        undefined,
+        `{\n  "success": true,\n  "data": { "period": "daily", "totalSales": 0, "totalOrders": 0, "averageOrderValue": 0, "totalItemsSold": 0, "totalDiscounts": 0 },\n  "message": "Daily sales retrieved successfully"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/sales/weekly",
+        "Admin",
+        "Report shipped and delivered orders from the last 7 local calendar days, with daily breakdown and totals.",
+        [NONE],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "daily_breakdown": [],\n    "weekly_totals": { "totalSales": 0, "totalOrders": 0, "totalItemsSold": 0, "averageOrderValue": 0 },\n    "average_daily_sales": 0\n  },\n  "message": "Weekly sales retrieved successfully"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/sales/monthly",
+        "Admin",
+        "Report delivered orders from the last 30 local calendar days, with daily breakdown, totals, and best day.",
+        [NONE],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "daily_breakdown": [],\n    "monthly_totals": { "totalSales": 0, "totalOrders": 0, "totalItemsSold": 0, "averageOrderValue": 0 },\n    "average_daily_sales": 0,\n    "best_day": {}\n  },\n  "message": "Monthly sales retrieved successfully"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/sales/yearly",
+        "Admin",
+        "Report delivered orders over the last 12 rolling months, with monthly breakdown, totals, and best month.",
+        [NONE],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "monthly_breakdown": [],\n    "yearly_totals": { "totalSales": 0, "totalOrders": 0, "totalItemsSold": 0, "averageOrderValue": 0 },\n    "average_monthly_sales": 0,\n    "best_month": {}\n  },\n  "message": "Yearly sales retrieved successfully"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/sales/summary",
+        "Admin",
+        "Return all-time sales summary, sales growth percentages, and totals by order status.",
+        [
+          NONE,
+          "Summary sales totals/customers are based on paid, non-cancelled orders; sales-by-status includes every order status.",
+        ],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "overall_summary": { "totalSales": 0, "totalOrders": 0, "averageOrderValue": 0, "totalItemsSold": 0, "totalDiscounts": 0, "totalCustomers": 0, "topProducts": [], "topCategories": [], "topCustomers": [] },\n    "growth_percentage": { "daily": 0, "weekly": 0, "monthly": 0, "yearly": 0 },\n    "sales_by_status": [{ "status": "pending", "totalSales": 0, "totalOrders": 0 }]\n  },\n  "message": "Sales summary retrieved successfully"\n}`,
+      ),
+      ep(
+        "GET",
+        "/v1/sales/today-ordered-products",
+        "Admin",
+        "Group order items by product for all confirmed orders; despite the route name, the query has no date filter.",
+        [NONE],
+        undefined,
+        `{\n  "success": true,\n  "data": {\n    "products": [{ "productName": "...", "distributor": "...", "quantity": 0, "price": 0, "tp": null }],\n    "summary": { "totalProducts": 0, "totalQuantity": 0, "totalRevenue": 0 }\n  },\n  "message": "Ordered products retrieved successfully"\n}`,
+      ),
+    ],
+  },
+  {
+    id: "locations",
+    title: "Locations & route inventory",
+    description: "Location API status and route inventory cross-check.",
+    endpoints: [
+      ep(
+        "GET",
+        "/v1/locations",
+        "Public",
+        "There are no separately registered division, district, upazila, or location lookup endpoints in the current application.",
+        [
+          "Registration/profile payloads accept location IDs, and user/profile/TSR/order responses may include location relations, but no location API route is mounted.",
+        ],
+      ),
+      ep(
+        "GET",
+        "/v1/route-inventory",
+        "Public",
+        "Route inventory cross-check reflecting all router modules mounted in src/index.ts.",
+        [
+          "Mounted modules: users, categories, products, orders, TSR, distributor routes, sales, both admin TSR-sales mount prefixes, and the root health check.",
+          "The TSR router is mounted twice at the same /v1/tsr prefix; this does not create additional distinct URLs.",
+          "No other API router or location route is registered.",
+        ],
+      ),
+    ],
+  },
+];
+
+const row = (
+  group: string,
+  p: boolean,
+  c: boolean,
+  a: boolean,
+  t: boolean,
+) => ({ group, public: p, customer: c, admin: a, tsr: t });
+const roleMatrix = [
+  row("Health GET /", true, true, true, true),
+  row("Registration and login", true, true, true, true),
+  row("Logout", false, true, true, true),
+  row("Public product reads (GET /v1/products...)", true, true, true, true),
+  row("Admin product inventory and mutations", false, false, true, false),
+  row("Public category reads (GET /v1/categories...)", true, true, true, true),
+  row("Category mutations", false, false, true, false),
+  row("Distributor APIs (/v1/dristributors...)", false, false, true, false),
+  row(
+    "User profile, address, notification reads/updates, and cart",
+    false,
+    true,
+    true,
+    true,
+  ),
+  row(
+    "Admin user management and notification sending",
+    false,
+    false,
+    true,
+    false,
+  ),
+  row(
+    "Customer order creation, history, and cancellation",
+    false,
+    true,
+    true,
+    true,
+  ),
+  row(
+    "Admin order listing, status, and payment management",
+    false,
+    false,
+    true,
+    false,
+  ),
+  row("TSR territory order APIs (/v1/tsr...)", false, false, false, true),
+  row("Admin TSR-sales APIs (both mount prefixes)", false, false, true, false),
+  row("Sales reports (/v1/sales...)", false, false, true, false),
+];
+
+const METHODS: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
+const ACCESS: AccessLevel[] = ["Public", "Customer", "Admin", "TSR"];
+
+const methodTone: Record<HttpMethod, string> = {
+  GET: "text-emerald-700 bg-emerald-50",
+  POST: "text-sky-700 bg-sky-50",
+  PUT: "text-amber-700 bg-amber-50",
+  PATCH: "text-violet-700 bg-violet-50",
+  DELETE: "text-rose-700 bg-rose-50",
+};
+
+const accessTone: Record<AccessLevel, string> = {
+  Public: "text-slate-600 bg-slate-100",
+  Customer: "text-sky-700 bg-sky-50",
+  Admin: "text-violet-700 bg-violet-50",
+  TSR: "text-teal-700 bg-teal-50",
+};
+
+const steps = [
+  ["Register", "POST /v1/users/register creates an unapproved customer."],
+  ["Get approved", "An admin calls PUT /v1/users/approve/:userId."],
+  ["Log in", "POST /v1/users/login returns a JWT valid for 30 days."],
+  ["Call the API", "Send Authorization: Bearer <token> on protected routes."],
+];
+
+function toCurl(e: Endpoint) {
+  const parts = [`curl -X ${e.method} "${baseUrl}${e.path}"`];
+  if (e.access !== "Public") parts.push(`-H "Authorization: Bearer $TOKEN"`);
+  if (e.body) {
+    parts.push(`-H "Content-Type: application/json"`);
+    parts.push(`-d '${e.body.replace(/\s*\n\s*/g, " ")}'`);
+  }
+  return parts.join(" \\\n  ");
 }
 
-const customerRoutes: ApiEndpoint[] = [
-  // Authentication
-  {
-    method: "POST",
-    endpoint: "/users/register",
-    description: "Register a new user account",
-    auth: "public",
-  },
-  {
-    method: "POST",
-    endpoint: "/users/login",
-    description: "Login to user account",
-    auth: "public",
-  },
-  // Profile Management
-  {
-    method: "GET",
-    endpoint: "/users/profile",
-    description: "Get user profile information",
-    auth: "customer",
-  },
-  {
-    method: "PUT",
-    endpoint: "/users/profile",
-    description: "Update user profile",
-    auth: "customer",
-  },
-  {
-    method: "POST",
-    endpoint: "/users/change-password",
-    description: "Change user password",
-    auth: "customer",
-  },
-  // Address Management
-  {
-    method: "GET",
-    endpoint: "/users/addresses",
-    description: "Get all user addresses",
-    auth: "customer",
-  },
-  {
-    method: "POST",
-    endpoint: "/users/addresses",
-    description: "Add new address",
-    auth: "customer",
-  },
-  {
-    method: "PUT",
-    endpoint: "/users/addresses/:addressId",
-    description: "Update address",
-    auth: "customer",
-  },
-  {
-    method: "DELETE",
-    endpoint: "/users/addresses/:addressId",
-    description: "Delete address",
-    auth: "customer",
-  },
-  {
-    method: "PUT",
-    endpoint: "/users/addresses/:addressId/default",
-    description: "Set default address",
-    auth: "customer",
-  },
-  // Cart Management
-  {
-    method: "GET",
-    endpoint: "/users/cart",
-    description: "Get user cart",
-    auth: "customer",
-  },
-  {
-    method: "GET",
-    endpoint: "/users/cart/count",
-    description: "Get cart item count",
-    auth: "customer",
-  },
-  {
-    method: "POST",
-    endpoint: "/users/cart/add",
-    description: "Add item to cart",
-    auth: "customer",
-  },
-  {
-    method: "PUT",
-    endpoint: "/users/cart/item/:itemId",
-    description: "Update cart item",
-    auth: "customer",
-  },
-  {
-    method: "DELETE",
-    endpoint: "/users/cart/item/:itemId",
-    description: "Remove cart item",
-    auth: "customer",
-  },
-  {
-    method: "DELETE",
-    endpoint: "/users/cart/clear",
-    description: "Clear cart",
-    auth: "customer",
-  },
-  // Notifications
-  {
-    method: "GET",
-    endpoint: "/users/notifications",
-    description: "Get user notifications",
-    auth: "customer",
-  },
-  {
-    method: "PUT",
-    endpoint: "/users/notifications/read-all",
-    description: "Mark all notifications as read",
-    auth: "customer",
-  },
-  {
-    method: "PUT",
-    endpoint: "/users/notifications/:notificationId/read",
-    description: "Mark notification as read",
-    auth: "customer",
-  },
-  // Products (Public)
-  {
-    method: "GET",
-    endpoint: "/products",
-    description: "Get all products",
-    auth: "public",
-  },
-  {
-    method: "GET",
-    endpoint: "/products/search",
-    description: "Search products",
-    auth: "public",
-  },
-  {
-    method: "GET",
-    endpoint: "/products/:id",
-    description: "Get product by ID",
-    auth: "public",
-  },
-  {
-    method: "GET",
-    endpoint: "/products/trending",
-    description: "Get trending products",
-    auth: "public",
-  },
-  {
-    method: "GET",
-    endpoint: "/products/featured",
-    description: "Get featured products",
-    auth: "public",
-  },
-  {
-    method: "GET",
-    endpoint: "/products/new",
-    description: "Get new products",
-    auth: "public",
-  },
-  // Categories (Public)
-  {
-    method: "GET",
-    endpoint: "/categories",
-    description: "Get all categories",
-    auth: "public",
-  },
-  {
-    method: "GET",
-    endpoint: "/categories/:id",
-    description: "Get category by ID",
-    auth: "public",
-  },
-  {
-    method: "GET",
-    endpoint: "/categories/:id/products",
-    description: "Get products by category",
-    auth: "public",
-  },
-  // Orders (Customer)
-  {
-    method: "POST",
-    endpoint: "/orders",
-    description: "Create new order",
-    auth: "customer",
-  },
-  {
-    method: "GET",
-    endpoint: "/orders/my-orders",
-    description: "Get my orders",
-    auth: "customer",
-  },
-  {
-    method: "GET",
-    endpoint: "/orders/my-orders/:orderId",
-    description: "Get order by ID",
-    auth: "customer",
-  },
-  {
-    method: "PUT",
-    endpoint: "/orders/:orderId/cancel",
-    description: "Cancel order",
-    auth: "customer",
-  },
-];
-
-const adminRoutes: ApiEndpoint[] = [
-  // User Management
-  {
-    method: "GET",
-    endpoint: "/users/all",
-    description: "Get all users",
-    auth: "admin",
-  },
-  {
-    method: "PUT",
-    endpoint: "/users/approve/:userId",
-    description: "Approve user",
-    auth: "admin",
-  },
-  {
-    method: "POST",
-    endpoint: "/users/notifications/send",
-    description: "Send notification to user",
-    auth: "admin",
-  },
-  {
-    method: "POST",
-    endpoint: "/users/notifications/send-bulk",
-    description: "Send bulk notifications",
-    auth: "admin",
-  },
-  // Product Management
-  {
-    method: "GET",
-    endpoint: "/products/admin/low-stock",
-    description: "Get low stock products",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/products/admin/out-of-stock",
-    description: "Get paginated out-of-stock products",
-    auth: "admin",
-  },
-  {
-    method: "POST",
-    endpoint: "/products",
-    description: "Create new product",
-    auth: "admin",
-  },
-  {
-    method: "PUT",
-    endpoint: "/products/:id",
-    description: "Update product",
-    auth: "admin",
-  },
-  {
-    method: "DELETE",
-    endpoint: "/products/:id",
-    description: "Delete product",
-    auth: "admin",
-  },
-  {
-    method: "POST",
-    endpoint: "/products/:id/images",
-    description: "Add product images",
-    auth: "admin",
-  },
-  {
-    method: "DELETE",
-    endpoint: "/products/:productId/images/:imageId",
-    description: "Delete product image",
-    auth: "admin",
-  },
-  {
-    method: "PATCH",
-    endpoint: "/products/:id/stock",
-    description: "Update product stock",
-    auth: "admin",
-  },
-  {
-    method: "PATCH",
-    endpoint: "/products/{{productId}}/trending",
-    description: "Update product trending status",
-    auth: "admin",
-  },
-  {
-    method: "PATCH",
-    endpoint: "/products/{{productId}}/featured",
-    description: "Update product featured status",
-    auth: "admin",
-  },
-  // Category Management
-  {
-    method: "POST",
-    endpoint: "/categories",
-    description: "Create category",
-    auth: "admin",
-  },
-  {
-    method: "PUT",
-    endpoint: "/categories/:id",
-    description: "Update category",
-    auth: "admin",
-  },
-  {
-    method: "DELETE",
-    endpoint: "/categories/:id",
-    description: "Delete category",
-    auth: "admin",
-  },
-  // Order Management
-  {
-    method: "GET",
-    endpoint: "/orders",
-    description: "Get all orders",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/orders/:orderId",
-    description: "Get order by ID",
-    auth: "admin",
-  },
-  {
-    method: "PUT",
-    endpoint: "/orders/:orderId/status",
-    description: "Update order status",
-    auth: "admin",
-  },
-  {
-    method: "PUT",
-    endpoint: "/orders/:orderId/payment/confirm",
-    description: "Confirm payment",
-    auth: "admin",
-  },
-  // Sales & Reports
-  {
-    method: "GET",
-    endpoint: "/sales/daily",
-    description: "Get daily sales",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/sales/weekly",
-    description: "Get weekly sales",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/sales/monthly",
-    description: "Get monthly sales",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/sales/yearly",
-    description: "Get yearly sales",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/sales/summary",
-    description: "Get sales summary",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/sales/custom-range",
-    description: "Get custom range sales",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/sales/top-products",
-    description: "Get top selling products",
-    auth: "admin",
-  },
-  {
-    method: "GET",
-    endpoint: "/sales/today-ordered-products",
-    description: "Get today's ordered products",
-    auth: "admin",
-  },
-];
-
-const baseUrl = "https://medicare-server-9je0.onrender.com/v1";
-
-export default function DocumentationPage() {
-  const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"customer" | "admin">("customer");
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const handleCopy = async (text: string) => {
-    await navigator.clipboard.writeText(`${baseUrl}${text}`);
-    setCopiedEndpoint(text);
-    toast.success("Endpoint copied to clipboard!");
-    setTimeout(() => setCopiedEndpoint(null), 2000);
-  };
-
-  const filteredCustomerRoutes = customerRoutes.filter(
-    (route) =>
-      route.endpoint.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      route.description.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
-  const filteredAdminRoutes = adminRoutes.filter(
-    (route) =>
-      route.endpoint.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      route.description.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
-
-  const getMethodColor = (method: string) => {
-    switch (method) {
-      case "GET":
-        return "bg-green-100 text-green-700 border-green-200";
-      case "POST":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      case "PUT":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case "PATCH":
-        return "bg-purple-100 text-purple-700 border-purple-200";
-      case "DELETE":
-        return "bg-red-100 text-red-700 border-red-200";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
-    }
-  };
-
+function CopyButton({
+  value,
+  label = "Copy",
+}: {
+  value: string;
+  label?: string;
+}) {
+  const [done, setDone] = useState(false);
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-8 text-white">
-        <div className="absolute right-0 top-0 -mr-16 -mt-16 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl" />
-        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 h-48 w-48 rounded-full bg-purple-500/10 blur-3xl" />
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur">
-              <BookOpen size={24} className="text-white" />
-            </div>
-            <h1 className="text-3xl font-bold">API Documentation</h1>
-          </div>
-          <p className="text-gray-300 max-w-2xl">
-            Complete API reference for the Medicare Admin Dashboard. All
-            endpoints are documented with their request methods, authentication
-            requirements, and expected responses.
-          </p>
-          <div className="mt-6 flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-xs text-gray-400">
-                API Status: Operational
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Shield size={12} className="text-blue-400" />
-              <span className="text-xs text-gray-400">
-                JWT Authentication Required
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Server size={12} className="text-purple-400" />
-              <span className="text-xs text-gray-400">RESTful API</span>
-            </div>
-          </div>
-        </div>
+    <button
+      type="button"
+      onClick={async (ev) => {
+        ev.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(value);
+          setDone(true);
+          setTimeout(() => setDone(false), 1400);
+        } catch {
+          toast.error("Unable to copy.");
+        }
+      }}
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-slate-400 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+    >
+      {done ? <Check size={12} /> : <Copy size={12} />}
+      {done ? "Copied" : label}
+    </button>
+  );
+}
+
+function Code({ title, code }: { title: string; code: string }) {
+  return (
+    <div className="overflow-hidden rounded-lg bg-[#0E1B22]">
+      <div className="flex items-center justify-between border-b border-white/10 px-3 py-1">
+        <span className="text-[11px] font-medium text-slate-400">{title}</span>
+        <CopyButton value={code} />
       </div>
-
-      {/* Base URL Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <Server size={18} className="text-blue-600" />
-          </div>
-          <h2 className="text-lg font-semibold text-gray-900">Base URL</h2>
-        </div>
-        <div className="bg-gray-900 rounded-xl p-4 flex items-center justify-between">
-          <code className="text-sm font-mono text-gray-300">{baseUrl}</code>
-          <button
-            onClick={() => handleCopy("")}
-            className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            {copiedEndpoint === "" ? (
-              <Check size={16} className="text-green-400" />
-            ) : (
-              <Copy size={16} className="text-gray-400" />
-            )}
-          </button>
-        </div>
-        <p className="text-xs text-gray-500 mt-3">
-          All API requests should be made to this base URL followed by the
-          endpoint path.
-        </p>
-      </div>
-
-      {/* Authentication Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-amber-100 rounded-lg">
-            <Key size={18} className="text-amber-600" />
-          </div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            Authentication
-          </h2>
-        </div>
-        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-          <p className="text-sm text-amber-800 mb-3">
-            Protected routes require a valid JWT token in the Authorization
-            header:
-          </p>
-          <div className="bg-gray-900 rounded-xl p-3">
-            <code className="text-xs font-mono text-gray-300">
-              Authorization: Bearer &lt;your_jwt_token&gt;
-            </code>
-          </div>
-          <div className="mt-3 flex items-center gap-2 text-xs text-amber-700">
-            <Shield size={12} />
-            <span>
-              Tokens expire after 365 days. Use the login endpoint to obtain a
-              new token.
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab("customer")}
-          className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-all ${
-            activeTab === "customer"
-              ? "bg-white text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Users size={16} />
-            Customer Routes
-          </div>
-        </button>
-        <button
-          onClick={() => setActiveTab("admin")}
-          className={`px-6 py-3 text-sm font-medium rounded-t-lg transition-all ${
-            activeTab === "admin"
-              ? "bg-white text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Shield size={16} />
-            Admin Routes
-          </div>
-        </button>
-      </div>
-
-      {/* Search Bar */}
-      <div className="relative">
-        <Search
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-          size={18}
-        />
-        <input
-          type="text"
-          placeholder="Search endpoints..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
-        />
-      </div>
-
-      {/* Endpoints Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-blue-100 rounded-lg">
-              <Code size={16} className="text-blue-600" />
-            </div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              {activeTab === "customer"
-                ? "Customer Endpoints"
-                : "Admin Endpoints"}
-            </h2>
-            <span className="px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full ml-2">
-              {activeTab === "customer"
-                ? filteredCustomerRoutes.length
-                : filteredAdminRoutes.length}{" "}
-              endpoints
-            </span>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-100">
-                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Method
-                </th>
-                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Endpoint
-                </th>
-                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Auth
-                </th>
-                <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Copy
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {(activeTab === "customer"
-                ? filteredCustomerRoutes
-                : filteredAdminRoutes
-              ).map((route, idx) => (
-                <tr
-                  key={idx}
-                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors group"
-                >
-                  <td className="py-3 px-6">
-                    <span
-                      className={`inline-flex px-2.5 py-1 rounded-lg text-xs font-mono font-semibold ${getMethodColor(route.method)}`}
-                    >
-                      {route.method}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6">
-                    <code className="text-xs font-mono text-gray-900">
-                      {route.endpoint}
-                    </code>
-                  </td>
-                  <td className="py-3 px-6 text-sm text-gray-600">
-                    {route.description}
-                  </td>
-                  <td className="py-3 px-6">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        route.auth === "public"
-                          ? "bg-gray-100 text-gray-600"
-                          : route.auth === "customer"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-purple-100 text-purple-700"
-                      }`}
-                    >
-                      {route.auth === "public" ? (
-                        <Globe size={10} />
-                      ) : route.auth === "customer" ? (
-                        <User size={10} />
-                      ) : (
-                        <Shield size={10} />
-                      )}
-                      {route.auth === "public"
-                        ? "Public"
-                        : route.auth === "customer"
-                          ? "Customer"
-                          : "Admin"}
-                    </span>
-                  </td>
-                  <td className="py-3 px-6">
-                    <button
-                      onClick={() => handleCopy(route.endpoint)}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
-                    >
-                      {copiedEndpoint === route.endpoint ? (
-                        <Check size={16} className="text-green-500" />
-                      ) : (
-                        <Copy size={16} />
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {(activeTab === "customer"
-          ? filteredCustomerRoutes
-          : filteredAdminRoutes
-        ).length === 0 && (
-          <div className="text-center py-12">
-            <Search size={32} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500 font-medium">No endpoints found</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Try adjusting your search
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white rounded-lg shadow-sm">
-              <Package size={18} className="text-blue-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Total Customer Endpoints</p>
-              <p className="text-2xl font-bold text-blue-700">
-                {customerRoutes.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white rounded-lg shadow-sm">
-              <Shield size={18} className="text-purple-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Total Admin Endpoints</p>
-              <p className="text-2xl font-bold text-purple-700">
-                {adminRoutes.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white rounded-lg shadow-sm">
-              <Database size={18} className="text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Total Resources</p>
-              <p className="text-2xl font-bold text-emerald-700">
-                {customerRoutes.length + adminRoutes.length}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-100">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white rounded-lg shadow-sm">
-              <Lock size={18} className="text-orange-600" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Protected Routes</p>
-              <p className="text-2xl font-bold text-orange-700">
-                {customerRoutes.filter((r) => r.auth !== "public").length +
-                  adminRoutes.length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* API Categories Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <Users size={24} className="mx-auto mb-2 text-blue-600" />
-          <h4 className="text-sm font-semibold text-gray-900">
-            User Management
-          </h4>
-          <p className="text-xs text-gray-500 mt-1">6 endpoints</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <Package size={24} className="mx-auto mb-2 text-green-600" />
-          <h4 className="text-sm font-semibold text-gray-900">
-            Product Management
-          </h4>
-          <p className="text-xs text-gray-500 mt-1">9 endpoints</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <ShoppingCart size={24} className="mx-auto mb-2 text-purple-600" />
-          <h4 className="text-sm font-semibold text-gray-900">
-            Order Management
-          </h4>
-          <p className="text-xs text-gray-500 mt-1">8 endpoints</p>
-        </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <BarChart3 size={24} className="mx-auto mb-2 text-orange-600" />
-          <h4 className="text-sm font-semibold text-gray-900">
-            Sales & Reports
-          </h4>
-          <p className="text-xs text-gray-500 mt-1">11 endpoints</p>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-center">
-        <div className="absolute right-0 top-0 -mr-16 -mt-16 h-48 w-48 rounded-full bg-blue-500/10 blur-2xl" />
-        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 h-48 w-48 rounded-full bg-purple-500/10 blur-2xl" />
-
-        <div className="relative">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-              <span className="text-white text-xs font-bold">Q</span>
-            </div>
-            <p className="text-sm text-gray-300">
-              Built with precision by{" "}
-              <a
-                href="https://www.qodeax.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-white hover:text-blue-400 transition-colors inline-flex items-center gap-1"
-              >
-                Qodeax – Software Agency
-                <ExternalLink size={12} />
-              </a>
-            </p>
-          </div>
-          <p className="text-xs text-gray-400 max-w-xl mx-auto leading-relaxed">
-            Qodeax specializes in building high-performance web applications,
-            scalable backend systems, and developer-first tools. This admin
-            panel is engineered for clarity, performance, and complete API
-            controllability.
-          </p>
-          <div className="flex items-center justify-center gap-4 mt-4">
-            <a
-              href="#"
-              className="text-gray-500 hover:text-blue-400 transition-colors"
-            >
-              <Github size={16} />
-            </a>
-            <a
-              href="#"
-              className="text-gray-500 hover:text-blue-400 transition-colors"
-            >
-              <Twitter size={16} />
-            </a>
-            <a
-              href="#"
-              className="text-gray-500 hover:text-blue-400 transition-colors"
-            >
-              <Linkedin size={16} />
-            </a>
-            <a
-              href="#"
-              className="text-gray-500 hover:text-blue-400 transition-colors"
-            >
-              <Mail size={16} />
-            </a>
-          </div>
-          <div className="mt-3 pt-3 border-t border-gray-700/50">
-            <p className="text-[10px] text-gray-500">
-              © 2024 MediCare. All rights reserved. | Version 1.0.0
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="text-center text-xs text-gray-400 pt-4">
-        Last updated: {new Date().toLocaleString()}
-      </div>
+      <pre className="overflow-x-auto p-3 font-mono text-[12px] leading-5 text-slate-200">
+        {code}
+      </pre>
     </div>
   );
 }
 
-// Helper component for Globe icon (not in lucide-react by default)
-const Globe = ({ size, className }: { size?: number; className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width={size || 24}
-    height={size || 24}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <circle cx="12" cy="12" r="10" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-  </svg>
-);
+function Path({ path }: { path: string }) {
+  return (
+    <code className="font-mono text-[13px] text-slate-900">
+      {path.split(/(:\w+)/g).map((seg, i) =>
+        seg.startsWith(":") ? (
+          <span key={i} className="rounded bg-teal-50 px-1 text-teal-700">
+            {seg}
+          </span>
+        ) : (
+          <span key={i}>{seg}</span>
+        ),
+      )}
+    </code>
+  );
+}
+
+export default function DocumentationPage() {
+  const [query, setQuery] = useState("");
+  const [method, setMethod] = useState<HttpMethod | null>(null);
+  const [access, setAccess] = useState<AccessLevel | null>(null);
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = ["INPUT", "TEXTAREA"].includes(
+        (e.target as HTMLElement).tagName,
+      );
+      if (e.key === "/" && !typing) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if (e.key === "Escape") {
+        setQuery("");
+        searchRef.current?.blur();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const groups = useMemo(() => {
+    const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return apiGroups
+      .map((g) => ({
+        ...g,
+        endpoints: g.endpoints.filter((e) => {
+          if (method && e.method !== method) return false;
+          if (access && e.access !== access) return false;
+          const hay =
+            `${e.method} ${e.path} ${e.summary} ${e.access} ${e.details.join(" ")} ${g.title}`.toLowerCase();
+          return tokens.every((t) => hay.includes(t));
+        }),
+      }))
+      .filter((g) => g.endpoints.length > 0);
+  }, [query, method, access]);
+
+  const total = groups.reduce((n, g) => n + g.endpoints.length, 0);
+  const allTotal = apiGroups.reduce((n, g) => n + g.endpoints.length, 0);
+  const keyOf = (gid: string, e: Endpoint) => `${gid}|${e.method}|${e.path}`;
+  const toggle = (k: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      next.has(k) ? next.delete(k) : next.add(k);
+      return next;
+    });
+  const filtering = query || method || access;
+
+  return (
+    <div className="-m-4 min-h-screen bg-[#F6F8F9] text-slate-800 sm:-m-6">
+      {/* Top bar */}
+      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+          <div className="mr-2">
+            <p className="text-sm font-semibold text-slate-900">Medicare API</p>
+            <p className="text-[11px] text-slate-500">
+              v1 reference · {allTotal} endpoints
+            </p>
+          </div>
+          <div className="relative min-w-[220px] flex-1">
+            <Search
+              size={15}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by path, action, error code or role…"
+              aria-label="Search endpoints"
+              className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-16 text-sm placeholder:text-slate-400 focus:border-teal-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/10"
+            />
+            {query ? (
+              <button
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-700"
+              >
+                <X size={14} />
+              </button>
+            ) : (
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded border border-slate-200 bg-white px-1.5 text-[11px] text-slate-400">
+                /
+              </kbd>
+            )}
+          </div>
+          <div className="flex items-center gap-1 rounded-lg bg-[#0E1B22] py-1 pl-3 pr-1">
+            <code className="max-w-[260px] truncate font-mono text-[12px] text-slate-200">
+              {baseUrl}
+            </code>
+            <CopyButton value={baseUrl} label="" />
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto grid max-w-[1280px] gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[230px_minmax(0,1fr)]">
+        {/* Sidebar */}
+        <aside className="lg:sticky lg:top-[84px] lg:h-[calc(100vh-110px)] lg:overflow-y-auto">
+          <div className="mb-5 space-y-3">
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-slate-500">
+                Method
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {METHODS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMethod(method === m ? null : m)}
+                    aria-pressed={method === m}
+                    className={`rounded-md px-2 py-1 font-mono text-[11px] font-semibold ring-1 ring-inset transition ${
+                      method === m
+                        ? `${methodTone[m]} ring-current`
+                        : "bg-white text-slate-500 ring-slate-200 hover:ring-slate-300"
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-slate-500">
+                Who can call it
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {ACCESS.map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setAccess(access === a ? null : a)}
+                    aria-pressed={access === a}
+                    className={`rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ring-inset transition ${
+                      access === a
+                        ? `${accessTone[a]} ring-current`
+                        : "bg-white text-slate-500 ring-slate-200 hover:ring-slate-300"
+                    }`}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <nav aria-label="Sections" className="border-l border-slate-200">
+            {groups.map((g) => (
+              <a
+                key={g.id}
+                href={`#${g.id}`}
+                className="-ml-px flex items-center justify-between border-l-2 border-transparent py-1.5 pl-3 pr-2 text-[13px] text-slate-600 transition hover:border-teal-600 hover:text-slate-900"
+              >
+                <span className="truncate">{g.title}</span>
+                <span className="text-[11px] tabular-nums text-slate-400">
+                  {g.endpoints.length}
+                </span>
+              </a>
+            ))}
+            <a
+              href="#access"
+              className="-ml-px block border-l-2 border-transparent py-1.5 pl-3 text-[13px] text-slate-600 hover:border-teal-600 hover:text-slate-900"
+            >
+              Role access matrix
+            </a>
+          </nav>
+        </aside>
+
+        {/* Content */}
+        <main className="min-w-0 space-y-10">
+          {/* Intro */}
+          {!filtering && (
+            <section>
+              <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900">
+                Everything you need to sell, ship and manage medicine orders
+                through one API.
+              </h1>
+              <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-600">
+                Customers browse and order, TSRs handle orders in their
+                territory, and admins run the catalogue, users and sales
+                reports. Search above, or open any endpoint to see its rules,
+                body, response and a ready-to-run cURL.
+              </p>
+
+              <ol className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {steps.map(([title, text], i) => (
+                  <li
+                    key={title}
+                    className="rounded-xl border border-slate-200 bg-white p-4"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {title}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-[13px] leading-5 text-slate-600">
+                      {text}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {[
+                  ["401", "Missing or blacklisted token"],
+                  ["403", "Invalid or expired token"],
+                  [
+                    "Rate limits",
+                    "Register 5 per 15 min · Login 10 per 5 min, per IP",
+                  ],
+                ].map(([k, v]) => (
+                  <div key={k} className="rounded-xl bg-slate-100 px-4 py-3">
+                    <p className="text-sm font-semibold text-slate-900">{k}</p>
+                    <p className="text-[13px] text-slate-600">{v}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {filtering && (
+            <p className="text-sm text-slate-500" aria-live="polite">
+              {total} of {allTotal} endpoints match.{" "}
+              <button
+                className="font-medium text-teal-700 hover:underline"
+                onClick={() => {
+                  setQuery("");
+                  setMethod(null);
+                  setAccess(null);
+                }}
+              >
+                Clear filters
+              </button>
+            </p>
+          )}
+
+          {total === 0 && (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
+              <p className="font-medium text-slate-700">
+                Nothing matches that search
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                Try “cart”, “approve”, “TSR” or a path like /v1/orders.
+              </p>
+            </div>
+          )}
+
+          {/* Groups */}
+          {groups.map((g) => (
+            <section key={g.id} id={g.id} className="scroll-mt-28">
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+                {g.title}
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+                {g.description}
+              </p>
+
+              <div className="mt-4 divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {g.endpoints.map((e) => {
+                  const k = keyOf(g.id, e);
+                  const isOpen = open.has(k);
+                  return (
+                    <article key={k}>
+                      <button
+                        type="button"
+                        onClick={() => toggle(k)}
+                        aria-expanded={isOpen}
+                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:bg-slate-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500"
+                      >
+                        <span
+                          className={`mt-0.5 w-[58px] shrink-0 rounded-md py-0.5 text-center font-mono text-[11px] font-bold ${methodTone[e.method]}`}
+                        >
+                          {e.method}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block break-all">
+                            <Path path={e.path} />
+                          </span>
+                          <span className="mt-0.5 block text-[13px] leading-5 text-slate-500">
+                            {e.summary}
+                          </span>
+                        </span>
+                        <span
+                          className={`mt-0.5 hidden shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium sm:inline-flex ${accessTone[e.access]}`}
+                        >
+                          {e.access === "Public" ? (
+                            <Globe size={11} />
+                          ) : e.access === "Customer" ? (
+                            <KeyRound size={11} />
+                          ) : (
+                            <Lock size={11} />
+                          )}
+                          {e.access}
+                        </span>
+                        <ChevronDown
+                          size={16}
+                          className={`mt-1 shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
+
+                      {isOpen && (
+                        <div className="space-y-4 border-t border-slate-100 bg-slate-50/60 px-4 py-4 sm:pl-[86px]">
+                          {e.details.length > 0 && (
+                            <ul className="space-y-1.5">
+                              {e.details.map((d) => (
+                                <li
+                                  key={d}
+                                  className="flex gap-2 text-[13px] leading-5 text-slate-700"
+                                >
+                                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-teal-600" />
+                                  <span>{d}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          <div className="grid gap-3 xl:grid-cols-2">
+                            {e.body && (
+                              <Code title="Request body" code={e.body} />
+                            )}
+                            {e.response && (
+                              <Code title="Response" code={e.response} />
+                            )}
+                          </div>
+                          <Code title="cURL" code={toCurl(e)} />
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+
+          {/* Matrix */}
+          {!filtering && (
+            <section id="access" className="scroll-mt-28">
+              <h2 className="text-xl font-semibold tracking-tight text-slate-900">
+                Role access matrix
+              </h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
+                Customer and TSR access to profile, cart and order routes needs
+                an approved account. Admins skip the approval check. TSR
+                territory routes check the TSR role only.
+              </p>
+              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                <table className="w-full min-w-[640px] text-left text-[13px]">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">
+                      <th className="px-4 py-2.5 font-medium">API group</th>
+                      {ACCESS.map((a) => (
+                        <th
+                          key={a}
+                          className="px-3 py-2.5 text-center font-medium"
+                        >
+                          {a}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {roleMatrix.map((r) => (
+                      <tr key={r.group} className="hover:bg-slate-50">
+                        <td className="px-4 py-2.5 text-slate-700">
+                          {r.group}
+                        </td>
+                        {[r.public, r.customer, r.admin, r.tsr].map((ok, i) => (
+                          <td key={i} className="px-3 py-2.5 text-center">
+                            {ok ? (
+                              <Check
+                                size={15}
+                                className="mx-auto text-teal-600"
+                                aria-label="Allowed"
+                              />
+                            ) : (
+                              <span
+                                className="text-slate-300"
+                                aria-label="Not allowed"
+                              >
+                                –
+                              </span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
