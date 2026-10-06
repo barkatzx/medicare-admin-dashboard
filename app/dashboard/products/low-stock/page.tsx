@@ -118,7 +118,7 @@ export default function LowStockPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px]">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
                     {[

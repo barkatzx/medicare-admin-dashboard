@@ -116,7 +116,7 @@ export default function OutOfStockPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px]">
+              <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
                     {[
@@ -218,9 +218,7 @@ export default function OutOfStockPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  setCurrentPage((page) => Math.max(1, page - 1))
-                }
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 disabled={currentPage === 1}
                 className="rounded-xl border border-gray-200 p-2 transition-colors hover:bg-white disabled:opacity-50"
               >

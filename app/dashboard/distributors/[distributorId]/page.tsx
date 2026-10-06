@@ -181,7 +181,6 @@ export default function DistributorProductsPage() {
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Category</th>
                   <th className="px-4 py-3 text-right">Price</th>
-                  <th className="px-4 py-3 text-right">Discount</th>
                   <th className="px-4 py-3 text-right">TP</th>
                   <th className="px-4 py-3">Featured</th>
                   <th className="px-4 py-3">Trending</th>
@@ -223,10 +222,6 @@ export default function DistributorProductsPage() {
 
                       <td className="px-4 py-4 text-right text-sm font-semibold tabular-nums text-gray-900">
                         {formatMoney(product.price)}
-                      </td>
-
-                      <td className="px-4 py-4 text-right text-sm font-semibold tabular-nums text-gray-900">
-                        {formatMoney(product.discountedPrice)}
                       </td>
 
                       <td className="px-4 py-4 text-right text-sm font-semibold tabular-nums text-gray-900">

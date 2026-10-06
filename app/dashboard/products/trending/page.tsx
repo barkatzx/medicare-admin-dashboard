@@ -78,65 +78,8 @@ export default function TrendingProductsPage() {
   const totalStock = trendingProducts.reduce((sum, p) => sum + p.stock, 0);
   const categoryCount = new Set(trendingProducts.map((p) => p.categoryId)).size;
 
-  const stats = [
-    {
-      label: "Total trending",
-      value: pagination.total,
-      icon: Star,
-      accent: "bg-yellow-400",
-      iconTone: "bg-yellow-50 text-yellow-600",
-    },
-    {
-      label: "Total value",
-      value: `৳${totalValue.toLocaleString()}`,
-      icon: TrendingUp,
-      accent: "bg-emerald-500",
-      iconTone: "bg-emerald-50 text-emerald-600",
-    },
-    {
-      label: "Categories",
-      value: categoryCount,
-      icon: Shield,
-      accent: "bg-violet-500",
-      iconTone: "bg-violet-50 text-violet-600",
-    },
-    {
-      label: "Total stock",
-      value: totalStock.toLocaleString(),
-      icon: Package,
-      accent: "bg-blue-500",
-      iconTone: "bg-blue-50 text-blue-600",
-    },
-  ];
-
   return (
     <div className="space-y-6">
-      {/* ─── Stats ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map(({ label, value, icon: Icon, accent, iconTone }) => (
-          <article
-            key={label}
-            className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5"
-          >
-            <div className="flex items-center gap-3.5">
-              <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconTone} transition-transform duration-200 group-hover:scale-105`}
-              >
-                <Icon size={18} strokeWidth={2} />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-[11px] font-medium uppercase tracking-wider text-gray-400">
-                  {label}
-                </p>
-                <p className="mt-0.5 truncate text-xl font-bold tabular-nums tracking-tight text-gray-900">
-                  {value}
-                </p>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
-
       {/* ─── Trending Products Table ─────────────────────────────── */}
       <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
@@ -179,15 +122,16 @@ export default function TrendingProductsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1000px] text-left">
+              <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                     {/* <th className="w-14 px-6 py-3">#</th> */}
                     <th className="px-6 py-3">Product</th>
                     <th className="px-6 py-3">Category</th>
-                    <th className="px-6 py-3 text-right">Price</th>
+                    <th className="px-6 py-3">Distributor</th>
+                    <th className="px-6 py-3 text-right">MRP</th>
+                    <th className="px-6 py-3 text-right">TP</th>
                     <th className="px-6 py-3 text-center">Stock</th>
-                    <th className="px-6 py-3">Discount</th>
                     <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -254,20 +198,24 @@ export default function TrendingProductsPage() {
                           </span>
                         </td>
 
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center rounded-lg bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-600 ring-1 ring-inset ring-gray-100">
+                            {product.distributor ?? "N/A"}
+                          </span>
+                        </td>
+
                         <td className="px-6 py-4 text-right">
-                          <div className="flex flex-col items-end">
-                            <span className="text-sm font-semibold tabular-nums text-gray-900">
-                              ৳
-                              {(
-                                product.finalPrice || product.price
-                              ).toLocaleString()}
-                            </span>
-                            {product.discountPercent > 0 && (
-                              <span className="text-[10px] font-medium tabular-nums text-gray-400 line-through">
-                                ৳{product.price.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
+                          <span className="text-sm font-semibold tabular-nums text-gray-900">
+                            ৳{product.price.toLocaleString()}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-sm font-semibold tabular-nums text-gray-900">
+                            {product.tp === null || product.tp === undefined
+                              ? "N/A"
+                              : `৳${product.tp.toLocaleString()}`}
+                          </span>
                         </td>
 
                         <td className="px-6 py-4 text-center">
@@ -280,20 +228,6 @@ export default function TrendingProductsPage() {
                           >
                             {product.stock}
                           </span>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          {product.discountPercent > 0 ? (
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex items-center rounded-lg bg-emerald-50 px-2 py-0.5 text-[10px] font-bold tabular-nums text-emerald-700 ring-1 ring-inset ring-emerald-200/60">
-                                −{product.discountPercent}%
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-[11px] font-medium text-gray-400">
-                              No discount
-                            </span>
-                          )}
                         </td>
 
                         <td className="px-6 py-4">
