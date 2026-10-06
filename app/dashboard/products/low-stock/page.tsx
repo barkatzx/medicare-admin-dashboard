@@ -161,7 +161,7 @@ export default function LowStockPage() {
                                 <img
                                   src={imageUrl}
                                   alt={product.name ?? ""}
-                                  className="h-full w-full rounded-full object-cover"
+                                  className="w-full h-full object-cover rounded-full border border-gray-200"
                                   onError={(event) => {
                                     event.currentTarget.style.display = "none";
                                   }}

@@ -165,7 +165,7 @@ export default function FeaturedProductsPage() {
 
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
+                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-gray-200 bg-gray-100">
                               {defaultImage?.url ? (
                                 <Image
                                   src={defaultImage.url}

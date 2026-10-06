@@ -320,7 +320,7 @@ export default function Header() {
 
           {/* Right Section - User Avatar, Name & Role */}
           <div className="flex-1 flex justify-end" ref={profileRef}>
-            <div className="relative bg-white rounded-xl border border-gray-100">
+            <div className="relative">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-all duration-200 group"

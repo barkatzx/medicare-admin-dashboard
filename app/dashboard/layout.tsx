@@ -40,7 +40,7 @@ export default function DashboardLayout({
         <Sidebar />
         <div className="flex-1 bg-[#F9FAFB] border border-gray-100 rounded-xl m-3 flex flex-col overflow-hidden">
           <Header />
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+          <main className="flex-1 overflow-y-auto p-5">{children}</main>
         </div>
       </div>
     </ProtectedRoute>

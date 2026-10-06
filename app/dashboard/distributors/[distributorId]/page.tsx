@@ -199,10 +199,10 @@ export default function DistributorProductsPage() {
                           <img
                             src={imageUrl}
                             alt={product.name || "Product image"}
-                            className="h-8 w-8 rounded-lg border border-gray-100 object-cover"
+                            className="h-10 w-10 rounded-full border border-gray-200 object-cover"
                           />
                         ) : (
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-100 bg-gray-50 text-gray-300">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-100 bg-gray-50 text-gray-300">
                             <Package size={18} />
                           </div>
                         )}
@@ -235,7 +235,7 @@ export default function DistributorProductsPage() {
                             Yes
                           </span>
                         ) : (
-                          <span className="text-[11px] font-medium text-gray-400">
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
                             No
                           </span>
                         )}
@@ -248,7 +248,7 @@ export default function DistributorProductsPage() {
                             Yes
                           </span>
                         ) : (
-                          <span className="text-[11px] font-medium text-gray-400">
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
                             No
                           </span>
                         )}

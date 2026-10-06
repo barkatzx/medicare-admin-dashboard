@@ -167,31 +167,31 @@ export default function ProductsPage() {
       label: "Total Products",
       value: pagination?.total ?? products.length,
       icon: Package,
-      color: "bg-blue-100 text-blue-600",
+      color: "bg-blue-50 text-blue-600",
     },
     {
       label: "Low Stock",
       value: stockCounts.lowStock ?? "—",
       icon: AlertTriangle,
-      color: "bg-amber-100 text-amber-600",
+      color: "bg-amber-50 text-amber-600",
     },
     {
       label: "Out of Stock",
       value: stockCounts.outOfStock ?? "—",
       icon: AlertTriangle,
-      color: "bg-red-100 text-red-600",
+      color: "bg-red-50 text-red-600",
     },
     {
       label: "Trending",
       value: trendingPagination.total,
       icon: Star,
-      color: "bg-yellow-100 text-yellow-600",
+      color: "bg-yellow-50 text-yellow-600",
     },
     {
       label: "Featured",
       value: featuredPagination.total,
       icon: Heart,
-      color: "bg-pink-100 text-pink-600",
+      color: "bg-pink-50 text-pink-600",
     },
   ];
 
@@ -393,7 +393,7 @@ export default function ProductsPage() {
                               {imageUrl ? (
                                 <img
                                   src={imageUrl}
-                                  className="w-full h-full object-cover rounded-full"
+                                  className="w-full h-full object-cover rounded-full border border-gray-200"
                                   onError={(e) => {
                                     (
                                       e.target as HTMLImageElement

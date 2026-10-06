@@ -13,6 +13,7 @@ import {
 import {
   AlertTriangle,
   ArrowUpRight,
+  Calendar,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
@@ -241,8 +242,9 @@ export default function PendingUsersPage() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                   <th className="px-6 py-3">User</th>
-                  <th className="px-6 py-3">Email</th>
+                  {/* <th className="px-6 py-3">Email</th> */}
                   <th className="px-6 py-3">Phone</th>
+                  <th className="px-6 py-3">Joined</th>
                   <th className="px-6 py-3">Status</th>
                   <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
@@ -264,17 +266,30 @@ export default function PendingUsersPage() {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4">
+                    {/* <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
                         <Mail size={13} className="shrink-0 text-gray-400" />
                         <span className="truncate">{user.email}</span>
                       </div>
-                    </td>
+                    </td> */}
 
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-xs font-medium tabular-nums text-gray-600">
                         <Phone size={13} className="shrink-0 text-gray-400" />
                         <span className="truncate">{user.phone_number}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-xs font-medium tabular-nums text-gray-500">
+                        <Calendar
+                          size={13}
+                          className="shrink-0 text-gray-400"
+                        />
+                        <span>
+                          {user.createdAt
+                            ? new Date(user.createdAt).toLocaleDateString()
+                            : "N/A"}
+                        </span>
                       </div>
                     </td>
 

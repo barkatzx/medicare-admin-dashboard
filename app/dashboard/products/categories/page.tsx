@@ -204,7 +204,7 @@ export default function CategoriesPage() {
             value: categories.length,
             icon: Folder,
             gradient: "from-blue-500 to-indigo-600",
-            color: "text-gray-900",
+            color: "text-blue-600",
           },
           {
             label: "Total Products",
@@ -334,9 +334,9 @@ export default function CategoriesPage() {
                     <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Products
                     </th>
-                    <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    {/* <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       ID
-                    </th>
+                    </th> */}
                     <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -387,11 +387,11 @@ export default function CategoriesPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3 px-6">
+                        {/* <td className="py-3 px-6">
                           <code className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">
                             {category.id.slice(-8)}
                           </code>
-                        </td>
+                        </td> */}
                         <td className="py-3 px-6">
                           <div className="flex items-center gap-1.5">
                             <button
