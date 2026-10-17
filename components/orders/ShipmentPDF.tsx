@@ -5,7 +5,7 @@ import type { OrderedProduct } from "@/config/api";
 import { Printer } from "lucide-react";
 
 interface ShipmentPDFProps {
-  products: OrderedProduct[];
+  groups: { distributor: string; products: OrderedProduct[] }[];
 }
 
 function escapeHtml(value: string): string {
@@ -21,17 +21,21 @@ function escapeHtml(value: string): string {
   });
 }
 
-export default function ShipmentPDF({ products }: ShipmentPDFProps) {
+export default function ShipmentPDF({ groups }: ShipmentPDFProps) {
   const printShipment = () => {
     const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+    if (!printWindow) {
+      console.error("Unable to open the shipment print window.");
+      return;
+    }
 
-    const rows = products
-      .map(
-        (product) => `
+    const pages = groups
+      .map(({ distributor, products }, pageIndex) => {
+        const rows = products
+          .map(
+            (product) => `
           <tr>
             <td>${escapeHtml(product.productName)}</td>
-            <td>${escapeHtml(product.distributor ?? "N/A")}</td>
             <td class="number">${product.quantity}</td>
             <td class="number">${formatSalesCurrency(product.price)}</td>
             <td class="number">${
@@ -39,7 +43,36 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
             }</td>
           </tr>
         `,
-      )
+          )
+          .join("");
+
+        return `
+          <section class="distributor-page${pageIndex === groups.length - 1 ? " last-page" : ""}">
+            <header>
+              <h1>MediCarePLC</h1>
+              <p>Today shipments</p>
+              <h2>${escapeHtml(distributor)}</h2>
+            </header>
+            <table>
+              <thead>
+                <tr>
+                  <th>Product name</th>
+                  <th class="number">Quantity</th>
+                  <th class="number">MRP</th>
+                  <th class="number">TP</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+              <tfoot>
+                <tr>
+                  <td>${products.length} product${products.length === 1 ? "" : "s"}</td>
+                  <td class="number" colspan="3">Total quantity: ${products.reduce((sum, product) => sum + product.quantity, 0)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </section>
+        `;
+      })
       .join("");
 
     printWindow.document.write(`
@@ -60,12 +93,20 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
             header {
               border-bottom: 1px solid #e5e7eb;
               text-align: center;
+              padding-bottom: 12px;
+              margin-bottom: 14px;
             }
             h1 {
               margin: 0 0 6px;
               font-size: 16px;
               font-weight: 600;
               letter-spacing: -0.01em;
+              color: #111827;
+            }
+            h2 {
+              margin: 10px 0 0;
+              font-size: 14px;
+              font-weight: 600;
               color: #111827;
             }
             p {
@@ -110,36 +151,25 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
               text-transform: uppercase;
               letter-spacing: 0.06em;
             }
+            .distributor-page {
+              break-after: page;
+              page-break-after: always;
+            }
+            .distributor-page.last-page {
+              break-after: auto;
+              page-break-after: auto;
+            }
             @page { size: landscape; margin: 12mm; }
             @media print {
               body { padding: 0; }
+              .distributor-page { break-inside: avoid; page-break-inside: avoid; }
               tr { break-inside: avoid; }
               thead { display: table-header-group; }
             }
           </style>
         </head>
         <body>
-          <header>
-            <h1>MediCarePLC</h1>
-          </header>
-          <table>
-            <thead>
-              <tr>
-                <th>Product name</th>
-                <th>Distributor</th>
-                <th class="number">Quantity</th>
-                <th class="number">MRP</th>
-                <th class="number">TP</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-            <tfoot>
-              <tr>
-                <td colspan="2">${products.length} product${products.length === 1 ? "" : "s"}</td>
-                <td class="number" colspan="3">Total quantity: ${products.reduce((sum, p) => sum + p.quantity, 0)}</td>
-              </tr>
-            </tfoot>
-          </table>
+          ${pages}
           <script>
             window.onload = function () {
               window.print();
@@ -156,9 +186,9 @@ export default function ShipmentPDF({ products }: ShipmentPDFProps) {
     <button
       type="button"
       onClick={printShipment}
-      disabled={products.length === 0}
+      disabled={groups.length === 0}
       className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
-      title="Print ordered products"
+      title="Print distributor-wise today shipments"
     >
       <Printer size={14} strokeWidth={2.25} />
       Print
