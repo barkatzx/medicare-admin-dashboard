@@ -6,7 +6,7 @@ import { Printer } from "lucide-react";
 interface InvoiceItem {
   quantity: number;
   price: string | number;
-  product: { name: string };
+  product: { name: string | null };
 }
 
 interface ShippingAddress {
@@ -23,7 +23,7 @@ interface InvoiceOrder {
   totalAmount: string | number;
   user: {
     name: string;
-    pharmacy_name?: string;
+    pharmacy_name?: string | null;
     phone_number?: string;
   };
   shippingAddress?: ShippingAddress | null;
