@@ -6,7 +6,6 @@ import { useAppSelector } from "@/store/hooks";
 import {
   ArrowRight,
   BarChart3,
-  Bell,
   FolderTree,
   HelpCircle,
   LayoutDashboard,
@@ -90,13 +89,6 @@ export default function Header() {
       icon: Settings,
       category: "Account",
       keywords: ["preferences", "profile", "account"],
-    },
-    {
-      name: "Notifications",
-      href: "/dashboard/notifications",
-      icon: Bell,
-      category: "Account",
-      keywords: ["alerts", "updates"],
     },
     {
       name: "Help",

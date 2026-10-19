@@ -63,15 +63,6 @@ export async function getAddresses(): Promise<any[]> {
   return Array.isArray(data) ? data : [];
 }
 
-export async function getNotifications(unreadOnly: boolean = false): Promise<any> {
-  const url = unreadOnly
-    ? "/users/notifications?unreadOnly=true"
-    : "/users/notifications";
-  const response = await apiClient.request(url);
-  // response.data = { notifications, unreadCount, pagination }
-  return response?.data ?? response;
-}
-
 export async function updateProfile(profileData: {
   name: string;
   pharmacy_name: string;
@@ -137,54 +128,6 @@ export async function setDefaultAddress(addressId: string): Promise<any> {
   const response = await apiClient.request(`/users/addresses/${addressId}`, {
     method: "PUT",
     body: JSON.stringify({ isDefault: true }),
-  });
-  return response?.data ?? response;
-}
-
-export async function markNotificationAsRead(notificationId: string): Promise<void> {
-  await apiClient.request(`/users/notifications/${notificationId}`, {
-    method: "PUT",
-  });
-}
-
-export async function markAllNotificationsAsRead(): Promise<void> {
-  return apiClient.request("/users/notifications/read-all", {
-    method: "PUT",
-  });
-}
-
-export async function sendNotification(payload: {
-  userId: string;
-  title: string;
-  message: string;
-  type: string;
-}): Promise<any> {
-  const adminToken = localStorage.getItem("adminToken");
-  const response = await apiClient.request("/users/notifications/send", {
-    method: "POST",
-    body: JSON.stringify(payload),
-    headers: {
-      "Content-Type": "application/json",
-      ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
-    },
-  });
-  return response?.data ?? response;
-}
-
-export async function sendBulkNotifications(payload: {
-  userIds: string[];
-  title: string;
-  message: string;
-  type: string;
-}): Promise<any> {
-  const adminToken = localStorage.getItem("adminToken");
-  const response = await apiClient.request("/users/notifications/send-bulk", {
-    method: "POST",
-    body: JSON.stringify(payload),
-    headers: {
-      "Content-Type": "application/json",
-      ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
-    },
   });
   return response?.data ?? response;
 }

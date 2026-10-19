@@ -6,7 +6,6 @@ import { logout } from "@/store/slices/authSlice";
 import {
   AlertTriangle,
   AreaChart,
-  Bell,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
@@ -14,7 +13,6 @@ import {
   CircleUser,
   Clock,
   Grid3X3,
-  HelpCircle,
   Layers2,
   LayoutDashboard,
   Leaf,
@@ -206,12 +204,6 @@ const bottomMenuItems = [
     icon: Settings,
     description: "Preferences",
   },
-  {
-    name: "Help",
-    href: "/dashboard/help",
-    icon: HelpCircle,
-    description: "Support & docs",
-  },
 ];
 
 // Path helpers
@@ -240,7 +232,6 @@ export default function Sidebar() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { user } = useAppSelector((state) => state.auth);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [pendingCustomersCount, setPendingCustomersCount] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -268,31 +259,6 @@ export default function Sidebar() {
       const saved = localStorage.getItem("sidebarCollapsed");
       if (saved !== null) setIsCollapsed(JSON.parse(saved));
     } catch {}
-  }, []);
-
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const data = await api.getNotifications(true);
-        const count = data?.unreadCount || data?.notifications?.length || 0;
-        setUnreadCount(count);
-      } catch (error) {
-        console.error("Failed to fetch unread count:", error);
-      }
-    };
-
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    const handleNotificationUpdate = () => fetchUnreadCount();
-    window.addEventListener("notificationsUpdated", handleNotificationUpdate);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener(
-        "notificationsUpdated",
-        handleNotificationUpdate,
-      );
-    };
   }, []);
 
   useEffect(() => {
@@ -830,45 +796,6 @@ export default function Sidebar() {
                     </Link>
                   );
                 })}
-              </div>
-            </div>
-
-            {/* Updates Section */}
-            <div>
-              {showText && (
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">
-                  Updates
-                </p>
-              )}
-              <div className="space-y-1">
-                <Link
-                  href="/dashboard/notifications"
-                  className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isCollapsed ? "justify-center" : ""} ${pathname === "/dashboard/notifications" ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}`}
-                >
-                  <div className="relative flex-shrink-0">
-                    <Bell
-                      size={20}
-                      className={`transition-all duration-200 ${pathname === "/dashboard/notifications" ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"}`}
-                    />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full ring-2 ring-white">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </div>
-                  {showText && (
-                    <>
-                      <span className="text-sm font-medium whitespace-nowrap">
-                        Notifications
-                      </span>
-                      {unreadCount > 0 && (
-                        <span className="ml-auto text-xs text-red-500 font-medium">
-                          {unreadCount} new
-                        </span>
-                      )}
-                    </>
-                  )}
-                </Link>
               </div>
             </div>
           </div>

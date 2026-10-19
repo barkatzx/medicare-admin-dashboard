@@ -7,7 +7,6 @@ import categoryReducer from "./slices/categorySlice";
 import distributorReducer from "./slices/distributorSlice";
 import orderReducer from "./slices/orderSlice";
 import salesReducer from "./slices/salesSlice";
-import notificationReducer from "./slices/notificationSlice";
 import trendingReducer from "./slices/trendingSlice";
 import featuredReducer from "./slices/featuredSlice";
 
@@ -20,7 +19,6 @@ export const store = configureStore({
     distributors: distributorReducer,
     orders: orderReducer,
     sales: salesReducer,
-    notifications: notificationReducer,
     trending: trendingReducer,
     featured: featuredReducer,
   },

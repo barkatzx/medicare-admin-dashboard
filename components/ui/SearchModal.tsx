@@ -14,7 +14,6 @@ import {
   BarChart3,
   Settings,
   HelpCircle,
-  Bell,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -76,13 +75,6 @@ const menuItems: SearchItem[] = [
     icon: Settings,
     category: "Account",
     keywords: ["preferences", "profile", "account"],
-  },
-  {
-    name: "Notifications",
-    href: "/dashboard/notifications",
-    icon: Bell,
-    category: "Account",
-    keywords: ["alerts", "updates"],
   },
   {
     name: "Help",

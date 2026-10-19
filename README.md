@@ -9,7 +9,6 @@ A modern, scalable healthcare administration dashboard built with Next.js 16 and
 - 🧩 Scalable architecture for large applications
 - 📊 Interactive charts and analytics with Recharts
 - 📝 Efficient form handling using React Hook Form
-- 🔔 Real-time notifications via React Hot Toast
 - 🎨 Clean, responsive UI with Tailwind CSS
 - 📅 Advanced date handling using date-fns
 - 🧠 Fully typed with TypeScript for better reliability

@@ -6,7 +6,6 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import {
-  Bell,
   Moon,
   Sun,
   Shield,
@@ -30,7 +29,6 @@ import {
   ChevronRight,
   Lock,
   Fingerprint,
-  BellRing,
   AtSign,
   Building2,
   Monitor,
@@ -50,15 +48,6 @@ interface Address {
   isDefault: boolean;
 }
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: string;
-  isRead: boolean;
-  createdAt: string;
-}
-
 interface Profile {
   id: string;
   email: string;
@@ -73,17 +62,13 @@ interface Profile {
 
 export default function SettingsPage() {
   const [darkMode, setDarkMode] = useState(false);
-  const [emailNotifications, setEmailNotifications] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -131,7 +116,6 @@ export default function SettingsPage() {
       setError(null);
       await fetchProfile();
       await fetchAddresses();
-      await fetchNotifications();
     } catch (error: any) {
       console.error("Failed to fetch data:", error);
       setError(error?.message || "Failed to load data");
@@ -165,18 +149,6 @@ export default function SettingsPage() {
     } catch (error) {
       console.error("Failed to fetch addresses:", error);
       setAddresses([]);
-    }
-  };
-
-  const fetchNotifications = async () => {
-    try {
-      const data = await api.getNotifications();
-      setNotifications(data?.notifications || []);
-      setUnreadCount(data?.unreadCount || 0);
-    } catch (error: any) {
-      console.error("Failed to fetch notifications:", error);
-      setNotifications([]);
-      setUnreadCount(0);
     }
   };
 
@@ -275,45 +247,6 @@ export default function SettingsPage() {
     } catch (error: any) {
       toast.error(error?.message || "Failed to set default address");
     }
-  };
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await api.markNotificationAsRead(notificationId);
-      await fetchNotifications();
-    } catch (error: any) {
-      toast.error("Failed to mark notification as read");
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await api.markAllNotificationsAsRead();
-      toast.success("All notifications marked as read");
-      await fetchNotifications();
-    } catch (error: any) {
-      toast.error("Failed to mark notifications");
-    }
-  };
-
-  const getTimeAgo = (date: string) => {
-    const seconds = Math.floor(
-      (new Date().getTime() - new Date(date).getTime()) / 1000,
-    );
-    const intervals = [
-      { label: "year", seconds: 31536000 },
-      { label: "month", seconds: 2592000 },
-      { label: "day", seconds: 86400 },
-      { label: "hour", seconds: 3600 },
-      { label: "minute", seconds: 60 },
-    ];
-    for (const interval of intervals) {
-      const count = Math.floor(seconds / interval.seconds);
-      if (count >= 1) {
-        return `${count} ${interval.label}${count !== 1 ? "s" : ""} ago`;
-      }
-    }
-    return "just now";
   };
 
   if (loading) {
@@ -695,48 +628,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Notifications */}
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <Bell size={15} strokeWidth={2.25} />
-                </span>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900">
-                    Notifications
-                  </h3>
-                  <p className="text-[11px] text-gray-500">Stay updated</p>
-                </div>
-              </div>
-              {unreadCount > 0 && (
-                <span className="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-200/60">
-                  {unreadCount} new
-                </span>
-              )}
-            </div>
-
-            <div className="space-y-2 p-4">
-              <button
-                onClick={() => setIsNotificationsOpen(true)}
-                className="w-full rounded-xl bg-gray-50 px-4 py-2.5 text-center text-xs font-semibold text-blue-600 transition-all hover:bg-blue-50 hover:text-blue-700"
-              >
-                View all notifications
-                <span className="ml-1 text-gray-400">
-                  ({notifications.length})
-                </span>
-              </button>
-              {unreadCount > 0 && (
-                <button
-                  onClick={handleMarkAllAsRead}
-                  className="w-full text-center text-[11px] font-medium text-gray-500 transition-colors hover:text-gray-700"
-                >
-                  Mark all as read
-                </button>
-              )}
-            </div>
-          </div>
-
           {/* Sessions */}
           <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
@@ -989,59 +880,6 @@ export default function SettingsPage() {
         </div>
       </Modal>
 
-      <Modal
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-        title="Notifications"
-      >
-        <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
-          {notifications.length === 0 ? (
-            <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
-                <Bell size={22} className="text-gray-300" />
-              </div>
-              <p className="mt-4 text-sm font-medium text-gray-500">
-                No notifications yet
-              </p>
-              <p className="mt-1 text-xs text-gray-400">
-                Updates will appear here
-              </p>
-            </div>
-          ) : (
-            notifications.map((notification) => (
-              <div
-                key={notification.id}
-                className={`cursor-pointer rounded-xl border p-3.5 transition-all ${
-                  notification.isRead
-                    ? "border-gray-100 bg-white hover:bg-gray-50"
-                    : "border-blue-200 bg-blue-50/60 hover:bg-blue-50"
-                }`}
-                onClick={() =>
-                  !notification.isRead && handleMarkAsRead(notification.id)
-                }
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="truncate text-sm font-semibold text-gray-900">
-                      {notification.title}
-                    </h4>
-                    <p className="mt-1 text-xs text-gray-600">
-                      {notification.message}
-                    </p>
-                    <p className="mt-2 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-gray-400">
-                      <Clock size={10} />
-                      {getTimeAgo(notification.createdAt)}
-                    </p>
-                  </div>
-                  {!notification.isRead && (
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </Modal>
     </div>
   );
 }

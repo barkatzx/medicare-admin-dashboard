@@ -194,7 +194,7 @@ const apiGroups: ApiGroup[] = [
         "GET",
         "/v1/users/profile",
         "Customer",
-        "Get the current user's profile, location relations, saved addresses, and up to 10 unread notifications.",
+        "Get the current user's profile, location relations, and saved addresses.",
         [
           APPROVED,
           "User identity comes from the JWT; users cannot request another user's profile.",
@@ -209,8 +209,7 @@ const apiGroups: ApiGroup[] = [
     "division": { "id": "..." },
     "district": { "id": "..." },
     "upazila": { "id": "..." },
-    "addresses": [],
-    "notifications": []
+    "addresses": []
   }
 }`,
       ),
@@ -403,73 +402,6 @@ const apiGroups: ApiGroup[] = [
         ["Access: Admin only.", "No query parameters or request body."],
         undefined,
         MSG("User profile deleted successfully"),
-      ),
-    ],
-  },
-  {
-    id: "notifications",
-    title: "Notifications",
-    description:
-      "Per-user notification reads, mark-as-read, and admin send operations.",
-    endpoints: [
-      ep(
-        "GET",
-        "/v1/users/notifications",
-        "Customer",
-        "List the authenticated user's notifications and unread count.",
-        [
-          APPROVED,
-          "Query parameters: unreadOnly=true filters the list to unread items; page (default 1); limit (default 20).",
-          "Only the authenticated user's notifications are returned.",
-        ],
-        undefined,
-        `{
-  "message": "Notifications fetched successfully",
-  "data": {
-    "notifications": [],
-    "unreadCount": 0,
-    "pagination": { "page": 1, "limit": 20, "total": 0, "pages": 0 }
-  }
-}`,
-      ),
-      ep(
-        "PUT",
-        "/v1/users/notifications/:notificationId",
-        "Customer",
-        "Mark one of the current user's notifications as read.",
-        [APPROVED, "Notification must belong to the authenticated user."],
-        undefined,
-        `{\n  "message": "Notification marked as read",\n  "data": { "id": "...", "isRead": true }\n}`,
-      ),
-      ep(
-        "PUT",
-        "/v1/users/notifications/read-all",
-        "Customer",
-        "Mark all of the current user's unread notifications as read.",
-        [APPROVED, "Affects only the authenticated user's notifications."],
-        undefined,
-        `{\n  "message": "All notifications marked as read",\n  "data": { "count": 0 }\n}`,
-      ),
-      ep(
-        "POST",
-        "/v1/users/notifications/send",
-        "Admin",
-        "Create a notification for one user.",
-        ["Access: Admin only.", "userId must identify an existing user."],
-        `{\n  "userId": "string",\n  "title": "string",\n  "message": "string",\n  "type": "order | approval | system"\n}`,
-        `{\n  "message": "Notification sent successfully",\n  "data": { "id": "...", "title": "...", "type": "system" }\n}`,
-      ),
-      ep(
-        "POST",
-        "/v1/users/notifications/send-bulk",
-        "Admin",
-        "Create the same notification for each listed user.",
-        [
-          "Access: Admin only.",
-          "userIds must be a non-empty array and every ID must exist.",
-        ],
-        `{\n  "userIds": ["string"],\n  "title": "string",\n  "message": "string",\n  "type": "order | approval | system"\n}`,
-        `{\n  "message": "Notifications sent to N users successfully",\n  "data": { "count": 0, "notifications": [] }\n}`,
       ),
     ],
   },
@@ -1216,14 +1148,14 @@ const roleMatrix = [
   row("Category mutations", false, false, true, false),
   row("Distributor APIs (/v1/dristributors...)", false, false, true, false),
   row(
-    "User profile, address, notification reads/updates, and cart",
+    "User profile, address, and cart",
     false,
     true,
     true,
     true,
   ),
   row(
-    "Admin user management and notification sending",
+    "Admin user management",
     false,
     false,
     true,
