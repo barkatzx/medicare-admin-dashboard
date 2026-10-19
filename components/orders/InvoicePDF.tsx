@@ -50,7 +50,7 @@ const INVOICE_STYLES = `
 
   :root {
     --brand: #1d4ed8;
-    --brand-soft: #eff6ff;
+    --brand-soft: #f9fafb;
     --brand-line: #dbeafe;
     --ink: #0f172a;
     --ink-soft: #334155;
@@ -90,13 +90,12 @@ const INVOICE_STYLES = `
   .brand { display: flex; align-items: center; gap: 10px; }
 
   .brand-logo {
-    width: 45px;
-    height: 45px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--brand-soft);
-    padding: 5px;
-    border: 1px solid var(--brand-line);
+    padding: 3px;
   }
 
   .brand-name {
@@ -202,9 +201,9 @@ const INVOICE_STYLES = `
     border-left: 1px solid var(--line);
   }
 
-  thead th:first-child { border-top-left-radius: 6px; }
+  thead th:first-child { border-top-left-radius: 10px; }
   thead th:last-child {
-    border-top-right-radius: 6px;
+    border-top-right-radius: 10px;
     border-right: 1px solid var(--line);
   }
 
@@ -240,8 +239,8 @@ const INVOICE_STYLES = `
     border-bottom: 1px solid var(--line);
     border-left: 1px solid var(--line);
     border-right: 1px solid var(--line);
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -267,15 +266,6 @@ const INVOICE_STYLES = `
     line-height: 1.5;
     margin-bottom: 8px;
   }
-
-  .footer-contact {
-    font-size: 10.5px;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-
-  .footer-contact strong { color: var(--ink-soft); font-weight: 600; }
-  .footer-contact span { margin: 0 6px; }
 
   @media print {
     @page { size: A4; margin: 12mm; }
