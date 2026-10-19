@@ -33,8 +33,12 @@ import {
   BellRing,
   AtSign,
   Building2,
+  Monitor,
+  Smartphone,
+  Tablet,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { parseDeviceInfo, type DeviceInfo } from "@/components/utils/deviceInfo";
 
 interface Address {
   id: string;
@@ -74,6 +78,7 @@ export default function SettingsPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -100,6 +105,10 @@ export default function SettingsPage() {
     country: "Bangladesh",
     isDefault: false,
   });
+
+  useEffect(() => {
+    setDeviceInfo(parseDeviceInfo(navigator.userAgent));
+  }, []);
 
   useEffect(() => {
     checkAuthAndFetchData();
@@ -728,70 +737,49 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Preferences */}
+          {/* Sessions */}
           <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-            <div className="flex items-center gap-2.5 border-b border-gray-100 px-6 py-4">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                <Settings size={15} strokeWidth={2.25} />
-              </span>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900">
-                  Preferences
-                </h3>
-                <p className="text-[11px] text-gray-500">
-                  Customize your experience
-                </p>
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                  <Monitor size={15} strokeWidth={2.25} />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Session
+                  </h3>
+                  <p className="text-[11px] text-gray-500">
+                    Where you&apos;re signed in
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-1 p-3">
-              <label className="flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 transition-all hover:bg-gray-50">
-                <div className="flex items-center gap-2.5">
-                  {darkMode ? (
-                    <Moon size={15} className="text-gray-400" />
-                  ) : (
-                    <Sun size={15} className="text-gray-400" />
-                  )}
-                  <span className="text-sm font-medium text-gray-700">
-                    Dark mode
+            <div className="p-4">
+              {deviceInfo && (
+                <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-gray-600 ring-1 ring-inset ring-gray-100">
+                    {deviceInfo.deviceType === "Mobile" ? (
+                      <Smartphone size={16} />
+                    ) : deviceInfo.deviceType === "Tablet" ? (
+                      <Tablet size={16} />
+                    ) : (
+                      <Monitor size={16} />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-gray-900">
+                      {deviceInfo.browser}
+                    </p>
+                    <p className="truncate text-xs text-gray-500">
+                      {deviceInfo.deviceType} · {deviceInfo.os}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200/60">
+                    This device
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setDarkMode(!darkMode)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    darkMode ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                      darkMode ? "translate-x-4" : "translate-x-0.5"
-                    }`}
-                  />
-                </button>
-              </label>
-
-              <label className="flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 transition-all hover:bg-gray-50">
-                <div className="flex items-center gap-2.5">
-                  <BellRing size={15} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700">
-                    Email notifications
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEmailNotifications(!emailNotifications)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    emailNotifications ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                      emailNotifications ? "translate-x-4" : "translate-x-0.5"
-                    }`}
-                  />
-                </button>
-              </label>
+              )}
             </div>
           </div>
         </div>
