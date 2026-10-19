@@ -5,6 +5,7 @@ export async function getAllOrders(
   page: number = 1,
   limit: number = 20,
   status?: string,
+  search?: string,
 ): Promise<{ orders: Order[]; pagination: OrderPagination }> {
   const params = new URLSearchParams({
     page: String(page),
@@ -13,17 +14,24 @@ export async function getAllOrders(
   if (status && status !== "all") {
     params.set("status", status);
   }
+  const normalizedSearch = search?.trim();
+  if (normalizedSearch) {
+    params.set("search", normalizedSearch);
+  }
   const data = await apiClient.request(`/orders?${params.toString()}`);
   if (!Array.isArray(data?.orders)) {
     throw new Error("Orders response is missing the order list.");
   }
 
   const total = Number(data.pagination?.total);
-  const responseLimit = Number(data.pagination?.limit);
-  const responsePage = Number(data.pagination?.page);
+  const totalPages = Number(data.pagination?.totalPages);
+  const responseLimit = Number(data.pagination?.limit ?? limit);
+  const responsePage = Number(data.pagination?.page ?? page);
   if (
     !Number.isInteger(total) ||
     total < 0 ||
+    !Number.isInteger(totalPages) ||
+    totalPages < 0 ||
     !Number.isInteger(responseLimit) ||
     responseLimit < 1 ||
     !Number.isInteger(responsePage) ||
@@ -38,7 +46,7 @@ export async function getAllOrders(
       page: responsePage,
       limit: responseLimit,
       total,
-      totalPages: total === 0 ? 0 : Math.ceil(total / responseLimit),
+      totalPages,
     },
   };
 }

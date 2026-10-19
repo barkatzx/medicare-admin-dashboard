@@ -19,7 +19,6 @@ interface FetchOrdersArgs {
   limit: number;
   status?: string;
   search?: string;
-  orderId?: string;
 }
 
 const initialState: OrderState = {
@@ -34,27 +33,8 @@ const initialState: OrderState = {
 
 export const fetchOrders = createAsyncThunk(
   "orders/fetchAll",
-  async ({ page, limit, status, orderId }: FetchOrdersArgs) => {
-    if (orderId) {
-      const order = await api.getOrderById(orderId);
-      const matchesStatus =
-        !status ||
-        status === "all" ||
-        order.status.toLowerCase() === status.toLowerCase();
-      const orders = matchesStatus ? [order] : [];
-      return {
-        orders,
-        pagination: {
-          page: 1,
-          limit,
-          total: orders.length,
-          totalPages: orders.length === 0 ? 0 : 1,
-        },
-      };
-    }
-
-    const response = await api.getAllOrders(page, limit, status);
-    return response;
+  async ({ page, limit, status, search }: FetchOrdersArgs) => {
+    return api.getAllOrders(page, limit, status, search);
   },
 );
 
@@ -99,21 +79,8 @@ const orderSlice = createSlice({
         if (state.activeFetchRequestId !== action.meta.requestId) return;
         state.fetching = false;
         state.activeFetchRequestId = null;
-        if (
-          action.meta.arg.orderId &&
-          action.error.message?.includes("status 404")
-        ) {
-          state.orders = [];
-          state.pagination = {
-            page: 1,
-            limit: action.meta.arg.limit,
-            total: 0,
-            totalPages: 0,
-          };
-          return;
-        }
         state.error = action.error.message || "Failed to fetch orders";
-        toast.error("Failed to fetch orders");
+        toast.error(state.error);
       })
       .addCase(updateOrderStatus.pending, (state) => {
         state.loading = true;

@@ -1,6 +1,5 @@
 "use client";
 
-import { isFullOrderId } from "@/components/orders/orderSearch";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchOrders, updateOrderStatus } from "@/store/slices/orderSlice";
 import {
@@ -18,36 +17,36 @@ import InvoiceView from "../../../../components/orders/InvoiceView";
 
 export default function OrdersPage() {
   const dispatch = useAppDispatch();
-  const { orders, pagination, fetching, query } = useAppSelector(
+  const { orders, pagination, fetching, error, query } = useAppSelector(
     (state) => state.orders,
   );
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [confirmingPayment, setConfirmingPayment] = useState<string | null>(
     null,
   );
-  const searchingById = isFullOrderId(searchTerm);
+  const normalizedSearch = debouncedSearchTerm.trim();
+  const isSearchDebouncing = searchTerm.trim() !== normalizedSearch;
 
   useEffect(() => {
-    if (searchingById) return;
-    dispatch(
-      fetchOrders({ page: currentPage, limit: 20, status: "delivered" }),
-    );
-  }, [dispatch, currentPage, searchingById]);
+    const debounceTimer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 200);
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
 
   useEffect(() => {
-    if (!searchingById) return;
     dispatch(
       fetchOrders({
-        page: 1,
-        limit: 10,
+        page: currentPage,
+        limit: 20,
         status: "delivered",
-        search: searchTerm,
-        orderId: searchTerm,
+        search: normalizedSearch || undefined,
       }),
     );
-  }, [dispatch, searchTerm, searchingById]);
+  }, [dispatch, currentPage, normalizedSearch]);
 
   useEffect(() => {
     if (pagination && currentPage > pagination.totalPages) {
@@ -65,10 +64,9 @@ export default function OrdersPage() {
       dispatch(
         fetchOrders({
           page: currentPage,
-          limit: 10,
+          limit: 20,
           status: "delivered",
-          search: searchTerm,
-          orderId: isFullOrderId(searchTerm) ? searchTerm : undefined,
+          search: normalizedSearch || undefined,
         }),
       );
     } catch {
@@ -96,26 +94,16 @@ export default function OrdersPage() {
     }
   };
 
-  const filteredOrders = orders.filter((order) => {
-    if (order.status.toLowerCase() !== "delivered") return false;
-
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      order.id.toLowerCase().includes(search) ||
-      order.user.name.toLowerCase().includes(search) ||
-      order.user.email.toLowerCase().includes(search)
-    );
-  });
+  const filteredOrders = orders.filter(
+    (order) => order.status.toLowerCase() === "delivered",
+  );
 
   const queryMatches =
     query?.page === currentPage &&
     query.status === "delivered" &&
-    (searchingById
-      ? query.search === searchTerm && query.orderId === searchTerm
-      : !query.orderId);
+    query.search === (normalizedSearch || undefined);
 
-  if (fetching || !queryMatches) {
+  if (fetching || isSearchDebouncing || !queryMatches) {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
@@ -154,7 +142,7 @@ export default function OrdersPage() {
             />
             <input
               type="text"
-              placeholder="Search by order ID, name, or email…"
+              placeholder="Search by order ID…"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -165,13 +153,22 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {filteredOrders.length === 0 ? (
+        {error ? (
+          <div
+            className="flex min-h-[280px] items-center justify-center px-6 text-center text-sm text-rose-600"
+            role="alert"
+          >
+            {error}
+          </div>
+        ) : filteredOrders.length === 0 ? (
           <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
               <Package size={22} className="text-gray-300" />
             </div>
             <p className="mt-4 text-sm font-medium text-gray-500">
-              No delivered orders found
+              {normalizedSearch
+                ? "No orders found for this Order ID."
+                : "No delivered orders found"}
             </p>
             <p className="mt-1 text-xs text-gray-400">
               Try adjusting your search
