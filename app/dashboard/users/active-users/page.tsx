@@ -325,7 +325,6 @@ export default function UsersPage() {
                             ) : (
                               <ArrowUpRight size={13} />
                             )}
-                            Promote to TSR
                           </button>
                         )}
                         <button

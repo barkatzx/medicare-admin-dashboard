@@ -327,7 +327,6 @@ export default function PendingUsersPage() {
                             ) : (
                               <ArrowUpRight size={13} />
                             )}
-                            Promote to TSR
                           </button>
                         )}
                         <button
