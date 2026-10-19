@@ -52,7 +52,7 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
                   MediCarePLC
                 </p>
                 <p className="text-[11px] text-gray-500 mt-1">
-                  Your Trusted Healthcare Partner
+                  Your Trusted B2B Sales Partner
                 </p>
               </div>
             </div>
@@ -131,9 +131,6 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
 
           {/* Order Summary table */}
           <div className="pt-3.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.10em] text-gray-500 mb-2">
-              Order Summary
-            </p>
             <div className="rounded-[10px] overflow-hidden border border-[#eeeeee]">
               <table className="w-full border-collapse text-[11.5px]">
                 <thead>

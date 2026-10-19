@@ -135,7 +135,7 @@ const INVOICE_STYLES = `
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 24px;
-    padding: 14px 0;
+    padding: 10px 0;
     border-bottom: 1px solid var(--line);
   }
 
@@ -367,7 +367,6 @@ function buildInvoiceHtml(order: InvoiceOrder): string {
       </section>
 
       <section class="items">
-        <h3>Order Summary</h3>
         <table>
           <thead>
             <tr>
