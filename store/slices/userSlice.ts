@@ -18,6 +18,8 @@ interface UserState {
   error: string | null;
   promotionLoadingIds: string[];
   pagination: Pagination;
+  currentRequestId: string | null;
+  activeSearch: string;
 }
 
 const initialState: UserState = {
@@ -25,6 +27,8 @@ const initialState: UserState = {
   loading: false,
   error: null,
   promotionLoadingIds: [],
+  currentRequestId: null,
+  activeSearch: "",
   pagination: {
     page: 1,
     limit: 20,
@@ -38,16 +42,26 @@ const initialState: UserState = {
 export const fetchUsers = createAsyncThunk(
   "users/fetchAll",
   async ({
-    page = 1,
+    page,
     limit = 20,
     role,
-  }: { page?: number; limit?: number; role?: UserRole } = {}) => {
-    if (!role) {
-      return api.getUsers(page, limit);
+    isApproved,
+    search,
+  }: {
+    page?: number;
+    limit?: number;
+    role?: UserRole | UserRole[];
+    isApproved?: boolean;
+    search?: string;
+  } = {}) => {
+    // The backend search is combined with the page's role/status filter by
+    // loading every search match and applying that existing filter.
+    if (role === undefined && isApproved === undefined) {
+      return api.getUsers(page ?? 1, limit, search);
     }
 
     const pageSize = 100;
-    const firstPage = await api.getUsers(1, pageSize);
+    const firstPage = await api.getUsers(1, pageSize, search);
     const totalPages = Number(firstPage.pagination?.pages);
     if (!Number.isInteger(totalPages) || totalPages < 1) {
       throw new Error("Unable to load users because pagination data is invalid.");
@@ -62,23 +76,45 @@ export const fetchUsers = createAsyncThunk(
         (_, index) => firstPageNumber + index,
       );
       const pages = await Promise.all(
-        pageNumbers.map((pageNumber) => api.getUsers(pageNumber, pageSize)),
+        pageNumbers.map((pageNumber) =>
+          api.getUsers(pageNumber, pageSize, search),
+        ),
       );
       allUsers.push(...pages.flatMap((result) => result.users));
     }
 
-    const matchingUsers = allUsers.filter((user) => user.role === role);
+    const roles = role === undefined ? null : [role].flat();
+    const matchingUsers = allUsers.filter(
+      (user) =>
+        (roles === null || roles.includes(user.role)) &&
+        (isApproved === undefined || user.isApproved === isApproved),
+    );
     const matchingPages = Math.max(1, Math.ceil(matchingUsers.length / limit));
 
+    if (page === undefined) {
+      return {
+        users: matchingUsers,
+        pagination: {
+          page: 1,
+          limit,
+          total: matchingUsers.length,
+          pages: matchingPages,
+          hasNextPage: matchingPages > 1,
+          hasPrevPage: false,
+        },
+      };
+    }
+
+    const currentPage = Math.min(Math.max(page, 1), matchingPages);
     return {
-      users: matchingUsers,
+      users: matchingUsers.slice((currentPage - 1) * limit, currentPage * limit),
       pagination: {
-        page: 1,
+        page: currentPage,
         limit,
         total: matchingUsers.length,
         pages: matchingPages,
-        hasNextPage: matchingPages > 1,
-        hasPrevPage: false,
+        hasNextPage: currentPage < matchingPages,
+        hasPrevPage: currentPage > 1,
       },
     };
   },
@@ -115,16 +151,25 @@ const userSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(fetchUsers.pending, (state) => {
+      .addCase(fetchUsers.pending, (state, action) => {
+        const search = action.meta.arg?.search ?? "";
         state.loading = true;
         state.error = null;
+        state.currentRequestId = action.meta.requestId;
+        if (search !== state.activeSearch) {
+          // Do not keep showing results of a different query while loading.
+          state.users = [];
+          state.activeSearch = search;
+        }
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
+        if (state.currentRequestId !== action.meta.requestId) return;
         state.loading = false;
         state.users = action.payload.users;
         state.pagination = action.payload.pagination;
       })
       .addCase(fetchUsers.rejected, (state, action) => {
+        if (state.currentRequestId !== action.meta.requestId) return;
         state.loading = false;
         state.error = action.error.message || "Failed to fetch users";
         toast.error("Failed to fetch users");

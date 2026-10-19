@@ -4,10 +4,15 @@ import type { User } from "./user.types";
 export async function getUsers(
   page: number = 1,
   limit: number = 20,
+  search?: string,
 ): Promise<{ users: User[]; pagination: any }> {
-  const response = await apiClient.request(
-    `/users/all?page=${page}&limit=${limit}`,
-  );
+  const query = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  if (search) query.set("search", search);
+
+  const response = await apiClient.request(`/users/all?${query.toString()}`);
 
   if (response && response.data && Array.isArray(response.data.users)) {
     return {

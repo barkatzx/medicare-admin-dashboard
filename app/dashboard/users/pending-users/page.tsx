@@ -24,6 +24,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
+import { useDebouncedValue } from "@/components/utils/useDebouncedValue";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -42,9 +43,25 @@ export default function PendingUsersPage() {
   );
   const [countRefresh, setCountRefresh] = useState(0);
 
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const search = useDebouncedValue(searchTerm.trim());
+
+  // The backend searches by email or phone; the page's existing filter
+  // (customer + isApproved=false) is applied to the search results.
+  const buildQuery = (page: number, limit: number) => ({
+    page,
+    limit,
+    ...(search && {
+      search,
+      role: "customer" as const,
+      isApproved: false,
+    }),
+  });
+
   useEffect(() => {
-    dispatch(fetchUsers({ page: 1, limit: 20 }));
-  }, [dispatch]);
+    dispatch(fetchUsers(buildQuery(1, 20))).finally(() => setHasLoaded(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, search]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -100,7 +117,7 @@ export default function PendingUsersPage() {
   }, [countRefresh]);
 
   const handlePageChange = (newPage: number) => {
-    dispatch(fetchUsers({ page: newPage, limit: pagination.limit }));
+    dispatch(fetchUsers(buildQuery(newPage, pagination.limit)));
   };
 
   const handleApprove = async (userId: string) => {
@@ -145,17 +162,11 @@ export default function PendingUsersPage() {
     }
   };
 
-  const filteredUsers = users.filter((user) => {
-    const isPending = !user.isApproved && user.role === "customer";
-    if (!isPending) return false;
-    return (
-      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone_number.includes(searchTerm)
-    );
-  });
+  const filteredUsers = users.filter(
+    (user) => !user.isApproved && user.role === "customer",
+  );
 
-  if (loading && users.length === 0) {
+  if (loading && users.length === 0 && !hasLoaded) {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="text-center">
@@ -198,7 +209,7 @@ export default function PendingUsersPage() {
               />
               <input
                 type="text"
-                placeholder="Search by name, email, or phone…"
+                placeholder="Search by email or phone…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-amber-300 focus:outline-none focus:ring-4 focus:ring-amber-50"
@@ -207,10 +218,7 @@ export default function PendingUsersPage() {
             <button
               onClick={() => {
                 dispatch(
-                  fetchUsers({
-                    page: pagination.page,
-                    limit: pagination.limit,
-                  }),
+                  fetchUsers(buildQuery(pagination.page, pagination.limit)),
                 );
                 setCountRefresh((count) => count + 1);
               }}
@@ -222,7 +230,12 @@ export default function PendingUsersPage() {
           </div>
         </div>
 
-        {filteredUsers.length === 0 ? (
+        {loading && filteredUsers.length === 0 ? (
+          <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
+            <div className="mb-4 h-10 w-10 animate-spin rounded-full border-[3px] border-amber-500 border-t-transparent" />
+            <p className="text-sm font-medium text-gray-500">Loading users…</p>
+          </div>
+        ) : filteredUsers.length === 0 ? (
           <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
               <Clock size={22} className="text-gray-300" />

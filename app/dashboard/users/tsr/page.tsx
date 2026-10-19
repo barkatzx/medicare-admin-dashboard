@@ -2,7 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
-import type { User } from "@/config/api";
+import type { User, UserRole } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { deleteUser, fetchUsers } from "@/store/slices/userSlice";
 import {
@@ -18,9 +18,11 @@ import {
   Trash2,
   Users as UsersIcon,
 } from "lucide-react";
+import { useDebouncedValue } from "@/components/utils/useDebouncedValue";
 import { useEffect, useState } from "react";
 
 const PAGE_SIZE = 20;
+const TSR_PAGE_ROLES: UserRole[] = ["TSR", "admin"];
 
 const TSR = () => {
   const dispatch = useAppDispatch();
@@ -32,21 +34,22 @@ const TSR = () => {
   const [userForLocation, setUserForLocation] = useState<User | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const search = useDebouncedValue(searchTerm.trim());
+
   useEffect(() => {
-    dispatch(fetchUsers({ role: "TSR", limit: PAGE_SIZE })).finally(() => {
+    dispatch(
+      fetchUsers({
+        role: TSR_PAGE_ROLES,
+        limit: PAGE_SIZE,
+        ...(search && { search }),
+      }),
+    ).finally(() => {
       setHasLoaded(true);
     });
-  }, [dispatch]);
+  }, [dispatch, search]);
 
-  const tsrUsers = users.filter((user) => user.role === "TSR");
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  const matchingUsers = tsrUsers.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(normalizedSearch) ||
-      user.email.toLowerCase().includes(normalizedSearch) ||
-      user.phone_number.toLowerCase().includes(normalizedSearch) ||
-      user.pharmacy_name?.toLowerCase().includes(normalizedSearch),
-  );
+  const tsrUsers = users.filter((user) => TSR_PAGE_ROLES.includes(user.role));
+  const matchingUsers = tsrUsers;
   const totalPages = Math.ceil(matchingUsers.length / PAGE_SIZE);
   const page = Math.min(currentPage, Math.max(totalPages, 1));
   const pageUsers = matchingUsers.slice(
@@ -64,7 +67,13 @@ const TSR = () => {
   };
 
   const handleRefresh = () => {
-    dispatch(fetchUsers({ role: "TSR", limit: PAGE_SIZE }));
+    dispatch(
+      fetchUsers({
+        role: TSR_PAGE_ROLES,
+        limit: PAGE_SIZE,
+        ...(search && { search }),
+      }),
+    );
   };
 
   const handleDelete = async () => {
@@ -90,9 +99,11 @@ const TSR = () => {
               <UsersIcon size={15} strokeWidth={2.25} />
             </span>
             <div>
-              <h1 className="text-sm font-semibold text-gray-900">TSR List</h1>
+              <h1 className="text-sm font-semibold text-gray-900">
+                TSR &amp; Admin List
+              </h1>
               <p className="text-[11px] text-gray-500">
-                {tsrUsers.length} {tsrUsers.length === 1 ? "TSR" : "TSRs"}
+                {tsrUsers.length} {tsrUsers.length === 1 ? "user" : "users"}
               </p>
             </div>
           </div>
@@ -105,8 +116,8 @@ const TSR = () => {
               />
               <input
                 type="search"
-                aria-label="Search TSR users"
-                placeholder="Search by name, email, or phone…"
+                aria-label="Search TSR and admin users"
+                placeholder="Search by email or phone…"
                 value={searchTerm}
                 onChange={(event) => handleSearchChange(event.target.value)}
                 className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-50"
@@ -136,9 +147,7 @@ const TSR = () => {
         {!hasLoaded || (loading && users.length === 0) ? (
           <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
             <div className="mb-4 h-10 w-10 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
-            <p className="text-sm font-medium text-gray-500">
-              Loading TSR users…
-            </p>
+            <p className="text-sm font-medium text-gray-500">Loading users…</p>
           </div>
         ) : pageUsers.length === 0 ? (
           <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
@@ -146,11 +155,11 @@ const TSR = () => {
               <UsersIcon size={22} className="text-gray-300" />
             </div>
             <p className="mt-4 text-sm font-medium text-gray-500">
-              {normalizedSearch
-                ? "No TSR users match your search."
-                : "No TSR users found."}
+              {searchTerm.trim()
+                ? "No users match your search."
+                : "No TSR or admin users found."}
             </p>
-            {normalizedSearch && (
+            {searchTerm.trim() && (
               <p className="mt-1 text-xs text-gray-400">
                 Try adjusting your search.
               </p>
@@ -165,7 +174,7 @@ const TSR = () => {
                   <th className="px-6 py-3">Email</th>
                   <th className="px-6 py-3">Phone</th>
                   <th className="px-6 py-3">Role</th>
-                  <th className="px-6 py-3">Approval status</th>
+                  {/* <th className="px-6 py-3">Approval status</th> */}
                   <th className="px-6 py-3">Joined</th>
                   <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
@@ -206,11 +215,17 @@ const TSR = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 ring-1 ring-inset ring-blue-100">
-                        TSR
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+                          user.role === "admin"
+                            ? "bg-purple-50 text-purple-700 ring-purple-100"
+                            : "bg-blue-50 text-blue-700 ring-blue-100"
+                        }`}
+                      >
+                        {user.role === "admin" ? "Admin" : "TSR"}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    {/* <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
                           user.isApproved
@@ -221,7 +236,7 @@ const TSR = () => {
                         {user.isApproved && <CheckCircle size={11} />}
                         {user.isApproved ? "Approved" : "Pending"}
                       </span>
-                    </td>
+                    </td> */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-xs font-medium tabular-nums text-gray-500">
                         <Calendar
@@ -277,7 +292,7 @@ const TSR = () => {
                 <span className="font-semibold text-gray-700">
                   {matchingUsers.length}
                 </span>{" "}
-                TSR users
+                users
               </p>
               {totalPages > 1 && (
                 <div className="flex items-center gap-1.5">
