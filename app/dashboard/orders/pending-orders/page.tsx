@@ -4,6 +4,7 @@ import { api } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   confirmPayment,
+  ACTIVE_STATUS,
   fetchOrders,
   updateOrderStatus,
 } from "@/store/slices/orderSlice";
@@ -30,6 +31,7 @@ export default function PendingOrdersPage() {
   );
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const apiStatus = statusFilter === "all" ? ACTIVE_STATUS : statusFilter;
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
@@ -86,11 +88,11 @@ export default function PendingOrdersPage() {
       fetchOrders({
         page: currentPage,
         limit: 20,
-        status: statusFilter,
+        status: apiStatus,
         search: normalizedSearch || undefined,
       }),
     );
-  }, [dispatch, currentPage, normalizedSearch, statusFilter]);
+  }, [dispatch, currentPage, normalizedSearch, apiStatus]);
 
   useEffect(() => {
     if (pagination && currentPage > pagination.totalPages) {
@@ -110,7 +112,7 @@ export default function PendingOrdersPage() {
         fetchOrders({
           page: currentPage,
             limit: 20,
-            status: statusFilter,
+            status: apiStatus,
             search: normalizedSearch || undefined,
         }),
       );
@@ -189,7 +191,7 @@ export default function PendingOrdersPage() {
 
   const queryMatches =
     query?.page === currentPage &&
-    query.status === statusFilter &&
+    query.status === apiStatus &&
     query.search === (normalizedSearch || undefined);
 
   if (fetching || isSearchDebouncing || !queryMatches) {

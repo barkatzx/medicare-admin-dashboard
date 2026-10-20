@@ -194,11 +194,11 @@ const TSR = () => {
                           <p className="truncate text-sm font-semibold text-gray-900">
                             {user.name || "N/A"}
                           </p>
-                          {user.pharmacy_name && (
+                          {/* {user.pharmacy_name && (
                             <p className="truncate text-xs text-gray-500">
                               {user.pharmacy_name}
                             </p>
-                          )}
+                          )} */}
                         </div>
                       </div>
                     </td>

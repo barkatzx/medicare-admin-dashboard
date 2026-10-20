@@ -46,16 +46,13 @@ export default function PendingUsersPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const search = useDebouncedValue(searchTerm.trim());
 
-  // The backend searches by email or phone; the page's existing filter
-  // (customer + isApproved=false) is applied to the search results.
+  // Only pending customers are listed, so pagination reflects just those.
   const buildQuery = (page: number, limit: number) => ({
     page,
     limit,
-    ...(search && {
-      search,
-      role: "customer" as const,
-      isApproved: false,
-    }),
+    role: "customer" as const,
+    isApproved: false,
+    ...(search && { search }),
   });
 
   useEffect(() => {
@@ -255,7 +252,7 @@ export default function PendingUsersPage() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                   <th className="px-6 py-3">User</th>
-                  {/* <th className="px-6 py-3">Email</th> */}
+                  <th className="px-6 py-3">Pharmacy</th>
                   <th className="px-6 py-3">Phone</th>
                   <th className="px-6 py-3">Joined</th>
                   <th className="px-6 py-3">Status</th>
@@ -279,12 +276,11 @@ export default function PendingUsersPage() {
                       </div>
                     </td>
 
-                    {/* <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
-                        <Mail size={13} className="shrink-0 text-gray-400" />
-                        <span className="truncate">{user.email}</span>
-                      </div>
-                    </td> */}
+                    <td className="px-6 py-4">
+                      <p className="truncate text-xs text-gray-500">
+                        {user.pharmacy_name || "N/A"}
+                      </p>
+                    </td>
 
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-xs font-medium tabular-nums text-gray-600">

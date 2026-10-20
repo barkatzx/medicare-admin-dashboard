@@ -21,6 +21,15 @@ interface FetchOrdersArgs {
   search?: string;
 }
 
+export const ACTIVE_STATUS = "active";
+const ACTIVE_STATUSES = ["pending", "confirmed", "processing", "shipped"];
+const EMPTY_PAGINATION = {
+  page: 1,
+  limit: 20,
+  total: 0,
+  totalPages: 0,
+} as OrderPagination;
+
 const initialState: OrderState = {
   orders: [],
   loading: false,
@@ -34,7 +43,35 @@ const initialState: OrderState = {
 export const fetchOrders = createAsyncThunk(
   "orders/fetchAll",
   async ({ page, limit, status, search }: FetchOrdersArgs) => {
-    return api.getAllOrders(page, limit, status, search);
+    if (status !== ACTIVE_STATUS) {
+      return api.getAllOrders(page, limit, status, search);
+    }
+
+    // The API filters by a single status, so merge the active ones and paginate here.
+    const perStatus = await Promise.all(
+      ACTIVE_STATUSES.map(async (s) => {
+        const first = await api.getAllOrders(1, 100, s, search);
+        const rest = await Promise.all(
+          Array.from(
+            { length: Math.max(0, first.pagination.totalPages - 1) },
+            (_, i) => api.getAllOrders(i + 2, 100, s, search),
+          ),
+        );
+        return [first, ...rest].flatMap((r) => r.orders);
+      }),
+    );
+    const merged = perStatus
+      .flat()
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+    const total = merged.length;
+    const totalPages = Math.ceil(total / limit);
+    return {
+      orders: merged.slice((page - 1) * limit, page * limit),
+      pagination: { ...EMPTY_PAGINATION, page, limit, total, totalPages },
+    };
   },
 );
 
