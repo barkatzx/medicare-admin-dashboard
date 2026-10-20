@@ -46,93 +46,153 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
   );
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-      <div className="flex items-center justify-between gap-4 border-b border-gray-100 px-5 py-4 sm:px-6">
+    <section>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 pb-3.5 border-b border-[#eeeeee]">
         <div>
-          <h1 className="text-sm font-bold">Today shipments</h1>
-          <p className="mt-1 text-xs text-gray-500">
-            Products grouped by distributor
-          </p>
+          <h1 className="text-[17px] font-bold leading-none tracking-tight text-blue-700">
+            Today Shipments
+          </h1>
         </div>
         <ShipmentPDF groups={distributorGroups} />
       </div>
 
       {distributorGroups.length === 0 ? (
-        <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
-            <PackageOpen size={22} className="text-gray-300" />
+        <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center border-b border-[#eeeeee]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50">
+            <PackageOpen size={20} className="text-gray-300" />
           </div>
-          <p className="mt-4 text-sm font-medium text-gray-500">
+          <p className="mt-3 text-[12px] font-medium text-gray-500">
             No today shipment products found.
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-gray-100">
-          {distributorGroups.map(({ distributor, products: groupProducts }) => (
-            <section key={distributor} className="px-5 py-5 sm:px-6">
-              <div className="mb-3 flex items-center justify-between gap-4">
-                <h2 className="text-sm font-semibold text-gray-900">
-                  {distributor}
-                </h2>
-                <span className="text-xs text-gray-500">
-                  {groupProducts.length} product
-                  {groupProducts.length === 1 ? "" : "s"}
-                </span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[600px] table-fixed text-left">
-                  <caption className="sr-only">
-                    Today shipment products for {distributor}
-                  </caption>
-                  <colgroup>
-                    <col className="w-[52%]" />
-                    <col className="w-[16%]" />
-                    <col className="w-[16%]" />
-                    <col className="w-[16%]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                      <th scope="col" className="px-5 py-3 sm:px-6">
-                        Product Name
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-right">
-                        Quantity
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-right">
-                        Price
-                      </th>
-                      <th scope="col" className="px-5 py-3 text-right sm:px-6">
-                        TP
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {groupProducts.map((product, index) => (
-                      <tr
-                        key={`${product.productName}-${index}`}
-                        className="transition-colors hover:bg-gray-50/80"
-                      >
-                        <td className="break-words px-5 py-4 text-sm font-medium leading-5 text-gray-900 sm:px-6">
-                          {product.productName}
-                        </td>
-                        <td className="px-4 py-4 text-right text-sm tabular-nums text-gray-700">
-                          {product.quantity}
-                        </td>
-                        <td className="px-4 py-4 text-right text-sm font-medium tabular-nums text-gray-900">
-                          {formatSalesCurrency(product.price)}
-                        </td>
-                        <td className="px-5 py-4 text-right text-sm tabular-nums text-gray-600 sm:px-6">
-                          {product.tp === null
-                            ? "N/A"
-                            : formatSalesCurrency(product.tp)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ))}
+        <div>
+          {distributorGroups.map(
+            ({ distributor, products: groupProducts }, groupIndex) => {
+              const unitPriceTotal = groupProducts.reduce(
+                (sum, product) => sum + product.price * product.quantity,
+                0,
+              );
+              const tpTotal = groupProducts.reduce<number | null>(
+                (sum, product) => {
+                  if (sum === null || product.tp === null) return null;
+                  return sum + product.tp * product.quantity;
+                },
+                0,
+              );
+
+              return (
+                <section
+                  key={distributor}
+                  className="pt-3.5 pb-3.5 border-b border-[#eeeeee] last:border-b-0"
+                >
+                  {/* Distributor sub-header */}
+                  <div className="flex items-center justify-between gap-4 mb-2">
+                    <h2 className="text-[13px] font-semibold text-gray-900">
+                      {distributor}
+                    </h2>
+                    <span className="text-[10.5px] text-gray-500">
+                      {groupProducts.length} product
+                      {groupProducts.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+
+                  {/* Rounded, bordered table — same recipe as the invoice */}
+                  <div className="rounded-[10px] overflow-hidden border border-[#eeeeee]">
+                    <table className="w-full table-fixed border-collapse text-[11.5px]">
+                      <caption className="sr-only">
+                        Today shipment products for {distributor}
+                      </caption>
+                      <colgroup>
+                        <col className="w-[52%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[16%]" />
+                      </colgroup>
+                      <thead>
+                        <tr className="bg-[#f7f7f7]">
+                          <th
+                            scope="col"
+                            className="text-left border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
+                          >
+                            Product
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-right border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
+                          >
+                            Qty
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-right border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
+                          >
+                            Unit Price
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-right border-b border-[#eeeeee] px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
+                          >
+                            TP
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groupProducts.map((product, index) => (
+                          <tr
+                            key={`${product.productName}-${index}`}
+                            className={
+                              index % 2 === 1 ? "bg-[#f7f7f7]" : "bg-white"
+                            }
+                          >
+                            <td className="break-words border-b border-r border-[#eeeeee] px-2.5 py-1.5 font-medium text-gray-900">
+                              {product.productName}
+                            </td>
+                            <td className="border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-right tabular-nums text-gray-700">
+                              {product.quantity}
+                            </td>
+                            <td className="border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-right font-semibold tabular-nums text-gray-900 whitespace-nowrap">
+                              {formatSalesCurrency(product.price)}
+                            </td>
+                            <td className="border-b border-[#eeeeee] px-2.5 py-1.5 text-right tabular-nums text-gray-600 whitespace-nowrap">
+                              {product.tp === null
+                                ? "N/A"
+                                : formatSalesCurrency(product.tp)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr>
+                          <td
+                            colSpan={2}
+                            className="bg-blue-50 px-2.5 py-2 text-left text-[12px] font-bold text-blue-700"
+                          >
+                            Totals
+                          </td>
+                          <td className="bg-blue-50 px-2 py-2 text-right text-[9px] font-bold leading-tight text-blue-700">
+                            {/* <span className="block">Total Unit Price Amount</span> */}
+                            <span className="mt-1 block whitespace-nowrap text-[11px] tabular-nums">
+                              {formatSalesCurrency(unitPriceTotal)}
+                            </span>
+                          </td>
+                          <td className="bg-blue-50 px-2 py-2 text-right text-[9px] font-bold leading-tight text-blue-700">
+                            {/* <span className="block">Total TP Price</span> */}
+                            <span className="mt-1 block whitespace-nowrap text-[11px] tabular-nums">
+                              {tpTotal === null
+                                ? "N/A"
+                                : formatSalesCurrency(tpTotal)}
+                            </span>
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </section>
+              );
+            },
+          )}
         </div>
       )}
     </section>

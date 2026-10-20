@@ -4,131 +4,61 @@ import { api } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { logout } from "@/store/slices/authSlice";
 import {
-  AlertTriangle,
-  AreaChart,
-  CheckCircle,
+  BadgeAlert,
+  BarChart3,
+  BookOpen,
+  Boxes,
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
-  CircleUser,
+  ClipboardList,
   Clock,
-  Grid3X3,
-  Layers2,
   LayoutDashboard,
-  Leaf,
+  LineChart,
   LogOut,
   Package,
-  Settings,
-  ShoppingBag,
+  PackageCheck,
+  PackageX,
+  ShoppingCart,
   Star,
-  Store,
+  Tags,
   TrendingUp,
   Truck,
   UserCheck,
-  UserIcon,
+  UserCog,
   Users,
+  Warehouse,
   XCircle,
+  type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-// Products submenu items
-const productSubItems = [
-  {
-    name: "Products",
-    href: "/dashboard/products/all-products",
-    icon: Grid3X3,
-    description: "Full inventory",
-    color: "text-blue-500",
-    bg: "bg-blue-50",
-  },
-  {
-    name: "Trending",
-    href: "/dashboard/products/trending",
-    icon: TrendingUp,
-    description: "Top performers",
-    color: "text-orange-500",
-    bg: "bg-orange-50",
-  },
-  {
-    name: "Featured",
-    href: "/dashboard/products/featured",
-    icon: Star,
-    description: "Highlighted items",
-    color: "text-yellow-500",
-    bg: "bg-yellow-50",
-  },
-  {
-    name: "Low Stock",
-    href: "/dashboard/products/low-stock",
-    icon: AlertTriangle,
-    description: "Items running low",
-    color: "text-amber-500",
-    bg: "bg-amber-50",
-  },
-  {
-    name: "Out of Stock",
-    href: "/dashboard/products/out-of-stock",
-    icon: XCircle,
-    description: "Low inventory items",
-    color: "text-red-500",
-    bg: "bg-red-50",
-  },
-  {
-    name: "Categories",
-    href: "/dashboard/products/categories",
-    icon: Layers2,
-    description: "Organize products",
-    color: "text-purple-500",
-    bg: "bg-purple-50",
-  },
-  {
-    name: "Distributors",
-    href: "/dashboard/distributors",
-    icon: Store,
-    description: "Manage distributors",
-    color: "text-purple-500",
-    bg: "bg-purple-50",
-  },
-];
+/* ----------------------------- Types & data ----------------------------- */
 
-// Users submenu items
-const userSubItems = [
-  {
-    name: "Pending",
-    href: "/dashboard/users/pending-users",
-    icon: Clock,
-    description: "Approve registrations",
-    color: "text-amber-500",
-    bg: "bg-amber-50",
-  },
-  {
-    name: "Active",
-    href: "/dashboard/users/active-users",
-    icon: UserCheck,
-    description: "Manage customers",
-    color: "text-emerald-500",
-    bg: "bg-emerald-50",
-  },
-  {
-    name: "TSR's",
-    href: "/dashboard/users/tsr",
-    icon: UserIcon,
-    description: "Manage TSRs",
-    color: "text-emerald-500",
-    bg: "bg-emerald-50",
-  },
-];
+interface SubItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  color: string;
+  bg: string;
+}
 
-// TSR submenu items
-const tsrSubItems = [
+interface NavLinkItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+}
+
+type GroupKey = "tsr" | "customers" | "inventory" | "orders";
+
+const tsrItems: SubItem[] = [
   {
     name: "Analytics",
     href: "/dashboard/tsr-info/tsr-summary",
-    icon: AreaChart,
-    description: "TSR analytics",
+    icon: LineChart,
     color: "text-blue-600",
     bg: "bg-blue-100",
   },
@@ -136,27 +66,99 @@ const tsrSubItems = [
     name: "Summary",
     href: "/dashboard/tsr-info/tsr-sales",
     icon: CircleDollarSign,
-    description: "TSR sales summary",
     color: "text-emerald-500",
     bg: "bg-emerald-50",
   },
 ];
 
-// Orders submenu items
-const orderSubItems = [
+const customerItems: SubItem[] = [
+  {
+    name: "Pending",
+    href: "/dashboard/users/pending-users",
+    icon: Clock,
+    color: "text-amber-500",
+    bg: "bg-amber-50",
+  },
+  {
+    name: "Active",
+    href: "/dashboard/users/active-users",
+    icon: UserCheck,
+    color: "text-emerald-500",
+    bg: "bg-emerald-50",
+  },
+  {
+    name: "TSR's",
+    href: "/dashboard/users/tsr",
+    icon: UserCog,
+    color: "text-indigo-500",
+    bg: "bg-indigo-50",
+  },
+];
+
+const inventoryItems: SubItem[] = [
+  {
+    name: "Products",
+    href: "/dashboard/products/all-products",
+    icon: Boxes,
+    color: "text-blue-500",
+    bg: "bg-blue-50",
+  },
+  {
+    name: "Trending",
+    href: "/dashboard/products/trending",
+    icon: TrendingUp,
+    color: "text-orange-500",
+    bg: "bg-orange-50",
+  },
+  {
+    name: "Featured",
+    href: "/dashboard/products/featured",
+    icon: Star,
+    color: "text-yellow-500",
+    bg: "bg-yellow-50",
+  },
+  {
+    name: "Low Stock",
+    href: "/dashboard/products/low-stock",
+    icon: BadgeAlert,
+    color: "text-amber-500",
+    bg: "bg-amber-50",
+  },
+  {
+    name: "Out of Stock",
+    href: "/dashboard/products/out-of-stock",
+    icon: PackageX,
+    color: "text-red-500",
+    bg: "bg-red-50",
+  },
+  {
+    name: "Categories",
+    href: "/dashboard/products/categories",
+    icon: Tags,
+    color: "text-purple-500",
+    bg: "bg-purple-50",
+  },
+  {
+    name: "Distributors",
+    href: "/dashboard/distributors",
+    icon: Warehouse,
+    color: "text-teal-500",
+    bg: "bg-teal-50",
+  },
+];
+
+const orderItems: SubItem[] = [
   {
     name: "Pending",
     href: "/dashboard/orders/pending-orders",
     icon: Clock,
-    description: "Manage active orders",
     color: "text-blue-500",
     bg: "bg-blue-50",
   },
   {
     name: "Delivered",
     href: "/dashboard/orders/delivered-orders",
-    icon: CheckCircle,
-    description: "Completed shipments",
+    icon: PackageCheck,
     color: "text-green-500",
     bg: "bg-green-50",
   },
@@ -164,90 +166,293 @@ const orderSubItems = [
     name: "Cancelled",
     href: "/dashboard/orders/cancel-orders",
     icon: XCircle,
-    description: "Invalidated orders",
     color: "text-red-500",
     bg: "bg-red-50",
   },
 ];
 
-const menuItems = [
+const groups: {
+  key: GroupKey;
+  label: string;
+  icon: LucideIcon;
+  items: SubItem[];
+}[] = [
+  { key: "tsr", label: "TSR's", icon: UserCog, items: tsrItems },
+  { key: "customers", label: "Customers", icon: Users, items: customerItems },
   {
-    name: "Analytics",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-    description: "Overview & analytics",
+    key: "inventory",
+    label: "Inventory",
+    icon: Package,
+    items: inventoryItems,
   },
-  {
-    name: "Reports",
-    href: "/dashboard/reports",
-    icon: AreaChart,
-    description: "Sales analytics",
-  },
-  {
-    name: "Shipments",
-    href: "/dashboard/today-shipments",
-    icon: Truck,
-    description: "Manage shipments",
-  },
+  { key: "orders", label: "Orders", icon: ShoppingCart, items: orderItems },
 ];
 
-const bottomMenuItems = [
-  {
-    name: "Documentation",
-    href: "/dashboard/documentation",
-    icon: Leaf,
-    description: "User guides",
-  },
+const topLink: NavLinkItem = {
+  name: "Analytics",
+  href: "/dashboard",
+  icon: LayoutDashboard,
+};
+
+const bottomLinks: NavLinkItem[] = [
+  { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
+  { name: "Shipments", href: "/dashboard/today-shipments", icon: Truck },
 ];
 
-// Path helpers
-const isProductsPath = (pathname: string) =>
-  productSubItems.some(
-    (sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"),
-  );
+const footerLinks: NavLinkItem[] = [
+  { name: "Documentation", href: "/dashboard/documentation", icon: BookOpen },
+];
 
-const isUsersPath = (pathname: string) =>
-  userSubItems.some(
-    (sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"),
-  );
+/* -------------------------------- Helpers ------------------------------- */
 
-const isOrdersPath = (pathname: string) =>
-  orderSubItems.some(
-    (sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"),
-  );
+const matchesPath = (pathname: string, href: string) =>
+  pathname === href || pathname.startsWith(href + "/");
 
-const isTsrPath = (pathname: string) =>
-  tsrSubItems.some(
-    (sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"),
+const isGroupActive = (pathname: string, items: SubItem[]) =>
+  items.some((item) => matchesPath(pathname, item.href));
+
+const ACTIVE_CLASS = "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700";
+const IDLE_CLASS = "text-gray-600 hover:bg-gray-50 hover:text-blue-600";
+const ACTIVE_BAR = (
+  <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
+);
+
+const iconClass = (active: boolean) =>
+  `flex-shrink-0 transition-all duration-200 ${
+    active
+      ? "text-blue-600"
+      : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"
+  }`;
+
+const PAGE_SIZE = 100;
+const BATCH_SIZE = 5;
+
+const isPendingCustomer = (u: { isApproved?: boolean; role?: string }) =>
+  !u.isApproved && u.role === "customer";
+
+async function countPendingCustomers(): Promise<number> {
+  const firstPage = await api.getUsers(1, PAGE_SIZE);
+  let count = firstPage.users.filter(isPendingCustomer).length;
+  const totalPages = firstPage.pagination.pages;
+
+  for (let start = 2; start <= totalPages; start += BATCH_SIZE) {
+    const pageNumbers = Array.from(
+      { length: Math.min(BATCH_SIZE, totalPages - start + 1) },
+      (_, i) => start + i,
+    );
+    const pages = await Promise.all(
+      pageNumbers.map((p) => api.getUsers(p, PAGE_SIZE)),
+    );
+    count += pages.reduce(
+      (sum, page) => sum + page.users.filter(isPendingCustomer).length,
+      0,
+    );
+  }
+  return count;
+}
+
+async function countPendingOrders(): Promise<number> {
+  const data = await api.getAllOrders(1, 1, "pending");
+  return data?.pagination?.total || data?.orders?.length || 0;
+}
+
+/** Polls a counter every 30s and refreshes when a window event fires. */
+function usePolledCount(fetcher: () => Promise<number>, eventName: string) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        setCount(await fetcher());
+      } catch (error) {
+        console.error(`Failed to fetch count for ${eventName}:`, error);
+      }
+    };
+
+    refresh();
+    const interval = setInterval(refresh, 30000);
+    window.addEventListener(eventName, refresh);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(eventName, refresh);
+    };
+  }, [fetcher, eventName]);
+
+  return count;
+}
+
+/* ------------------------------ Sub-components -------------------------- */
+
+function NavLink({
+  item,
+  active,
+  showText,
+  isCollapsed,
+}: {
+  item: NavLinkItem;
+  active: boolean;
+  showText: boolean;
+  isCollapsed: boolean;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+        isCollapsed ? "justify-center" : ""
+      } ${active ? ACTIVE_CLASS : IDLE_CLASS}`}
+    >
+      <Icon size={20} className={iconClass(active)} />
+      {showText && (
+        <span className="text-sm font-medium whitespace-nowrap">
+          {item.name}
+        </span>
+      )}
+      {active && showText && ACTIVE_BAR}
+    </Link>
   );
+}
+
+function NavGroup({
+  label,
+  icon: Icon,
+  items,
+  pathname,
+  open,
+  onToggle,
+  showText,
+  isCollapsed,
+  badge = 0,
+  badgeHref,
+}: {
+  label: string;
+  icon: LucideIcon;
+  items: SubItem[];
+  pathname: string;
+  open: boolean;
+  onToggle: () => void;
+  showText: boolean;
+  isCollapsed: boolean;
+  badge?: number;
+  badgeHref?: string;
+}) {
+  const active = isGroupActive(pathname, items);
+
+  return (
+    <div>
+      <button
+        onClick={() => showText && onToggle()}
+        className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+          isCollapsed ? "justify-center" : ""
+        } ${active ? ACTIVE_CLASS : IDLE_CLASS}`}
+      >
+        <Icon size={20} className={iconClass(active)} />
+        {showText && (
+          <>
+            <span className="text-sm font-medium whitespace-nowrap flex-1 text-left">
+              {label}
+            </span>
+            {badge > 0 && !open && (
+              <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
+                {badge}
+              </span>
+            )}
+            <ChevronRight
+              size={14}
+              className={`transition-transform duration-300 ${open ? "rotate-90" : ""} ${
+                active ? "text-blue-500" : "text-gray-400"
+              }`}
+            />
+          </>
+        )}
+        {active && showText && ACTIVE_BAR}
+      </button>
+
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          open && showText ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="mt-0.5 mb-1 space-y-0.5">
+          {items.map((sub) => {
+            const isActive = matchesPath(pathname, sub.href);
+            const SubIcon = sub.icon;
+            return (
+              <Link
+                key={sub.href}
+                href={sub.href}
+                className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                  isActive
+                    ? ACTIVE_CLASS
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <span
+                  className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 ${
+                    isActive ? "bg-blue-100" : `${sub.bg} group-hover:scale-110`
+                  }`}
+                >
+                  <SubIcon
+                    size={12}
+                    className={isActive ? "text-blue-600" : sub.color}
+                  />
+                </span>
+                <span className="text-sm font-medium whitespace-nowrap">
+                  {sub.name}
+                </span>
+                {sub.href === badgeHref && badge > 0 && (
+                  <span className="ml-auto bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                    {badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------------- Sidebar ------------------------------ */
 
 export default function Sidebar() {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { user } = useAppSelector((state) => state.auth);
-  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
-  const [pendingCustomersCount, setPendingCustomersCount] = useState(0);
+
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-
-  const [productsOpen, setProductsOpen] = useState(() =>
-    isProductsPath(pathname),
+  const [openGroups, setOpenGroups] = useState<Record<GroupKey, boolean>>(
+    () => ({
+      tsr: isGroupActive(pathname, tsrItems),
+      customers: isGroupActive(pathname, customerItems),
+      inventory: isGroupActive(pathname, inventoryItems),
+      orders: isGroupActive(pathname, orderItems),
+    }),
   );
-  const [usersOpen, setUsersOpen] = useState(() => isUsersPath(pathname));
-  const [tsrOpen, setTsrOpen] = useState(() => isTsrPath(pathname));
-  const [ordersOpen, setOrdersOpen] = useState(() => isOrdersPath(pathname));
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const getPendingOrders = useCallback(countPendingOrders, []);
+  const getPendingCustomers = useCallback(countPendingCustomers, []);
+  const pendingOrdersCount = usePolledCount(getPendingOrders, "ordersUpdated");
+  const pendingCustomersCount = usePolledCount(
+    getPendingCustomers,
+    "usersUpdated",
+  );
 
-  // Auto-open dropdowns if path is active
+  // Auto-open the group that contains the current route
   useEffect(() => {
-    if (isProductsPath(pathname)) setProductsOpen(true);
-    if (isUsersPath(pathname)) setUsersOpen(true);
-    if (isTsrPath(pathname)) setTsrOpen(true);
-    if (isOrdersPath(pathname)) setOrdersOpen(true);
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      groups.forEach((g) => {
+        if (isGroupActive(pathname, g.items)) next[g.key] = true;
+      });
+      return next;
+    });
   }, [pathname]);
 
+  // Restore collapsed state
   useEffect(() => {
     try {
       const saved = localStorage.getItem("sidebarCollapsed");
@@ -255,88 +460,19 @@ export default function Sidebar() {
     } catch {}
   }, []);
 
-  useEffect(() => {
-    const fetchPendingOrdersCount = async () => {
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
       try {
-        const data = await api.getAllOrders(1, 1, "pending");
-        const count = data?.pagination?.total || data?.orders?.length || 0;
-        setPendingOrdersCount(count);
-      } catch (error) {
-        console.error("Failed to fetch pending orders count:", error);
-      }
-    };
+        localStorage.setItem("sidebarCollapsed", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
 
-    fetchPendingOrdersCount();
-    const interval = setInterval(fetchPendingOrdersCount, 30000);
-    const handleOrderUpdate = () => fetchPendingOrdersCount();
-    window.addEventListener("ordersUpdated", handleOrderUpdate);
+  const toggleGroup = (key: GroupKey) =>
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("ordersUpdated", handleOrderUpdate);
-    };
-  }, []);
-
-  useEffect(() => {
-    const fetchPendingCustomersCount = async () => {
-      try {
-        const pageSize = 100;
-        const firstPage = await api.getUsers(1, pageSize);
-        let count = firstPage.users.filter(
-          (user) => !user.isApproved && user.role === "customer",
-        ).length;
-
-        for (
-          let firstPageNumber = 2;
-          firstPageNumber <= firstPage.pagination.pages;
-          firstPageNumber += 5
-        ) {
-          const pageNumbers = Array.from(
-            {
-              length: Math.min(
-                5,
-                firstPage.pagination.pages - firstPageNumber + 1,
-              ),
-            },
-            (_, index) => firstPageNumber + index,
-          );
-          const pages = await Promise.all(
-            pageNumbers.map((page) => api.getUsers(page, pageSize)),
-          );
-          count += pages.reduce(
-            (total, page) =>
-              total +
-              page.users.filter(
-                (user) => !user.isApproved && user.role === "customer",
-              ).length,
-            0,
-          );
-        }
-
-        setPendingCustomersCount(count);
-      } catch (error) {
-        console.error("Failed to fetch pending customers count:", error);
-      }
-    };
-
-    fetchPendingCustomersCount();
-    const interval = setInterval(fetchPendingCustomersCount, 30000);
-    const handleUsersUpdate = () => fetchPendingCustomersCount();
-    window.addEventListener("usersUpdated", handleUsersUpdate);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("usersUpdated", handleUsersUpdate);
-    };
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed));
-    } catch {}
-  }, [isCollapsed]);
-
-  const handleToggle = () => setIsCollapsed((v) => !v);
   const handleLogout = async () => {
     await dispatch(logout());
     router.push("/login");
@@ -344,10 +480,19 @@ export default function Sidebar() {
 
   const showText = !isCollapsed || isHovered;
   const sidebarWidth = isCollapsed ? "w-20" : "w-64";
-  const productsActive = isProductsPath(pathname);
-  const usersActive = isUsersPath(pathname);
-  const tsrActive = isTsrPath(pathname);
-  const ordersActive = isOrdersPath(pathname);
+
+  const badges: Record<GroupKey, { count: number; href?: string }> = {
+    tsr: { count: 0 },
+    customers: {
+      count: pendingCustomersCount,
+      href: "/dashboard/users/pending-users",
+    },
+    inventory: { count: 0 },
+    orders: {
+      count: pendingOrdersCount,
+      href: "/dashboard/orders/pending-orders",
+    },
+  };
 
   return (
     <>
@@ -356,26 +501,24 @@ export default function Sidebar() {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Logo Section */}
+        {/* Logo */}
         <div
           className={`relative p-5 ${isCollapsed ? "px-3" : ""} border-b border-gray-100`}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="relative flex-shrink-0">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-                  <Image
-                    src="/logo.png"
-                    alt="Logo"
-                    className="rounded-lg border border-gray-100"
-                    width={50}
-                    height={50}
-                  />
-                </div>
+                <Image
+                  src="/logo.png"
+                  alt="Logo"
+                  className="rounded-lg border border-gray-100"
+                  width={50}
+                  height={50}
+                />
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full ring-2 ring-white" />
               </div>
               {showText && (
-                <div className="transition-opacity duration-200 whitespace-nowrap">
+                <div className="whitespace-nowrap">
                   <h1 className="text-sm font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                     MediCarePLC
                   </h1>
@@ -389,7 +532,8 @@ export default function Sidebar() {
               )}
             </div>
             <button
-              onClick={handleToggle}
+              onClick={toggleCollapsed}
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               className={`absolute -right-3 top-6 bg-white border border-gray-100 rounded-full p-1.5 shadow-md hover:shadow-lg transition-all duration-200 hover:bg-gray-50 ${
                 isCollapsed ? "rotate-180" : ""
               }`}
@@ -401,445 +545,74 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-2 overflow-y-auto overflow-x-hidden">
-          <div className="space-y-4">
-            <div>
-              {showText && (
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">
-                  Main Menu
-                </p>
-              )}
-              <div className="space-y-1">
-                {/* Analytics */}
-                {menuItems.slice(0, 1).map((item) => {
-                  const isActive = pathname === item.href;
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      scroll={false}
-                      className={`
-                        group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
-                        transition-all duration-200
-                        ${isCollapsed ? "justify-center" : ""}
-                        ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}
-                      `}
-                    >
-                      <Icon
-                        size={20}
-                        className={`flex-shrink-0 transition-all duration-200 ${isActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
-                      />
-                      {showText && (
-                        <span className="text-sm font-medium whitespace-nowrap">
-                          {item.name}
-                        </span>
-                      )}
-                      {isActive && showText && (
-                        <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
-                      )}
-                    </Link>
-                  );
-                })}
+          {showText && (
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">
+              Main Menu
+            </p>
+          )}
+          <div className="space-y-1">
+            <NavLink
+              item={topLink}
+              active={pathname === topLink.href}
+              showText={showText}
+              isCollapsed={isCollapsed}
+            />
 
-                {/* ── TSR Dropdown ── */}
-                <div>
-                  <button
-                    onClick={() => {
-                      if (!isCollapsed || isHovered) setTsrOpen((v) => !v);
-                    }}
-                    className={`
-                      group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-                      transition-all duration-200
-                      ${isCollapsed ? "justify-center" : ""}
-                      ${tsrActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}
-                    `}
-                  >
-                    <CircleUser
-                      size={20}
-                      className={`flex-shrink-0 transition-all duration-200 ${tsrActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
-                    />
-                    {showText && (
-                      <>
-                        <span className="text-sm font-medium whitespace-nowrap flex-1 text-left">
-                          TSR's
-                        </span>
-                        <span
-                          className={`transition-transform duration-300 ${tsrOpen ? "rotate-90" : "rotate-0"}`}
-                        >
-                          <ChevronRight
-                            size={14}
-                            className={
-                              tsrActive ? "text-blue-500" : "text-gray-400"
-                            }
-                          />
-                        </span>
-                      </>
-                    )}
-                    {tsrActive && showText && (
-                      <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
-                    )}
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${tsrOpen && showText ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}
-                  >
-                    <div className="mt-0.5 mb-1 space-y-0.5">
-                      {tsrSubItems.map((sub) => {
-                        const isActive = Boolean(
-                          sub.href && pathname === sub.href,
-                        );
-                        const Icon = sub.icon;
-                        const itemContent = (
-                          <>
-                            <span
-                              className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 ${isActive ? "bg-blue-100" : `${sub.bg} group-hover:scale-110`}`}
-                            >
-                              <Icon
-                                size={12}
-                                className={
-                                  isActive ? "text-blue-600" : sub.color
-                                }
-                              />
-                            </span>
-                            <span className="text-sm font-medium whitespace-nowrap">
-                              {sub.name}
-                            </span>
-                          </>
-                        );
+            {groups.map((group) => (
+              <NavGroup
+                key={group.key}
+                label={group.label}
+                icon={group.icon}
+                items={group.items}
+                pathname={pathname}
+                open={openGroups[group.key]}
+                onToggle={() => toggleGroup(group.key)}
+                showText={showText}
+                isCollapsed={isCollapsed}
+                badge={badges[group.key].count}
+                badgeHref={badges[group.key].href}
+              />
+            ))}
 
-                        return sub.href ? (
-                          <Link
-                            key={sub.name}
-                            href={sub.href}
-                            scroll={false}
-                            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
-                          >
-                            {itemContent}
-                          </Link>
-                        ) : (
-                          <div
-                            key={sub.name}
-                            aria-disabled="true"
-                            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 cursor-not-allowed"
-                          >
-                            {itemContent}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Users Dropdown ── */}
-                <div>
-                  <button
-                    onClick={() => {
-                      if (!isCollapsed || isHovered) setUsersOpen((v) => !v);
-                    }}
-                    className={`
-                      group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-                      transition-all duration-200
-                      ${isCollapsed ? "justify-center" : ""}
-                      ${usersActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}
-                    `}
-                  >
-                    <Users
-                      size={20}
-                      className={`flex-shrink-0 transition-all duration-200 ${usersActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
-                    />
-                    {showText && (
-                      <>
-                        <span className="text-sm font-medium whitespace-nowrap flex-1 text-left">
-                          Customers
-                        </span>
-                        {pendingCustomersCount > 0 && !usersOpen && (
-                          <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
-                            {pendingCustomersCount}
-                          </span>
-                        )}
-                        <span
-                          className={`transition-transform duration-300 ${usersOpen ? "rotate-90" : "rotate-0"}`}
-                        >
-                          <ChevronRight
-                            size={14}
-                            className={
-                              usersActive ? "text-blue-500" : "text-gray-400"
-                            }
-                          />
-                        </span>
-                      </>
-                    )}
-                    {usersActive && showText && (
-                      <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
-                    )}
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${usersOpen && showText ? "max-h-40 opacity-100" : "max-h-0 opacity-0"}`}
-                  >
-                    <div className="mt-0.5 mb-1 space-y-0.5">
-                      {userSubItems.map((sub) => {
-                        const isActive = pathname === sub.href;
-                        const Icon = sub.icon;
-                        return (
-                          <Link
-                            key={sub.href}
-                            href={sub.href}
-                            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
-                          >
-                            <span
-                              className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 ${isActive ? "bg-blue-100" : `${sub.bg} group-hover:scale-110`}`}
-                            >
-                              <Icon
-                                size={12}
-                                className={
-                                  isActive ? "text-blue-600" : sub.color
-                                }
-                              />
-                            </span>
-                            <span className="text-sm font-medium whitespace-nowrap">
-                              {sub.name}
-                            </span>
-                            {sub.name === "Pending" &&
-                              pendingCustomersCount > 0 && (
-                                <span className="ml-auto bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                  {pendingCustomersCount}
-                                </span>
-                              )}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Inventory Dropdown ── */}
-                <div>
-                  <button
-                    onClick={() => {
-                      if (!isCollapsed || isHovered) setProductsOpen((v) => !v);
-                    }}
-                    className={`
-                      group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-                      transition-all duration-200
-                      ${isCollapsed ? "justify-center" : ""}
-                      ${productsActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}
-                    `}
-                  >
-                    <Package
-                      size={20}
-                      className={`flex-shrink-0 transition-all duration-200 ${productsActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
-                    />
-                    {showText && (
-                      <>
-                        <span className="text-sm font-medium whitespace-nowrap flex-1 text-left">
-                          Inventory
-                        </span>
-                        <span
-                          className={`transition-transform duration-300 ${productsOpen ? "rotate-90" : "rotate-0"}`}
-                        >
-                          <ChevronRight
-                            size={14}
-                            className={
-                              productsActive ? "text-blue-500" : "text-gray-400"
-                            }
-                          />
-                        </span>
-                      </>
-                    )}
-                    {productsActive && showText && (
-                      <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
-                    )}
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${productsOpen && showText ? "max-h-80 opacity-100" : "max-h-0 opacity-0"}`}
-                  >
-                    <div className="mt-0.5 mb-1 space-y-0.5">
-                      {productSubItems.map((sub) => {
-                        const isActive = pathname === sub.href;
-                        const Icon = sub.icon;
-                        return (
-                          <Link
-                            key={sub.href}
-                            href={sub.href}
-                            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
-                          >
-                            <span
-                              className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 ${isActive ? "bg-blue-100" : `${sub.bg} group-hover:scale-110`}`}
-                            >
-                              <Icon
-                                size={12}
-                                className={
-                                  isActive ? "text-blue-600" : sub.color
-                                }
-                              />
-                            </span>
-                            <span className="text-sm font-medium whitespace-nowrap">
-                              {sub.name}
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── Orders Dropdown ── */}
-                <div>
-                  <button
-                    onClick={() => {
-                      if (!isCollapsed || isHovered) setOrdersOpen((v) => !v);
-                    }}
-                    className={`
-                      group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-                      transition-all duration-200
-                      ${isCollapsed ? "justify-center" : ""}
-                      ${ordersActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}
-                    `}
-                  >
-                    <div className="relative flex-shrink-0">
-                      <ShoppingBag
-                        size={20}
-                        className={`transition-all duration-200 ${ordersActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
-                      />
-                    </div>
-                    {showText && (
-                      <>
-                        <span className="text-sm font-medium whitespace-nowrap flex-1 text-left">
-                          Orders
-                        </span>
-                        {pendingOrdersCount > 0 && !ordersOpen && (
-                          <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
-                            {pendingOrdersCount}
-                          </span>
-                        )}
-                        <span
-                          className={`transition-transform duration-300 ${ordersOpen ? "rotate-90" : "rotate-0"}`}
-                        >
-                          <ChevronRight
-                            size={14}
-                            className={
-                              ordersActive ? "text-blue-500" : "text-gray-400"
-                            }
-                          />
-                        </span>
-                      </>
-                    )}
-                    {ordersActive && showText && (
-                      <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
-                    )}
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${ordersOpen && showText ? "max-h-60 opacity-100" : "max-h-0 opacity-0"}`}
-                  >
-                    <div className="mt-0.5 mb-1 space-y-0.5">
-                      {orderSubItems.map((sub) => {
-                        const isActive = pathname === sub.href;
-                        const Icon = sub.icon;
-                        return (
-                          <Link
-                            key={sub.href}
-                            href={sub.href}
-                            className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}
-                          >
-                            <span
-                              className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all duration-200 ${isActive ? "bg-blue-100" : `${sub.bg} group-hover:scale-110`}`}
-                            >
-                              <Icon
-                                size={12}
-                                className={
-                                  isActive ? "text-blue-600" : sub.color
-                                }
-                              />
-                            </span>
-                            <span className="text-sm font-medium whitespace-nowrap">
-                              {sub.name}
-                            </span>
-                            {sub.name === "Pending" &&
-                              pendingOrdersCount > 0 && (
-                                <span className="ml-auto bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
-                                  {pendingOrdersCount}
-                                </span>
-                              )}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Reports */}
-                {menuItems.slice(1).map((item) => {
-                  const isActive = pathname === item.href;
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`
-                        group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
-                        transition-all duration-200
-                        ${isCollapsed ? "justify-center" : ""}
-                        ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}
-                      `}
-                    >
-                      <Icon
-                        size={20}
-                        className={`flex-shrink-0 transition-all duration-200 ${isActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600 group-hover:scale-105"}`}
-                      />
-                      {showText && (
-                        <span className="text-sm font-medium whitespace-nowrap">
-                          {item.name}
-                        </span>
-                      )}
-                      {isActive && showText && (
-                        <div className="absolute left-0 w-1 h-8 bg-gradient-to-b from-blue-500 to-blue-600 rounded-r-full" />
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
+            {bottomLinks.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={pathname === item.href}
+                showText={showText}
+                isCollapsed={isCollapsed}
+              />
+            ))}
           </div>
         </nav>
 
-        {/* Bottom Menu */}
-        <div className="px-3 py-3 border-t border-gray-100">
-          <div className="space-y-1">
-            {bottomMenuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${isCollapsed ? "justify-center" : ""} ${isActive ? "bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700" : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"}`}
-                >
-                  <Icon
-                    size={20}
-                    className={`flex-shrink-0 transition-all duration-200 ${isActive ? "text-blue-600" : "text-gray-500 group-hover:text-blue-600"}`}
-                  />
-                  {showText && (
-                    <span className="text-sm font-medium whitespace-nowrap">
-                      {item.name}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-            <button
-              onClick={handleLogout}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 group ${isCollapsed ? "justify-center" : ""}`}
-            >
-              <LogOut
-                size={20}
-                className="flex-shrink-0 transition-transform duration-200 group-hover:scale-105"
-              />
-              {showText && (
-                <span className="text-sm font-medium whitespace-nowrap">
-                  Logout
-                </span>
-              )}
-            </button>
-          </div>
+        {/* Footer */}
+        <div className="px-3 py-3 border-t border-gray-100 space-y-1">
+          {footerLinks.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={pathname === item.href}
+              showText={showText}
+              isCollapsed={isCollapsed}
+            />
+          ))}
+          <button
+            onClick={handleLogout}
+            className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 ${
+              isCollapsed ? "justify-center" : ""
+            }`}
+          >
+            <LogOut
+              size={20}
+              className="flex-shrink-0 transition-transform duration-200 group-hover:scale-105"
+            />
+            {showText && (
+              <span className="text-sm font-medium whitespace-nowrap">
+                Logout
+              </span>
+            )}
+          </button>
         </div>
       </aside>
 

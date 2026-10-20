@@ -8,17 +8,280 @@ interface ShipmentPDFProps {
   groups: { distributor: string; products: OrderedProduct[] }[];
 }
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => {
-    const entities: Record<string, string> = {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-    };
-    return entities[character];
-  });
+const HTML_ENTITIES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
+};
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (char) => HTML_ENTITIES[char]);
+
+const PRINT_STYLES = `
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --brand: #1d4ed8;
+    --brand-soft: #eff6ff;
+    --ink: #111111;
+    --muted: #666666;
+    --line: #eeeeee;
+    --bg: #f7f7f7;
+  }
+
+  html, body {
+    background: #ffffff;
+    color: var(--ink);
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body { padding: 16px; }
+
+  /* Page */
+  .distributor-page {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .distributor-page.last-page {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+    padding: 4px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    object-fit: contain;
+  }
+
+  .brand-name {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--brand);
+    line-height: 1.1;
+  }
+
+  .brand-tag { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  .shipment-meta { text-align: right; }
+
+  .shipment-meta h2 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--brand);
+    line-height: 1;
+    margin-bottom: 5px;
+  }
+
+  .shipment-meta .meta-row { font-size: 11px; color: var(--muted); }
+
+  /* Distributor title */
+  .distributor-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .distributor-title .name { font-size: 13px; font-weight: 600; }
+  .distributor-title .count { font-size: 10.5px; color: var(--muted); }
+
+  /* Table */
+  .table-wrap {
+    margin-top: 14px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    background: var(--bg);
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-align: left;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+
+  tbody td {
+    padding: 7px 10px;
+    font-size: 11.5px;
+    background: #ffffff;
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  thead th:last-child,
+  tbody td:last-child { border-right: none; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody tr.row-alt td { background: var(--bg); }
+  tbody td.product { font-weight: 500; }
+  tbody td.muted { color: var(--muted); }
+
+  .number {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  tfoot td {
+    padding: 8px 10px;
+    font-weight: 700;
+    color: var(--brand);
+    background: var(--brand-soft);
+    border-top: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+
+  tfoot td.total-label {
+    text-align: left;
+    font-size: 12px;
+  }
+
+  tfoot td.total {
+    text-align: right;
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  tfoot .total-value {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  /* Print */
+  @page { size: landscape; margin: 12mm; }
+
+  @media print {
+    body { padding: 0; }
+    .distributor-page { break-inside: avoid; page-break-inside: avoid; margin-bottom: 0; }
+    tr { break-inside: avoid; }
+    thead { display: table-header-group; }
+    thead th, tfoot td, tbody tr.row-alt td, .brand-logo {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+`;
+
+// Wait for the Outfit font before opening the print dialog
+const PRINT_SCRIPT = `
+  window.onload = function () {
+    var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    ready.then(function () {
+      window.print();
+      setTimeout(function () { window.close(); }, 500);
+    });
+  };
+`;
+
+function renderPage(
+  { distributor, products }: ShipmentPDFProps["groups"][number],
+  isLast: boolean,
+  date: string,
+): string {
+  const rows = products
+    .map(
+      (product, index) => `
+        <tr class="${index % 2 === 1 ? "row-alt" : ""}">
+          <td class="product">${escapeHtml(product.productName)}</td>
+          <td class="number">${product.quantity}</td>
+          <td class="number">${formatSalesCurrency(product.price)}</td>
+          <td class="number muted">${product.tp === null ? "N/A" : formatSalesCurrency(product.tp)}</td>
+        </tr>`,
+    )
+    .join("");
+
+  const unitPriceTotal = products.reduce(
+    (sum, product) => sum + product.price * product.quantity,
+    0,
+  );
+  const tpTotal = products.reduce<number | null>((sum, product) => {
+    if (sum === null || product.tp === null) return null;
+    return sum + product.tp * product.quantity;
+  }, 0);
+
+  return `
+    <section class="distributor-page${isLast ? " last-page" : ""}">
+      <header class="header">
+        <div class="brand">
+          <img src="/logo.png" alt="MediCarePLC" class="brand-logo" />
+          <div>
+            <div class="brand-name">MediCarePLC</div>
+            <div class="brand-tag">Your Trusted B2B Sales Partner</div>
+          </div>
+        </div>
+        <div class="shipment-meta">
+          <h2>SHIPMENT</h2>
+          <div class="meta-row">Date: ${date}</div>
+        </div>
+      </header>
+
+      <div class="distributor-title">
+        <div class="name">${escapeHtml(distributor)}</div>
+        <div class="count">${products.length} product${products.length === 1 ? "" : "s"}</div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th class="number">Qty</th>
+              <th class="number">Unit Price</th>
+              <th class="number">TP</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" class="total-label">Totals</td>
+              <td class="total">
+                <span class="total-value">${formatSalesCurrency(unitPriceTotal)}</span>
+              </td>
+              <td class="total">
+                <span class="total-value">${tpTotal === null ? "N/A" : formatSalesCurrency(tpTotal)}</span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>`;
 }
 
 export default function ShipmentPDF({ groups }: ShipmentPDFProps) {
@@ -29,156 +292,34 @@ export default function ShipmentPDF({ groups }: ShipmentPDFProps) {
       return;
     }
 
-    const pages = groups
-      .map(({ distributor, products }, pageIndex) => {
-        const rows = products
-          .map(
-            (product) => `
-          <tr>
-            <td>${escapeHtml(product.productName)}</td>
-            <td class="number">${product.quantity}</td>
-            <td class="number">${formatSalesCurrency(product.price)}</td>
-            <td class="number">${
-              product.tp === null ? "N/A" : formatSalesCurrency(product.tp)
-            }</td>
-          </tr>
-        `,
-          )
-          .join("");
+    const date = new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 
-        return `
-          <section class="distributor-page${pageIndex === groups.length - 1 ? " last-page" : ""}">
-            <header>
-              <h1>MediCarePLC</h1>
-              <p>Today shipments</p>
-              <h2>${escapeHtml(distributor)}</h2>
-            </header>
-            <table>
-              <thead>
-                <tr>
-                  <th>Product name</th>
-                  <th class="number">Quantity</th>
-                  <th class="number">MRP</th>
-                  <th class="number">TP</th>
-                </tr>
-              </thead>
-              <tbody>${rows}</tbody>
-              <tfoot>
-                <tr>
-                  <td>${products.length} product${products.length === 1 ? "" : "s"}</td>
-                  <td class="number" colspan="3">Total quantity: ${products.reduce((sum, product) => sum + product.quantity, 0)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </section>
-        `;
-      })
+    const pages = groups
+      .map((group, index) =>
+        renderPage(group, index === groups.length - 1, date),
+      )
       .join("");
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="utf-8" />
-          <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-          <style>
-            * { box-sizing: border-box; }
-            body {
-              margin: 0;
-              padding: 28px;
-              color: #1f2937;
-              font-family: 'Outfit', 'Helvetica', 'Arial', sans-serif;
-              -webkit-font-smoothing: antialiased;
-            }
-            header {
-              border-bottom: 1px solid #e5e7eb;
-              text-align: center;
-              padding-bottom: 12px;
-              margin-bottom: 14px;
-            }
-            h1 {
-              margin: 0 0 6px;
-              font-size: 16px;
-              font-weight: 600;
-              letter-spacing: -0.01em;
-              color: #111827;
-            }
-            h2 {
-              margin: 10px 0 0;
-              font-size: 14px;
-              font-weight: 600;
-              color: #111827;
-            }
-            p {
-              margin: 0;
-              color: #6b7280;
-              font-size: 11px;
-              font-weight: 400;
-              letter-spacing: 0.02em;
-            }
-            table { width: 100%; border-collapse: collapse; }
-            th, td {
-              padding: 10px 10px;
-              border-bottom: 1px solid #f1f5f9;
-              text-align: left;
-              vertical-align: top;
-              font-size: 11px;
-              overflow-wrap: anywhere;
-            }
-            th {
-              background: #f8fafc;
-              color: #64748b;
-              font-size: 9px;
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              border-bottom: 1px solid #e2e8f0;
-            }
-            tbody tr:nth-child(even) { background: #fafbfc; }
-            td:first-child { font-weight: 500; color: #111827; }
-            .number {
-              text-align: right;
-              white-space: nowrap;
-              font-variant-numeric: tabular-nums;
-            }
-            tfoot td {
-              padding-top: 14px;
-              border-top: 1px solid #e2e8f0;
-              border-bottom: none;
-              font-size: 10px;
-              color: #64748b;
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 0.06em;
-            }
-            .distributor-page {
-              break-after: page;
-              page-break-after: always;
-            }
-            .distributor-page.last-page {
-              break-after: auto;
-              page-break-after: auto;
-            }
-            @page { size: landscape; margin: 12mm; }
-            @media print {
-              body { padding: 0; }
-              .distributor-page { break-inside: avoid; page-break-inside: avoid; }
-              tr { break-inside: avoid; }
-              thead { display: table-header-group; }
-            }
-          </style>
-        </head>
-        <body>
-          ${pages}
-          <script>
-            window.onload = function () {
-              window.print();
-              setTimeout(function () { window.close(); }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `);
+    printWindow.document.write(`<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shipment</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>${PRINT_STYLES}</style>
+  </head>
+  <body>
+    ${pages}
+    <script>${PRINT_SCRIPT}</script>
+  </body>
+</html>`);
     printWindow.document.close();
   };
 
