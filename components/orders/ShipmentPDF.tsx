@@ -4,8 +4,10 @@ import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 import type { OrderedProduct } from "@/config/api";
 import { Printer } from "lucide-react";
 
+type ShipmentGroup = { distributor: string; products: OrderedProduct[] };
+
 interface ShipmentPDFProps {
-  groups: { distributor: string; products: OrderedProduct[] }[];
+  groups: ShipmentGroup[];
 }
 
 const HTML_ENTITIES: Record<string, string> = {
@@ -35,15 +37,14 @@ const PRINT_STYLES = `
     background: #ffffff;
     color: var(--ink);
     font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
   }
 
   body { padding: 16px; }
 
-  /* Page */
+  /* Page (A4 portrait: 210mm - 2 x 12mm margins = 186mm content width) */
   .distributor-page {
-    max-width: 720px;
+    width: 186mm;
+    max-width: 100%;
     margin: 0 auto 28px;
     break-after: page;
     page-break-after: always;
@@ -65,6 +66,7 @@ const PRINT_STYLES = `
   }
 
   .brand { display: flex; align-items: center; gap: 10px; }
+
   .brand-logo {
     width: 36px;
     height: 36px;
@@ -120,6 +122,14 @@ const PRINT_STYLES = `
 
   table { width: 100%; border-collapse: collapse; }
 
+  th, td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+
+  th:last-child, td:last-child { border-right: none; }
+
   thead th {
     background: var(--bg);
     font-size: 9.5px;
@@ -128,25 +138,16 @@ const PRINT_STYLES = `
     letter-spacing: 0.08em;
     color: var(--muted);
     text-align: left;
-    padding: 7px 10px;
-    border-bottom: 1px solid var(--line);
-    border-right: 1px solid var(--line);
   }
 
   tbody td {
-    padding: 7px 10px;
     font-size: 11.5px;
     background: #ffffff;
-    border-bottom: 1px solid var(--line);
-    border-right: 1px solid var(--line);
     vertical-align: top;
     overflow-wrap: anywhere;
   }
 
-  thead th:last-child,
-  tbody td:last-child { border-right: none; }
   tbody tr:last-child td { border-bottom: none; }
-
   tbody tr.row-alt td { background: var(--bg); }
   tbody td.product { font-weight: 500; }
   tbody td.muted { color: var(--muted); }
@@ -157,39 +158,23 @@ const PRINT_STYLES = `
     font-variant-numeric: tabular-nums;
   }
 
+  tfoot { display: table-row-group; }
+
   tfoot td {
-    padding: 8px 10px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--brand);
     background: var(--brand-soft);
+    border-bottom: none;
     border-top: 1px solid var(--line);
-    font-variant-numeric: tabular-nums;
-  }
-
-  tfoot td.total-label {
-    text-align: left;
-    font-size: 12px;
-  }
-
-  tfoot td.total {
-    text-align: right;
-    font-size: 9px;
-    line-height: 1.35;
-  }
-
-  tfoot .total-value {
-    display: block;
-    margin-top: 4px;
-    font-size: 11px;
-    white-space: nowrap;
   }
 
   /* Print */
-  @page { size: landscape; margin: 12mm; }
+  @page { size: A4 portrait; margin: 12mm; }
 
   @media print {
     body { padding: 0; }
-    .distributor-page { break-inside: avoid; page-break-inside: avoid; margin-bottom: 0; }
+    .distributor-page { margin-bottom: 0; }
     tr { break-inside: avoid; }
     thead { display: table-header-group; }
     thead th, tfoot td, tbody tr.row-alt td, .brand-logo {
@@ -210,30 +195,42 @@ const PRINT_SCRIPT = `
   };
 `;
 
+const formatDate = () =>
+  new Date().toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+function renderRow(product: OrderedProduct, index: number): string {
+  return `
+        <tr class="${index % 2 === 1 ? "row-alt" : ""}">
+          <td class="product">${escapeHtml(product.productName)}</td>
+          <td>${escapeHtml(product.category?.name ?? "N/A")}</td>
+          <td class="number">${product.quantity}</td>
+          <td class="number">${formatSalesCurrency(product.price)}</td>
+          <td class="number muted">${product.tp == null ? "N/A" : formatSalesCurrency(product.tp)}</td>
+        </tr>`;
+}
+
 function renderPage(
-  { distributor, products }: ShipmentPDFProps["groups"][number],
+  { distributor, products }: ShipmentGroup,
   isLast: boolean,
   date: string,
 ): string {
-  const rows = products
-    .map(
-      (product, index) => `
-        <tr class="${index % 2 === 1 ? "row-alt" : ""}">
-          <td class="product">${escapeHtml(product.productName)}</td>
-          <td class="number">${product.quantity}</td>
-          <td class="number">${formatSalesCurrency(product.price)}</td>
-          <td class="number muted">${product.tp === null ? "N/A" : formatSalesCurrency(product.tp)}</td>
-        </tr>`,
-    )
-    .join("");
-
-  const unitPriceTotal = products.reduce(
-    (sum, product) => sum + product.price * product.quantity,
+  const quantityTotal = products.reduce(
+    (sum, product) => sum + product.quantity,
     0,
   );
+  const unitPriceTotal = products.reduce(
+    (sum, product) => sum + Number(product.price) * product.quantity,
+    0,
+  );
+
+  // TP total is only shown when every product has a TP
   const tpTotal = products.reduce<number | null>((sum, product) => {
-    if (sum === null || product.tp === null) return null;
-    return sum + product.tp * product.quantity;
+    if (sum === null || product.tp == null) return null;
+    return sum + Number(product.tp) * product.quantity;
   }, 0);
 
   return `
@@ -262,21 +259,19 @@ function renderPage(
           <thead>
             <tr>
               <th>Product</th>
+              <th>Company</th>
               <th class="number">Qty</th>
-              <th class="number">Unit Price</th>
+              <th class="number">MRP</th>
               <th class="number">TP</th>
             </tr>
           </thead>
-          <tbody>${rows}</tbody>
+          <tbody>${products.map(renderRow).join("")}</tbody>
           <tfoot>
             <tr>
-              <td colspan="2" class="total-label">Totals</td>
-              <td class="total">
-                <span class="total-value">${formatSalesCurrency(unitPriceTotal)}</span>
-              </td>
-              <td class="total">
-                <span class="total-value">${tpTotal === null ? "N/A" : formatSalesCurrency(tpTotal)}</span>
-              </td>
+              <td colspan="2">Total</td>
+              <td class="number">${quantityTotal}</td>
+              <td class="number">${formatSalesCurrency(unitPriceTotal)}</td>
+              <td class="number">${tpTotal === null ? "N/A" : formatSalesCurrency(tpTotal)}</td>
             </tr>
           </tfoot>
         </table>
@@ -292,12 +287,7 @@ export default function ShipmentPDF({ groups }: ShipmentPDFProps) {
       return;
     }
 
-    const date = new Date().toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-
+    const date = formatDate();
     const pages = groups
       .map((group, index) =>
         renderPage(group, index === groups.length - 1, date),
@@ -308,7 +298,6 @@ export default function ShipmentPDF({ groups }: ShipmentPDFProps) {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Shipment</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

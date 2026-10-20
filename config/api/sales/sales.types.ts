@@ -1,4 +1,5 @@
 import type { Product } from "../products/products.types";
+import type { Category } from "../categories/categories.types";
 
 export interface DailySalesData {
   date: string;
@@ -73,6 +74,7 @@ export interface SalesSummaryData {
 
 export interface OrderedProduct {
   productName: string;
+  category?: Category | null;
   distributor: string | null;
   quantity: number;
   price: number;

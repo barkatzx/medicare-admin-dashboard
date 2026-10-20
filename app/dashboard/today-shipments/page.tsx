@@ -3,9 +3,69 @@
 import { useCallback, useEffect, useState } from "react";
 import { Activity, PackageOpen, RefreshCw } from "lucide-react";
 import { api } from "@/config/api";
-import type { OrderedProduct, OrderedProductsData } from "@/config/api";
+import type {
+  OrderedProduct,
+  OrderedProductsData,
+  Product,
+} from "@/config/api";
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 import ShipmentPDF from "@/components/orders/ShipmentPDF";
+
+async function getMatchingCatalogProducts(
+  orderedProducts: OrderedProduct[],
+): Promise<Product[]> {
+  const productNames = [
+    ...new Set(
+      orderedProducts
+        .filter((product) => product.category === undefined)
+        .map((product) => product.productName.trim())
+        .filter(Boolean),
+    ),
+  ];
+  const batchSize = 5;
+  const catalogProducts: Product[] = [];
+
+  for (let index = 0; index < productNames.length; index += batchSize) {
+    const batch = productNames.slice(index, index + batchSize);
+    const results = await Promise.all(
+      batch.map((name) => api.getAllProducts(1, 20, name)),
+    );
+    catalogProducts.push(...results.flatMap((result) => result.products));
+  }
+
+  return catalogProducts;
+}
+
+function addProductCategories(
+  orderedProducts: OrderedProduct[],
+  catalogProducts: Product[],
+): OrderedProduct[] {
+  const productsByName = new Map<string, Product[]>();
+  for (const product of catalogProducts) {
+    const name = product.name?.trim().toLocaleLowerCase();
+    if (!name) continue;
+    const matches = productsByName.get(name) ?? [];
+    matches.push(product);
+    productsByName.set(name, matches);
+  }
+
+  return orderedProducts.map((orderedProduct) => {
+    if (orderedProduct.category) return orderedProduct;
+
+    const matches = productsByName.get(
+      orderedProduct.productName.trim().toLocaleLowerCase(),
+    );
+    const matchingProduct =
+      matches?.find(
+        (product) => product.distributor === orderedProduct.distributor,
+      ) ?? (matches?.length === 1 ? matches[0] : undefined);
+
+    return {
+      ...orderedProduct,
+      category: matchingProduct?.category ?? null,
+    };
+  });
+}
 
 function SkeletonBlock({ className }: { className: string }) {
   return (
@@ -46,7 +106,7 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
   );
 
   return (
-    <section>
+    <section className="bg-white p-6 rounded-xl">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 pb-3.5 border-b border-[#eeeeee]">
         <div>
@@ -70,6 +130,10 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
         <div>
           {distributorGroups.map(
             ({ distributor, products: groupProducts }, groupIndex) => {
+              const quantityTotal = groupProducts.reduce(
+                (sum, product) => sum + product.quantity,
+                0,
+              );
               const unitPriceTotal = groupProducts.reduce(
                 (sum, product) => sum + product.price * product.quantity,
                 0,
@@ -105,10 +169,11 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
                         Today shipment products for {distributor}
                       </caption>
                       <colgroup>
-                        <col className="w-[52%]" />
-                        <col className="w-[16%]" />
-                        <col className="w-[16%]" />
-                        <col className="w-[16%]" />
+                        <col className="w-[36%]" />
+                        <col className="w-[24%]" />
+                        <col className="w-[13%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[13%]" />
                       </colgroup>
                       <thead>
                         <tr className="bg-[#f7f7f7]">
@@ -120,15 +185,21 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
                           </th>
                           <th
                             scope="col"
-                            className="text-right border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
+                            className="text-left border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
+                          >
+                            Company
+                          </th>
+                          <th
+                            scope="col"
+                            className="text-right border-b border-r border-[#eeeeee] px-2 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
                           >
                             Qty
                           </th>
                           <th
                             scope="col"
-                            className="text-right border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
+                            className="text-right border-b border-r border-[#eeeeee] px-2 py-1.5 text-[9.5px] font-bold uppercase tracking-[0.08em] text-gray-500"
                           >
-                            Unit Price
+                            MRP
                           </th>
                           <th
                             scope="col"
@@ -148,6 +219,9 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
                           >
                             <td className="break-words border-b border-r border-[#eeeeee] px-2.5 py-1.5 font-medium text-gray-900">
                               {product.productName}
+                            </td>
+                            <td className="break-words border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-gray-700">
+                              {product.category?.name ?? "N/A"}
                             </td>
                             <td className="border-b border-r border-[#eeeeee] px-2.5 py-1.5 text-right tabular-nums text-gray-700">
                               {product.quantity}
@@ -169,7 +243,10 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
                             colSpan={2}
                             className="bg-blue-50 px-2.5 py-2 text-left text-[12px] font-bold text-blue-700"
                           >
-                            Totals
+                            Total
+                          </td>
+                          <td className="bg-blue-50 px-2 py-2 text-right text-[11px] font-bold tabular-nums text-blue-700">
+                            {quantityTotal}
                           </td>
                           <td className="bg-blue-50 px-2 py-2 text-right text-[9px] font-bold leading-tight text-blue-700">
                             {/* <span className="block">Total Unit Price Amount</span> */}
@@ -209,8 +286,7 @@ export default function TodayShipmentsPage() {
     setLoading(true);
     setHasError(false);
     try {
-      const response = await api.getTodayOrderedProducts();
-      setOrderedProducts(response);
+      setOrderedProducts(await api.getTodayOrderedProducts());
     } catch (error) {
       console.error("Failed to load ordered products:", error);
       setHasError(true);
@@ -222,6 +298,40 @@ export default function TodayShipmentsPage() {
   useEffect(() => {
     void loadOrderedProducts();
   }, [loadOrderedProducts]);
+
+  useEffect(() => {
+    if (
+      !orderedProducts?.products.some(
+        (product) => product.category === undefined,
+      )
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    void getMatchingCatalogProducts(orderedProducts.products)
+      .then((catalogProducts) => {
+        if (cancelled) return;
+        setOrderedProducts((current) =>
+          current
+            ? {
+                ...current,
+                products: addProductCategories(
+                  current.products,
+                  catalogProducts,
+                ),
+              }
+            : current,
+        );
+      })
+      .catch((error) => {
+        console.error("Failed to load shipment product categories:", error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [orderedProducts]);
 
   if (loading) {
     return <OrderedProductsSkeleton />;
