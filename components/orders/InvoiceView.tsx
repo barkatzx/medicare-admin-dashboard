@@ -67,7 +67,7 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
                 </span>
               </p>
               <p className="text-[11px] text-gray-500 leading-relaxed">
-                Date: {invoiceDate}
+                Order Date: {invoiceDate}
               </p>
             </div>
           </div>

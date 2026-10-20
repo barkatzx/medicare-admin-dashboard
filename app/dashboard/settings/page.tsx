@@ -6,8 +6,6 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import {
-  Moon,
-  Sun,
   Shield,
   User,
   Globe,
@@ -61,7 +59,6 @@ interface Profile {
 }
 
 export default function SettingsPage() {
-  const [darkMode, setDarkMode] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);

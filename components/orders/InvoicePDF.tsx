@@ -357,7 +357,7 @@ function buildInvoiceHtml(order: InvoiceOrder): string {
         <div class="invoice-meta">
           <h2>INVOICE</h2>
           <div class="meta-row">Invoice No: <strong>#${invoiceNo}</strong></div>
-          <div class="meta-row">Date: ${invoiceDate}</div>
+          <div class="meta-row">Order Date: ${invoiceDate}</div>
         </div>
       </header>
 

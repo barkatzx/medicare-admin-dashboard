@@ -5,7 +5,7 @@ import SearchModal from "@/components/ui/SearchModal";
 import { useAppSelector } from "@/store/hooks";
 import {
   ArrowRight,
-  Bell,
+  CalendarDays,
   BarChart3,
   FolderTree,
   HelpCircle,
@@ -38,6 +38,12 @@ export default function Header() {
   const [showResults, setShowResults] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const todayLabel = new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
   const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -203,17 +209,15 @@ export default function Header() {
     <>
       <header className="bg-[#F9FAFB]">
         <div className="flex items-center justify-between px-6 py-3">
-          {/* Left Section - Welcome Message */}
-          {/* <div className="flex-1">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">
-                Welcome back, {user?.name?.split(" ")[0] || "Admin"}!
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Here's what's happening with your store today
-              </p>
+          {/* Left Section - Date */}
+          <div className="flex-1 flex items-center gap-5">
+            <div className="flex items-center gap-2 text-sm text-gray-700">
+              <span className="w-10 h-10 bg-white border border-gray-100 rounded-full flex items-center justify-center">
+                <CalendarDays size={16} className="text-gray-500" />
+              </span>
+              <span>{todayLabel}</span>
             </div>
-          </div> */}
+          </div>
 
           {/* Center Section - Search Bar */}
           <div className="flex-1 max-w-xs relative" ref={searchRef}>
@@ -320,13 +324,6 @@ export default function Header() {
               className="w-10 h-10 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors"
             >
               <Settings size={18} />
-            </Link>
-            <Link
-              href="/dashboard"
-              aria-label="Notifications"
-              className="w-10 h-10 bg-white rounded-full border border-gray-100 flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors"
-            >
-              <Bell size={18} />
             </Link>
             <div className="relative" ref={profileRef}>
               <button
