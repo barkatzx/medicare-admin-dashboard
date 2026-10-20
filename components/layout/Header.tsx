@@ -5,6 +5,7 @@ import SearchModal from "@/components/ui/SearchModal";
 import { useAppSelector } from "@/store/hooks";
 import {
   ArrowRight,
+  Bell,
   BarChart3,
   FolderTree,
   HelpCircle,
@@ -16,6 +17,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -202,7 +204,7 @@ export default function Header() {
       <header className="bg-[#F9FAFB]">
         <div className="flex items-center justify-between px-6 py-3">
           {/* Left Section - Welcome Message */}
-          <div className="flex-1">
+          {/* <div className="flex-1">
             <div>
               <h2 className="text-lg font-semibold text-gray-800">
                 Welcome back, {user?.name?.split(" ")[0] || "Admin"}!
@@ -211,10 +213,10 @@ export default function Header() {
                 Here's what's happening with your store today
               </p>
             </div>
-          </div>
+          </div> */}
 
           {/* Center Section - Search Bar */}
-          <div className="flex-1 max-w-xl relative" ref={searchRef}>
+          <div className="flex-1 max-w-xs relative" ref={searchRef}>
             <div
               className={`relative transition-all duration-200 ${isSearchFocused ? "scale-105" : ""}`}
             >
@@ -249,7 +251,7 @@ export default function Header() {
 
             {/* Search Results Dropdown */}
             {showResults && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50 animate-fade-in">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-100 overflow-hidden z-50 animate-fade-in">
                 <div className="max-h-96 overflow-y-auto">
                   {Object.entries(groupedResults).map(([category, items]) => (
                     <div key={category}>
@@ -299,7 +301,7 @@ export default function Header() {
 
             {/* No Results */}
             {showResults && searchResults.length === 0 && searchQuery && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-50">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-100 overflow-hidden z-50">
                 <div className="px-4 py-8 text-center">
                   <Search size={32} className="mx-auto text-gray-300 mb-2" />
                   <p className="text-sm text-gray-500">
@@ -310,25 +312,34 @@ export default function Header() {
             )}
           </div>
 
-          {/* Right Section - User Avatar, Name & Role */}
-          <div className="flex-1 flex justify-end" ref={profileRef}>
-            <div className="relative">
+          {/* Right Section - Settings, Notifications, Avatar */}
+          <div className="flex-1 flex justify-end items-center gap-3">
+            <Link
+              href="/dashboard/settings"
+              aria-label="Settings"
+              className="w-10 h-10 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              <Settings size={18} />
+            </Link>
+            <Link
+              href="/dashboard"
+              aria-label="Notifications"
+              className="w-10 h-10 bg-white rounded-full border border-gray-100 flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              <Bell size={18} />
+            </Link>
+            <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-all duration-200 group"
+                aria-label="Profile"
+                className="w-10 h-10 bg-white rounded-full flex items-center border border-gray-100 justify-center"
               >
-                {/* Avatar */}
-                <div className="relative">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
-                    <span className="text-white font-semibold text-sm">
-                      {user?.name?.charAt(0) || "A"}
-                    </span>
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-sm"></div>
-                </div>
-
-                {/* Name and Role */}
-                <div className="hidden md:block text-left">
+                <span className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-black font-semibold text-sm hover:text-blue-600 transition-colors">
+                  {user?.name?.charAt(0)?.toUpperCase() || "A"}
+                </span>
+              </button>
+              {isProfileOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl border border-gray-100 px-4 py-3 z-50 animate-fade-in">
                   <p className="text-sm font-semibold text-gray-800">
                     {user?.name || "Admin User"}
                   </p>
@@ -336,7 +347,7 @@ export default function Header() {
                     {user?.role || "Administrator"}
                   </p>
                 </div>
-              </button>
+              )}
             </div>
           </div>
         </div>

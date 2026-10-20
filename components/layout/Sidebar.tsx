@@ -198,12 +198,6 @@ const bottomMenuItems = [
     icon: Leaf,
     description: "User guides",
   },
-  {
-    name: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-    description: "Preferences",
-  },
 ];
 
 // Path helpers
@@ -369,8 +363,14 @@ export default function Sidebar() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="relative flex-shrink-0">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center">
-                  <Image src="/logo.png" alt="Logo" width={36} height={36} />
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+                  <Image
+                    src="/logo.png"
+                    alt="Logo"
+                    className="rounded-lg border border-gray-100"
+                    width={50}
+                    height={50}
+                  />
                 </div>
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full ring-2 ring-white" />
               </div>
@@ -380,10 +380,10 @@ export default function Sidebar() {
                     MediCarePLC
                   </h1>
                   <p className="text-[10px] text-gray-400 -mt-0.5">
-                    {user?.name || "Admin User"} (Logged in)
+                    {user?.name || "Admin User"}
                   </p>
                   <p className="text-[10px] text-gray-400 -mt-0.5">
-                    Version 2.0.0
+                    Version 2.0.5
                   </p>
                 </div>
               )}
