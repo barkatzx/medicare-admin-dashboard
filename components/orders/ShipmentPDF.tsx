@@ -107,8 +107,7 @@ const PRINT_STYLES = `
   /* Distributor title */
   .distributor-title {
     text-align: center;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--line);
+    padding: 10px 0;
   }
 
   .distributor-title .name { font-size: 18px; font-weight: 600; }
@@ -117,7 +116,7 @@ const PRINT_STYLES = `
 
   /* Table */
   .table-wrap {
-    margin-top: 14px;
+    margin-top: 10px;
     border-radius: 10px;
     overflow: hidden;
     border: 1px solid var(--line);
