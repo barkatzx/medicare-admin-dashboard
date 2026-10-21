@@ -10,6 +10,7 @@ import {
   Boxes,
   CalendarDays,
   LayoutDashboard,
+  Menu,
   Search,
   Settings,
   ShoppingCart,
@@ -24,6 +25,12 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+interface HeaderProps {
+  onOpenMobileNav: () => void;
+  isMobileNavOpen: boolean;
+  menuButtonRef: React.RefObject<HTMLButtonElement>;
+}
 
 interface SearchItem {
   name: string;
@@ -129,7 +136,11 @@ function searchItems(query: string): SearchItem[] {
   });
 }
 
-export default function Header() {
+export default function Header({
+  onOpenMobileNav,
+  isMobileNavOpen,
+  menuButtonRef,
+}: HeaderProps) {
   const { user } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
@@ -140,6 +151,7 @@ export default function Header() {
 
   const searchRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const mobileProfileRef = useRef<HTMLDivElement>(null);
 
   const todayLabel = new Date().toLocaleDateString("en-US", {
     weekday: "short",
@@ -165,7 +177,10 @@ export default function Header() {
       if (searchRef.current && !searchRef.current.contains(target)) {
         setShowResults(false);
       }
-      if (profileRef.current && !profileRef.current.contains(target)) {
+      if (
+        !profileRef.current?.contains(target) &&
+        !mobileProfileRef.current?.contains(target)
+      ) {
         setIsProfileOpen(false);
       }
     };
@@ -206,7 +221,7 @@ export default function Header() {
   return (
     <>
       <header className="bg-[#F9FAFB]">
-        <div className="flex items-center justify-between px-6 py-3">
+        <div className="hidden items-center justify-between px-6 py-3 md:flex">
           {/* Left - Date */}
           <div className="flex-1 flex items-center gap-2 text-sm text-gray-700">
             <span className="w-10 h-10 bg-white border border-gray-100 rounded-full flex items-center justify-center">
@@ -335,6 +350,65 @@ export default function Header() {
                     {user?.name || "Admin User"}
                   </p>
                   <p className="text-xs text-gray-500 capitalize">
+                    {user?.role || "Administrator"}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div
+          className="flex min-w-0 items-center gap-2 px-2 py-2 md:hidden"
+          style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top))" }}
+        >
+          <button
+            ref={menuButtonRef}
+            type="button"
+            onClick={onOpenMobileNav}
+            aria-label="Open navigation menu"
+            aria-controls="mobile-navigation"
+            aria-expanded={isMobileNavOpen}
+            className="flex h-10 w-10 flex-none items-center justify-center rounded-full border border-gray-100 text-gray-700 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Menu size={22} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsSearchModalOpen(true)}
+            aria-label="Open search"
+            className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-gray-100 bg-white px-3 text-left text-sm text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Search size={17} className="flex-none" />
+            <span className="truncate">Search...</span>
+          </button>
+
+          <div className="flex flex-none items-center gap-1">
+            <Link
+              href="/dashboard/settings"
+              aria-label="Settings"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-100 bg-white text-gray-600 transition-colors hover:text-blue-600"
+            >
+              <Settings size={18} />
+            </Link>
+            <div className="relative" ref={mobileProfileRef}>
+              <button
+                type="button"
+                onClick={() => setIsProfileOpen((open) => !open)}
+                aria-label="Profile"
+                aria-expanded={isProfileOpen}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-100 bg-white text-sm font-semibold text-black transition-colors hover:text-blue-600"
+              >
+                {user?.name?.trim()?.charAt(0)?.toUpperCase() ||
+                  user?.email?.trim()?.charAt(0)?.toUpperCase() ||
+                  "A"}
+              </button>
+              {isProfileOpen && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-gray-100 bg-white px-4 py-3">
+                  <p className="text-sm font-semibold text-gray-800">
+                    {user?.name || user?.email || "Admin User"}
+                  </p>
+                  <p className="text-xs capitalize text-gray-500">
                     {user?.role || "Administrator"}
                   </p>
                 </div>

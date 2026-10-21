@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAppSelector } from "@/store/hooks";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
@@ -13,10 +13,17 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const { isInitialized } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  const closeMobileNav = useCallback(() => {
+    setIsMobileNavOpen(false);
+    requestAnimationFrame(() => mobileMenuButtonRef.current?.focus());
   }, []);
 
   // ✅ Server + first client render: render children as-is, no spinner
@@ -36,11 +43,20 @@ export default function DashboardLayout({
 
   return (
     <ProtectedRoute>
-      <div className="flex">
-        <Sidebar />
-        <div className="flex-1 bg-[#F9FAFB] border border-gray-100 rounded-xl m-3 flex flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 overflow-y-auto p-5">{children}</main>
+      <div className="flex min-h-screen w-full flex-col overflow-x-hidden md:flex-row md:min-h-0">
+        <Sidebar
+          isMobileOpen={isMobileNavOpen}
+          onMobileClose={closeMobileNav}
+        />
+        <div className="m-0 flex min-w-0 flex-1 flex-col overflow-hidden rounded-none border-0 bg-[#F9FAFB] md:m-3 md:rounded-xl md:border md:border-gray-100">
+          <Header
+            onOpenMobileNav={() => setIsMobileNavOpen(true)}
+            isMobileNavOpen={isMobileNavOpen}
+            menuButtonRef={mobileMenuButtonRef}
+          />
+          <main className="min-w-0 flex-1 overflow-y-auto p-3 md:p-5">
+            {children}
+          </main>
         </div>
       </div>
     </ProtectedRoute>

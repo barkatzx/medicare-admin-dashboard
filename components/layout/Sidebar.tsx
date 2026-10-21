@@ -3,6 +3,7 @@
 import { api } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { logout } from "@/store/slices/authSlice";
+import InstallApp from "@/components/layout/InstallApp";
 import {
   BadgeAlert,
   BarChart3,
@@ -34,7 +35,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /* ----------------------------- Types & data ----------------------------- */
 
@@ -416,14 +417,24 @@ function NavGroup({
 
 /* --------------------------------- Sidebar ------------------------------ */
 
-export default function Sidebar() {
+interface SidebarProps {
+  isMobileOpen: boolean;
+  onMobileClose: () => void;
+}
+
+export default function Sidebar({
+  isMobileOpen,
+  onMobileClose,
+}: SidebarProps) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const router = useRouter();
   const { user } = useAppSelector((state) => state.auth);
 
+  const sidebarRef = useRef<HTMLElement>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(true);
   const [openGroups, setOpenGroups] = useState<Record<GroupKey, boolean>>(
     () => ({
       tsr: isGroupActive(pathname, tsrItems),
@@ -440,6 +451,52 @@ export default function Sidebar() {
     getPendingCustomers,
     "usersUpdated",
   );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const updateViewport = () => setIsDesktopViewport(mediaQuery.matches);
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileOpen || isDesktopViewport) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    sidebarRef.current?.querySelector<HTMLElement>("a")?.focus();
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onMobileClose();
+        return;
+      }
+
+      if (event.key !== "Tab" || !sidebarRef.current) return;
+      const focusableItems = Array.from(
+        sidebarRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled])',
+        ),
+      ).filter((item) => item.getClientRects().length > 0);
+      const firstItem = focusableItems[0];
+      const lastItem = focusableItems[focusableItems.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstItem) {
+        event.preventDefault();
+        lastItem?.focus();
+      } else if (!event.shiftKey && document.activeElement === lastItem) {
+        event.preventDefault();
+        firstItem?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isMobileOpen, isDesktopViewport, onMobileClose]);
 
   // Auto-open the group that contains the current route
   useEffect(() => {
@@ -474,11 +531,12 @@ export default function Sidebar() {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const handleLogout = async () => {
+    if (isMobileOpen && !isDesktopViewport) onMobileClose();
     await dispatch(logout());
     router.push("/login");
   };
 
-  const showText = !isCollapsed || isHovered;
+  const showText = !isCollapsed || isHovered || !isDesktopViewport;
   const sidebarWidth = isCollapsed ? "w-20" : "w-64";
 
   const badges: Record<GroupKey, { count: number; href?: string }> = {
@@ -496,10 +554,37 @@ export default function Sidebar() {
 
   return (
     <>
+      {isMobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={onMobileClose}
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+        />
+      )}
       <aside
-        className={`fixed left-3 top-3 bottom-3 ${sidebarWidth} bg-[#F9FAFB] rounded-2xl flex flex-col transition-all duration-300 z-30 border border-gray-100`}
+        ref={sidebarRef}
+        id="mobile-navigation"
+        aria-label="Primary navigation"
+        aria-hidden={!isDesktopViewport && !isMobileOpen}
+        aria-modal={!isDesktopViewport ? isMobileOpen : undefined}
+        role={!isDesktopViewport ? "dialog" : undefined}
+        inert={!isDesktopViewport && !isMobileOpen}
+        className={`fixed left-0 top-0 bottom-0 w-64 ${isCollapsed ? "md:w-20" : "md:w-64"} ${
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        } bg-[#F9FAFB] rounded-none md:left-3 md:top-3 md:bottom-3 md:rounded-2xl flex flex-col transition-all duration-300 z-50 md:z-30 border border-gray-100 md:translate-x-0`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onClick={(event) => {
+          if (
+            isMobileOpen &&
+            !isDesktopViewport &&
+            event.target instanceof Element &&
+            event.target.closest("a")
+          ) {
+            onMobileClose();
+          }
+        }}
       >
         {/* Logo */}
         <div
@@ -534,7 +619,7 @@ export default function Sidebar() {
             <button
               onClick={toggleCollapsed}
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className={`absolute -right-3 top-6 bg-white border border-gray-100 rounded-full p-1.5 shadow-md hover:shadow-lg transition-all duration-200 hover:bg-gray-50 ${
+              className={`absolute -right-3 top-6 hidden bg-white border border-gray-100 rounded-full p-1.5 shadow-md hover:shadow-lg transition-all duration-200 hover:bg-gray-50 md:inline-block ${
                 isCollapsed ? "rotate-180" : ""
               }`}
             >
@@ -597,6 +682,7 @@ export default function Sidebar() {
               isCollapsed={isCollapsed}
             />
           ))}
+          <InstallApp />
           <button
             onClick={handleLogout}
             className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200 ${
@@ -617,7 +703,10 @@ export default function Sidebar() {
       </aside>
 
       {/* Spacer for layout */}
-      <div className={`${sidebarWidth} ml-3 transition-all duration-300`} />
+      <div
+        aria-hidden="true"
+        className={`hidden ${sidebarWidth} ml-3 transition-all duration-300 md:block`}
+      />
     </>
   );
 }
