@@ -2,7 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
-import { api } from "@/config/api";
+import { api, type Distributor, type LocationArea } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   createDistributor,
@@ -26,11 +26,25 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-interface DistributorRecord {
-  id: string;
-  name: string;
-  createdAt?: string;
-  updatedAt?: string;
+type DistributorRecord = Distributor;
+
+const emptyForm = {
+  name: "",
+  fullAddress: "",
+  divisionId: "",
+  districtId: "",
+  upazilaId: "",
+};
+
+function formatAddress(distributor: Distributor): string {
+  return [
+    distributor.fullAddress,
+    distributor.upazila?.name,
+    distributor.district?.name,
+    distributor.division?.name,
+  ]
+    .filter(Boolean)
+    .join(", ");
 }
 
 export default function DistributorsPage() {
@@ -49,12 +63,52 @@ export default function DistributorsPage() {
     useState<DistributorRecord | null>(null);
   const [deletingDistributor, setDeletingDistributor] =
     useState<DistributorRecord | null>(null);
-  const [distributorName, setDistributorName] = useState("");
+  const [form, setForm] = useState(emptyForm);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [divisions, setDivisions] = useState<LocationArea[]>([]);
+  const [districts, setDistricts] = useState<LocationArea[]>([]);
+  const [upazilas, setUpazilas] = useState<LocationArea[]>([]);
   const itemsPerPage = 10;
+
+  useEffect(() => {
+    api
+      .getDivisions()
+      .then(setDivisions)
+      .catch(() => toast.error("Failed to load divisions"));
+  }, []);
+
+  useEffect(() => {
+    if (!form.divisionId) {
+      setDistricts([]);
+      return;
+    }
+    let active = true;
+    api
+      .getDistricts(form.divisionId)
+      .then((data) => active && setDistricts(data))
+      .catch(() => toast.error("Failed to load districts"));
+    return () => {
+      active = false;
+    };
+  }, [form.divisionId]);
+
+  useEffect(() => {
+    if (!form.districtId) {
+      setUpazilas([]);
+      return;
+    }
+    let active = true;
+    api
+      .getUpazilas(form.districtId)
+      .then((data) => active && setUpazilas(data))
+      .catch(() => toast.error("Failed to load upazilas"));
+    return () => {
+      active = false;
+    };
+  }, [form.districtId]);
 
   useEffect(() => {
     dispatch(fetchDistributors());
@@ -112,7 +166,9 @@ export default function DistributorsPage() {
   }, [distributors, loading]);
 
   const filteredDistributors = distributors.filter((distributor) =>
-    distributor.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    `${distributor.name} ${formatAddress(distributor)}`
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase()),
   );
 
   useEffect(() => {
@@ -136,13 +192,19 @@ export default function DistributorsPage() {
 
   const handleOpenCreateModal = () => {
     setEditingDistributor(null);
-    setDistributorName("");
+    setForm(emptyForm);
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (distributor: DistributorRecord) => {
     setEditingDistributor(distributor);
-    setDistributorName(distributor.name);
+    setForm({
+      name: distributor.name,
+      fullAddress: distributor.fullAddress ?? "",
+      divisionId: distributor.divisionId ?? "",
+      districtId: distributor.districtId ?? "",
+      upazilaId: distributor.upazilaId ?? "",
+    });
     setIsModalOpen(true);
   };
 
@@ -152,7 +214,13 @@ export default function DistributorsPage() {
   };
 
   const handleSave = async () => {
-    const trimmedName = distributorName.trim();
+    const trimmedName = form.name.trim();
+    const details = {
+      fullAddress: form.fullAddress.trim() || null,
+      divisionId: form.divisionId.trim() || null,
+      districtId: form.districtId.trim() || null,
+      upazilaId: form.upazilaId.trim() || null,
+    };
 
     if (!trimmedName) {
       toast.error("Distributor name is required.");
@@ -167,18 +235,20 @@ export default function DistributorsPage() {
           updateDistributor({
             id: editingDistributor.id,
             name: trimmedName,
+            ...details,
           }),
         ).unwrap();
       } else {
         await dispatch(
           createDistributor({
             name: trimmedName,
+            ...details,
           }),
         ).unwrap();
       }
 
       setIsModalOpen(false);
-      setDistributorName("");
+      setForm(emptyForm);
       setEditingDistributor(null);
       dispatch(fetchDistributors());
     } catch (error) {
@@ -291,6 +361,7 @@ export default function DistributorsPage() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                   <th className="px-6 py-3">Distributor name</th>
+                  <th className="px-6 py-3">Address</th>
                   <th className="px-6 py-3 text-right">Products</th>
                   <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
@@ -310,6 +381,10 @@ export default function DistributorsPage() {
                           {distributor.name}
                         </span>
                       </div>
+                    </td>
+
+                    <td className="max-w-xs px-6 py-4 text-sm text-gray-600">
+                      {formatAddress(distributor) || "—"}
                     </td>
 
                     <td className="px-6 py-4 text-right text-sm font-semibold tabular-nums">
@@ -421,7 +496,7 @@ export default function DistributorsPage() {
           if (!isSubmitting) {
             setIsModalOpen(false);
             setEditingDistributor(null);
-            setDistributorName("");
+            setForm(emptyForm);
           }
         }}
         title={editingDistributor ? "Edit distributor" : "Add distributor"}
@@ -432,12 +507,110 @@ export default function DistributorsPage() {
               Distributor name
             </label>
             <input
-              value={distributorName}
-              onChange={(event) => setDistributorName(event.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
+              value={form.name}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  name: event.target.value,
+                }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50 disabled:text-gray-400"
               placeholder="e.g. Seba Drug House"
               disabled={isSubmitting}
             />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Full address
+            </label>
+            <input
+              value={form.fullAddress}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  fullAddress: event.target.value,
+                }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50 disabled:text-gray-400"
+              placeholder="House, road, area"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Division
+            </label>
+            <select
+              value={form.divisionId}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  divisionId: event.target.value,
+                  districtId: "",
+                  upazilaId: "",
+                }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50 disabled:text-gray-400"
+              disabled={isSubmitting}
+            >
+              <option value="">Select division</option>
+              {divisions.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              District
+            </label>
+            <select
+              value={form.districtId}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  districtId: event.target.value,
+                  upazilaId: "",
+                }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50 disabled:text-gray-400"
+              disabled={isSubmitting || !form.divisionId}
+            >
+              <option value="">Select district</option>
+              {districts.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Upazila
+            </label>
+            <select
+              value={form.upazilaId}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  upazilaId: event.target.value,
+                }))
+              }
+              className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50 disabled:text-gray-400"
+              disabled={isSubmitting || !form.districtId}
+            >
+              <option value="">Select upazila</option>
+              {upazilas.map((area) => (
+                <option key={area.id} value={area.id}>
+                  {area.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex gap-3 pt-1">
@@ -447,7 +620,7 @@ export default function DistributorsPage() {
                 if (!isSubmitting) {
                   setIsModalOpen(false);
                   setEditingDistributor(null);
-                  setDistributorName("");
+                  setForm(emptyForm);
                 }
               }}
               disabled={isSubmitting}

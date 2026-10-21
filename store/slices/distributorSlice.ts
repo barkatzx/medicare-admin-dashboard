@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { api, type Distributor } from "@/config/api";
+import { api, type Distributor, type DistributorInput } from "@/config/api";
 import toast from "react-hot-toast";
 
 interface DistributorState {
@@ -24,16 +24,20 @@ export const fetchDistributors = createAsyncThunk(
 
 export const createDistributor = createAsyncThunk(
   "distributors/create",
-  async ({ name }: { name: string }) => {
-    const response = await api.createDistributor(name);
+  async ({ name, ...details }: { name: string } & DistributorInput) => {
+    const response = await api.createDistributor(name, details);
     return response;
   },
 );
 
 export const updateDistributor = createAsyncThunk(
   "distributors/update",
-  async ({ id, name }: { id: string; name: string }) => {
-    const response = await api.updateDistributor(id, name);
+  async ({
+    id,
+    name,
+    ...details
+  }: { id: string; name: string } & DistributorInput) => {
+    const response = await api.updateDistributor(id, name, details);
     return response;
   },
 );

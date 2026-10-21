@@ -1,19 +1,14 @@
 "use client";
 
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
-import { api, type Product } from "@/config/api";
-import { ArrowLeft, Package, Star, TrendingUp } from "lucide-react";
+import { api, type Distributor, type Product } from "@/config/api";
+import { ArrowLeft, MapPin, Package, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
-interface DistributorInfo {
-  id: string;
-  name: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+type DistributorInfo = Distributor;
 
 function formatMoney(value: number | null | undefined): string {
   if (typeof value !== "number" || Number.isNaN(value)) return "—";
@@ -87,6 +82,13 @@ export default function DistributorProductsPage() {
     [products],
   );
 
+  const addressParts = [
+    distributor?.fullAddress,
+    distributor?.upazila?.name,
+    distributor?.district?.name,
+    distributor?.division?.name,
+  ].filter(Boolean);
+
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -127,6 +129,12 @@ export default function DistributorProductsPage() {
             <h1 className="mt-0.5 truncate text-2xl font-semibold tracking-tight text-gray-900">
               {distributor?.name || "Distributor details"}
             </h1>
+            {addressParts.length > 0 ? (
+              <p className="mt-1 flex items-start gap-1.5 text-xs font-medium text-gray-500">
+                <MapPin size={13} className="mt-0.5 shrink-0" />
+                <span>{addressParts.join(", ")}</span>
+              </p>
+            ) : null}
             {/* {distributor?.createdAt ? (
               <p className="mt-0.5 text-xs font-medium text-gray-500">
                 Created {formatDateTime(distributor.createdAt)}

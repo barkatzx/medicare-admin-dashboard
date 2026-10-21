@@ -6,6 +6,7 @@ import * as tsrSales from "./tsr-sales";
 import * as products from "./products";
 import * as categories from "./categories";
 import * as distributors from "./distributors";
+import * as locations from "./locations";
 import { apiClient } from "./client";
 import type { User } from "./user/user.types";
 
@@ -17,6 +18,7 @@ export * from "./tsr-sales";
 export * from "./products";
 export * from "./categories";
 export * from "./distributors";
+export * from "./locations";
 
 export const api = {
   ...auth,
@@ -27,6 +29,7 @@ export const api = {
   ...products,
   ...categories,
   ...distributors,
+  ...locations,
   setToken: (token: string) => apiClient.setToken(token),
   getToken: () => apiClient.getToken(),
   clearToken: () => apiClient.clearToken(),

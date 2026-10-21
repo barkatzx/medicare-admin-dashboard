@@ -1,5 +1,5 @@
 import { apiClient } from "../client";
-import type { Distributor } from "./distributors.types";
+import type { Distributor, DistributorInput } from "./distributors.types";
 
 const distributorRoutes = ["/dristributors", "/distributors"] as const;
 
@@ -49,15 +49,19 @@ export async function getDistributorById(id: string): Promise<Distributor> {
   return requestDistributorRoute("GET", `/${id}`);
 }
 
-export async function createDistributor(name: string): Promise<Distributor> {
-  return requestDistributorRoute("POST", "", { name });
+export async function createDistributor(
+  name: string,
+  details: DistributorInput = {},
+): Promise<Distributor> {
+  return requestDistributorRoute("POST", "", { name, ...details });
 }
 
 export async function updateDistributor(
   id: string,
   name: string,
+  details: DistributorInput = {},
 ): Promise<Distributor> {
-  return requestDistributorRoute("PATCH", `/${id}`, { name });
+  return requestDistributorRoute("PATCH", `/${id}`, { name, ...details });
 }
 
 export async function deleteDistributor(id: string): Promise<void> {

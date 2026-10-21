@@ -14,7 +14,12 @@ import {
 } from "@/store/slices/productSlice";
 import { createCategory, fetchCategories } from "@/store/slices/categorySlice";
 import Button from "@/components/ui/Button";
-import { api, type Distributor, type Product } from "@/config/api";
+import {
+  api,
+  type Distributor,
+  type LocationArea,
+  type Product,
+} from "@/config/api";
 import {
   Upload,
   X,
@@ -73,6 +78,13 @@ export default function ProductForm({
   const [isCreateDistributorModalOpen, setIsCreateDistributorModalOpen] =
     useState(false);
   const [newDistributorName, setNewDistributorName] = useState("");
+  const [newDistributorAddress, setNewDistributorAddress] = useState("");
+  const [newDivisionId, setNewDivisionId] = useState("");
+  const [newDistrictId, setNewDistrictId] = useState("");
+  const [newUpazilaId, setNewUpazilaId] = useState("");
+  const [divisions, setDivisions] = useState<LocationArea[]>([]);
+  const [districts, setDistricts] = useState<LocationArea[]>([]);
+  const [upazilas, setUpazilas] = useState<LocationArea[]>([]);
   const [creatingDistributor, setCreatingDistributor] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -176,6 +188,44 @@ export default function ProductForm({
   const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(categorySearch.toLowerCase()),
   );
+  useEffect(() => {
+    if (!isCreateDistributorModalOpen || divisions.length > 0) return;
+    api
+      .getDivisions()
+      .then(setDivisions)
+      .catch(() => toast.error("Failed to load divisions"));
+  }, [isCreateDistributorModalOpen, divisions.length]);
+
+  useEffect(() => {
+    if (!newDivisionId) {
+      setDistricts([]);
+      return;
+    }
+    let active = true;
+    api
+      .getDistricts(newDivisionId)
+      .then((data) => active && setDistricts(data))
+      .catch(() => toast.error("Failed to load districts"));
+    return () => {
+      active = false;
+    };
+  }, [newDivisionId]);
+
+  useEffect(() => {
+    if (!newDistrictId) {
+      setUpazilas([]);
+      return;
+    }
+    let active = true;
+    api
+      .getUpazilas(newDistrictId)
+      .then((data) => active && setUpazilas(data))
+      .catch(() => toast.error("Failed to load upazilas"));
+    return () => {
+      active = false;
+    };
+  }, [newDistrictId]);
+
   const selectedDistributor = distributors.find(
     (distributor) => distributor.id === formData.distributorId,
   );
@@ -228,6 +278,12 @@ export default function ProductForm({
     try {
       const createdDistributor = await api.createDistributor(
         newDistributorName.trim(),
+        {
+          fullAddress: newDistributorAddress.trim() || null,
+          divisionId: newDivisionId || null,
+          districtId: newDistrictId || null,
+          upazilaId: newUpazilaId || null,
+        },
       );
 
       if (
@@ -248,6 +304,10 @@ export default function ProductForm({
       }));
       toast.success("Distributor created successfully");
       setNewDistributorName("");
+      setNewDistributorAddress("");
+      setNewDivisionId("");
+      setNewDistrictId("");
+      setNewUpazilaId("");
       setIsCreateDistributorModalOpen(false);
       setIsDistributorDropdownOpen(false);
     } catch (error) {
@@ -1166,6 +1226,74 @@ export default function ProductForm({
                   autoFocus
                   disabled={creatingDistributor}
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Full Address</label>
+                <input
+                  type="text"
+                  value={newDistributorAddress}
+                  onChange={(e) => setNewDistributorAddress(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+                  placeholder="House, road, area"
+                  disabled={creatingDistributor}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Division</label>
+                <select
+                  value={newDivisionId}
+                  onChange={(e) => {
+                    setNewDivisionId(e.target.value);
+                    setNewDistrictId("");
+                    setNewUpazilaId("");
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+                  disabled={creatingDistributor}
+                >
+                  <option value="">Select division</option>
+                  {divisions.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">District</label>
+                <select
+                  value={newDistrictId}
+                  onChange={(e) => {
+                    setNewDistrictId(e.target.value);
+                    setNewUpazilaId("");
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+                  disabled={creatingDistributor || !newDivisionId}
+                >
+                  <option value="">Select district</option>
+                  {districts.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Upazila</label>
+                <select
+                  value={newUpazilaId}
+                  onChange={(e) => {
+                    setNewUpazilaId(e.target.value);
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+                  disabled={creatingDistributor || !newDistrictId}
+                >
+                  <option value="">Select upazila</option>
+                  {upazilas.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex gap-3 pt-4">
                 <Button
