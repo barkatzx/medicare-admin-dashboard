@@ -5,7 +5,11 @@ import type { OrderedProduct } from "@/config/api";
 import { orderShipmentProductsByCompany } from "@/components/orders/shipmentProductOrdering";
 import { Printer } from "lucide-react";
 
-type ShipmentGroup = { distributor: string; products: OrderedProduct[] };
+type ShipmentGroup = {
+  distributor: string;
+  address?: string;
+  products: OrderedProduct[];
+};
 
 interface ShipmentPDFProps {
   groups: ShipmentGroup[];
@@ -102,16 +106,14 @@ const PRINT_STYLES = `
 
   /* Distributor title */
   .distributor-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 16px;
+    text-align: center;
     padding: 14px 0;
     border-bottom: 1px solid var(--line);
   }
 
-  .distributor-title .name { font-size: 13px; font-weight: 600; }
-  .distributor-title .count { font-size: 10.5px; color: var(--muted); }
+  .distributor-title .name { font-size: 18px; font-weight: 600; }
+  .distributor-title .address { font-size: 14px; color: var(--muted); margin-top: 2px; }
+  .distributor-title .count { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
   /* Table */
   .table-wrap {
@@ -215,7 +217,7 @@ function renderRow(product: OrderedProduct, index: number): string {
 }
 
 function renderPage(
-  { distributor, products }: ShipmentGroup,
+  { distributor, address, products }: ShipmentGroup,
   isLast: boolean,
   date: string,
 ): string {
@@ -253,7 +255,8 @@ function renderPage(
 
       <div class="distributor-title">
         <div class="name">${escapeHtml(distributor)}</div>
-        <div class="count">${products.length} product${products.length === 1 ? "" : "s"}</div>
+        ${address ? `<div class="address">${escapeHtml(address)}</div>` : ""}
+        <div class="count">${products.length} Product${products.length === 1 ? "" : "s"}</div>
       </div>
 
       <div class="table-wrap">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Activity, PackageOpen, RefreshCw } from "lucide-react";
 import { api } from "@/config/api";
 import type {
+  Distributor,
   OrderedProduct,
   OrderedProductsData,
   Product,
@@ -11,6 +12,17 @@ import type {
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 import ShipmentPDF from "@/components/orders/ShipmentPDF";
 import { orderShipmentProductsByCompany } from "@/components/orders/shipmentProductOrdering";
+
+function formatDistributorAddress(distributor: Distributor): string {
+  return [
+    distributor.fullAddress,
+    distributor.upazila?.name,
+    distributor.district?.name,
+    distributor.division?.name,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
 
 async function getMatchingCatalogProducts(
   orderedProducts: OrderedProduct[],
@@ -86,7 +98,13 @@ function OrderedProductsSkeleton() {
   );
 }
 
-function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
+function OrderProductsTable({
+  products,
+  addresses,
+}: {
+  products: OrderedProduct[];
+  addresses: Record<string, string>;
+}) {
   const distributorProducts = new Map<string, OrderedProduct[]>();
   for (const product of products) {
     const distributor = product.distributor ?? "N/A";
@@ -102,6 +120,7 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
     distributorProducts,
     ([distributor, groupProducts]) => ({
       distributor,
+      address: addresses[distributor] ?? "",
       products: groupProducts,
     }),
   );
@@ -111,9 +130,7 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 pb-3.5 border-b border-[#eeeeee]">
         <div>
-          <h1 className="text-[17px] font-bold leading-none tracking-tight text-blue-700">
-            Today Shipments
-          </h1>
+          <h1 className="text-lg font-bold">Today Shipments</h1>
         </div>
         <ShipmentPDF groups={distributorGroups} />
       </div>
@@ -130,7 +147,7 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
       ) : (
         <div>
           {distributorGroups.map(
-            ({ distributor, products: groupProducts }, groupIndex) => {
+            ({ distributor, address, products: groupProducts }, groupIndex) => {
               const orderedGroupProducts =
                 orderShipmentProductsByCompany(groupProducts);
               const quantityTotal = groupProducts.reduce(
@@ -155,14 +172,17 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
                   className="pt-3.5 pb-3.5 border-b border-[#eeeeee] last:border-b-0"
                 >
                   {/* Distributor sub-header */}
-                  <div className="flex items-center justify-between gap-4 mb-2">
-                    <h2 className="text-[13px] font-semibold text-gray-900">
+                  <div className="mb-2 text-center">
+                    <h2 className="text-xl font-bold text-gray-900">
                       {distributor}
                     </h2>
-                    <span className="text-[10.5px] text-gray-500">
-                      {groupProducts.length} product
+                    {address ? (
+                      <p className="mt-0.5 text-sm text-gray-500">{address}</p>
+                    ) : null}
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {groupProducts.length} Product
                       {groupProducts.length === 1 ? "" : "s"}
-                    </span>
+                    </p>
                   </div>
 
                   {/* Rounded, bordered table — same recipe as the invoice */}
@@ -284,6 +304,7 @@ export default function TodayShipmentsPage() {
     useState<OrderedProductsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [addresses, setAddresses] = useState<Record<string, string>>({});
 
   const loadOrderedProducts = useCallback(async () => {
     setLoading(true);
@@ -301,6 +322,21 @@ export default function TodayShipmentsPage() {
   useEffect(() => {
     void loadOrderedProducts();
   }, [loadOrderedProducts]);
+
+  useEffect(() => {
+    api
+      .getAllDistributor()
+      .then((distributors) => {
+        const map: Record<string, string> = {};
+        for (const distributor of distributors) {
+          map[distributor.name] = formatDistributorAddress(distributor);
+        }
+        setAddresses(map);
+      })
+      .catch((error) => {
+        console.error("Failed to load distributor addresses:", error);
+      });
+  }, []);
 
   useEffect(() => {
     if (
@@ -369,7 +405,10 @@ export default function TodayShipmentsPage() {
 
   return (
     <div className="space-y-6 pb-8">
-      <OrderProductsTable products={orderedProducts.products} />
+      <OrderProductsTable
+        products={orderedProducts.products}
+        addresses={addresses}
+      />
     </div>
   );
 }
