@@ -2,6 +2,7 @@
 
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 import type { OrderedProduct } from "@/config/api";
+import { orderShipmentProductsByCompany } from "@/components/orders/shipmentProductOrdering";
 import { Printer } from "lucide-react";
 
 type ShipmentGroup = { distributor: string; products: OrderedProduct[] };
@@ -71,7 +72,7 @@ const PRINT_STYLES = `
     width: 36px;
     height: 36px;
     padding: 4px;
-    border-radius: 6px;
+    border-radius: 8px;
     background: #f3f4f6;
     object-fit: contain;
   }
@@ -218,6 +219,7 @@ function renderPage(
   isLast: boolean,
   date: string,
 ): string {
+  const orderedProducts = orderShipmentProductsByCompany(products);
   const quantityTotal = products.reduce(
     (sum, product) => sum + product.quantity,
     0,
@@ -265,7 +267,7 @@ function renderPage(
               <th class="number">TP</th>
             </tr>
           </thead>
-          <tbody>${products.map(renderRow).join("")}</tbody>
+          <tbody>${orderedProducts.map(renderRow).join("")}</tbody>
           <tfoot>
             <tr>
               <td colspan="2">Total</td>

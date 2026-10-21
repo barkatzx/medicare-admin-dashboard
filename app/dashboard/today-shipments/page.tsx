@@ -10,6 +10,7 @@ import type {
 } from "@/config/api";
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 import ShipmentPDF from "@/components/orders/ShipmentPDF";
+import { orderShipmentProductsByCompany } from "@/components/orders/shipmentProductOrdering";
 
 async function getMatchingCatalogProducts(
   orderedProducts: OrderedProduct[],
@@ -130,6 +131,8 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
         <div>
           {distributorGroups.map(
             ({ distributor, products: groupProducts }, groupIndex) => {
+              const orderedGroupProducts =
+                orderShipmentProductsByCompany(groupProducts);
               const quantityTotal = groupProducts.reduce(
                 (sum, product) => sum + product.quantity,
                 0,
@@ -210,7 +213,7 @@ function OrderProductsTable({ products }: { products: OrderedProduct[] }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {groupProducts.map((product, index) => (
+                        {orderedGroupProducts.map((product, index) => (
                           <tr
                             key={`${product.productName}-${index}`}
                             className={
