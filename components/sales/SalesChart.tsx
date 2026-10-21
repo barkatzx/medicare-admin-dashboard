@@ -113,7 +113,7 @@ const PeriodBtn = ({
 }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
+    className={`min-h-10 w-full rounded-xl px-1 py-2 text-xs font-medium transition-all duration-200 sm:w-auto sm:px-4 sm:text-sm ${
       active
         ? "bg-blue-600 text-white shadow-md shadow-blue-200"
         : "text-gray-500 hover:bg-gray-100"
@@ -161,19 +161,19 @@ export default function SalesChart() {
   const isLoading = loading && !chartData.length;
 
   return (
-    <div className="rounded-2xl bg-white border border-gray-100 p-6 space-y-8">
+    <div className="min-w-0 space-y-5 rounded-2xl border border-gray-100 bg-white p-4 md:space-y-8 md:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h2 className="flex items-center gap-2 text-base font-bold text-gray-900 sm:text-lg">
             <TrendingUp size={20} className="text-blue-600" />
-            Sales Overview With Analysis
+            <span>Sales Overview With Analysis</span>
           </h2>
           <p className="text-sm text-gray-400 mt-0.5">{periodLabel}</p>
         </div>
 
         {/* Period Tabs */}
-        <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-1">
+        <div className="grid w-full grid-cols-4 items-center gap-1 rounded-xl bg-gray-50 p-1 sm:w-auto">
           {(["daily", "weekly", "monthly", "yearly"] as Period[]).map((p) => (
             <PeriodBtn
               key={p}
@@ -187,7 +187,7 @@ export default function SalesChart() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <StatCard
           label="Total Revenue"
           value={`৳${totalRevenue.toLocaleString()}`}
@@ -215,7 +215,7 @@ export default function SalesChart() {
       </div>
 
       {/* Chart Type Toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs text-gray-400 font-medium">Chart style:</span>
         {(["area", "composed"] as ChartType[]).map((t) => (
           <button
@@ -241,7 +241,8 @@ export default function SalesChart() {
           </div>
         )}
 
-        <ResponsiveContainer width="100%" height={340}>
+        <div className="h-[280px] w-full sm:h-[340px]">
+        <ResponsiveContainer width="100%" height="100%">
           {chartType === "area" ? (
             <AreaChart
               data={chartData}
@@ -373,6 +374,7 @@ export default function SalesChart() {
             </ComposedChart>
           )}
         </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

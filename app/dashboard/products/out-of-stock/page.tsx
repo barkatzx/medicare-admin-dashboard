@@ -65,17 +65,17 @@ export default function OutOfStockPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg bg-red-100 p-1.5">
+    <div className="min-w-0 space-y-6">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 rounded-lg bg-red-100 p-1.5">
               <Package size={16} className="text-red-600" />
             </span>
-            <h1 className="text-lg font-semibold text-gray-900">
+            <h1 className="text-base font-semibold text-gray-900 md:text-lg">
               Out of Stock Products
             </h1>
-            <span className="ml-2 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
               {pagination.total}
             </span>
           </div>
@@ -84,7 +84,8 @@ export default function OutOfStockPage() {
             onClick={() => void loadProducts(currentPage)}
             disabled={loading}
             title="Refresh products"
-            className="rounded-lg bg-gray-50 p-2 transition-colors hover:bg-gray-100 disabled:opacity-50"
+            aria-label="Refresh out-of-stock products"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-50 transition-colors hover:bg-gray-100 disabled:opacity-50"
           >
             <RefreshCw
               size={16}
@@ -115,8 +116,9 @@ export default function OutOfStockPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50">
                     {[
@@ -194,6 +196,7 @@ export default function OutOfStockPage() {
                             type="button"
                             onClick={() => setSelectedProduct(product)}
                             title="Manage Stock"
+                            aria-label={`Manage stock for ${product.name}`}
                             className="rounded-lg bg-emerald-100 p-2 text-emerald-600 transition-colors hover:bg-emerald-200"
                           >
                             <Pencil size={16} />
@@ -203,13 +206,88 @@ export default function OutOfStockPage() {
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
-          )}
+                  </table>
+                </div>
+
+                <ul className="divide-y divide-gray-100 md:hidden">
+                  {products.map((product) => {
+                    const imageUrl = getProductImage(product);
+                    return (
+                      <li key={product.id} className="min-w-0 p-4">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={product.name ?? "Product"}
+                                className="h-full w-full object-cover"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <Package size={20} className="text-blue-600" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="break-words text-sm font-semibold text-gray-900">
+                              {product.name}
+                            </p>
+                            <p className="mt-1 truncate text-xs text-gray-500">
+                              {product.category?.name ?? "N/A"}
+                            </p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-semibold text-red-700">
+                            0 units
+                          </span>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                          <div className="min-w-0">
+                            <p className="text-gray-400">Distributor</p>
+                            <p className="mt-0.5 truncate font-medium text-gray-700">
+                              {product.distributor ?? "N/A"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">MRP</p>
+                            <p className="mt-0.5 font-semibold tabular-nums text-gray-900">
+                              {formatSalesCurrency(product.price)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">TP</p>
+                            <p className="mt-0.5 font-medium tabular-nums text-gray-700">
+                              {product.tp == null
+                                ? "N/A"
+                                : formatSalesCurrency(product.tp)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex justify-end border-t border-gray-100 pt-3">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedProduct(product)}
+                            aria-label={`Manage stock for ${product.name}`}
+                            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-100 px-3 text-emerald-700 transition-colors hover:bg-emerald-200"
+                          >
+                            <Pencil size={15} />
+                            <span className="text-xs font-medium">
+                              Manage stock
+                            </span>
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
         </div>
 
         {pagination.total > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 bg-gray-50 px-6 py-4">
+            <div className="flex flex-col items-center justify-between gap-3 border-t border-gray-100 bg-gray-50 px-4 py-4 sm:flex-row sm:px-6">
             <p className="text-sm text-gray-600">
               Showing {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}–
               {Math.min(currentPage * PRODUCTS_PER_PAGE, pagination.total)} of{" "}
@@ -220,7 +298,8 @@ export default function OutOfStockPage() {
                 type="button"
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 disabled={currentPage === 1}
-                className="rounded-xl border border-gray-200 p-2 transition-colors hover:bg-white disabled:opacity-50"
+                aria-label="Previous page"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 transition-colors hover:bg-white disabled:opacity-50 md:h-auto md:w-auto md:p-2"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -233,7 +312,8 @@ export default function OutOfStockPage() {
                   setCurrentPage((page) => Math.min(totalPages, page + 1))
                 }
                 disabled={currentPage === totalPages}
-                className="rounded-xl border border-gray-200 p-2 transition-colors hover:bg-white disabled:opacity-50"
+                aria-label="Next page"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 transition-colors hover:bg-white disabled:opacity-50 md:h-auto md:w-auto md:p-2"
               >
                 <ChevronRight size={16} />
               </button>

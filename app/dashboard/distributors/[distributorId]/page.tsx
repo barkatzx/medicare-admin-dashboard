@@ -103,7 +103,7 @@ export default function DistributorProductsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* ─── Back link ───────────────────────────────────────────── */}
       <Link
         href="/dashboard/distributors"
@@ -117,7 +117,7 @@ export default function DistributorProductsPage() {
       </Link>
 
       {/* ─── Header ──────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex items-start justify-between gap-3 sm:items-end">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
             {distributor?.name?.charAt(0) || "D"}
@@ -132,7 +132,7 @@ export default function DistributorProductsPage() {
             {addressParts.length > 0 ? (
               <p className="mt-1 flex items-start gap-1.5 text-xs font-medium text-gray-500">
                 <MapPin size={13} className="mt-0.5 shrink-0" />
-                <span>{addressParts.join(", ")}</span>
+                <span className="break-words">{addressParts.join(", ")}</span>
               </p>
             ) : null}
             {/* {distributor?.createdAt ? (
@@ -143,7 +143,7 @@ export default function DistributorProductsPage() {
           </div>
         </div>
 
-        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-500 ring-1 ring-inset ring-gray-100 sm:self-auto">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-gray-50 px-2.5 py-1 text-[11px] font-medium text-gray-500 ring-1 ring-inset ring-gray-100">
           <Package size={12} />
           {products.length} {products.length === 1 ? "product" : "products"}
         </span>
@@ -162,8 +162,8 @@ export default function DistributorProductsPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4 md:px-6">
             <div className="flex items-center gap-2.5">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                 <Package size={15} strokeWidth={2.25} />
@@ -181,7 +181,83 @@ export default function DistributorProductsPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <ul className="divide-y divide-gray-100 md:hidden">
+            {products.map((product) => {
+              const imageUrl = product.images?.[0]?.url;
+              const categoryName =
+                product.category?.name || product.categoryId || "—";
+
+              return (
+                <li key={product.id} className="min-w-0 p-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={product.name || "Product image"}
+                        className="h-12 w-12 shrink-0 rounded-xl border border-gray-200 object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-gray-100 bg-gray-50 text-gray-300">
+                        <Package size={20} />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-semibold text-gray-900">
+                        {product.name || "Unnamed product"}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-gray-500">
+                        {categoryName}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        Price
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-gray-900">
+                        {formatMoney(product.price)}
+                      </p>
+                    </div>
+                    <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        TP
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-gray-900">
+                        {product.tp != null ? formatMoney(product.tp) : "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {product.featured ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-pink-50 px-2 py-1 text-[11px] font-semibold text-pink-700 ring-1 ring-inset ring-pink-200/60">
+                        <Star size={11} className="fill-current" />
+                        Featured
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-600">
+                        Not featured
+                      </span>
+                    )}
+                    {product.trending ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200/60">
+                        <TrendingUp size={11} />
+                        Trending
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-600">
+                        Not trending
+                      </span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">

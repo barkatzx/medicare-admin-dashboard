@@ -115,13 +115,13 @@ function BestTsrCard({
   metric: "orders" | "value";
 }) {
   return (
-    <article className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+    <article className="min-w-0 rounded-xl border border-gray-100 bg-gray-50 p-3 sm:p-4">
       <div className="flex items-center gap-2 text-amber-600">
         <Award size={16} />
         <h3 className="text-sm text-gray-600">{title}</h3>
       </div>
       {tsr ? (
-        <div className="mt-3 flex items-end justify-between gap-3">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
           <div className="min-w-0">
             <p className="text-sm text-gray-700">{tsr.tsrName || "—"}</p>
             <p className="mt-1 text-xs tabular-nums text-gray-500">
@@ -130,7 +130,7 @@ function BestTsrCard({
                 : `${count(tsr.totalOrders)} orders`}
             </p>
           </div>
-          <p className="shrink-0 text-sm font-bold tabular-nums text-gray-700">
+          <p className="text-sm font-bold tabular-nums text-gray-700 sm:shrink-0 sm:text-right">
             {metric === "orders"
               ? `${count(tsr.totalOrders)} orders`
               : currency(tsr.totalOrderValue)}
@@ -157,22 +157,22 @@ function PeriodSection({
   return (
     <section
       aria-label={`${title} TSR sales summary`}
-      className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-50"
+      className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-gray-50"
     >
-      <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4 sm:px-6">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+      <div className="flex min-w-0 items-center gap-3 border-b border-gray-100 px-4 py-4 sm:px-6">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
           <AreaChart size={18} />
         </span>
         <div>
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <p className="text-xs text-gray-500">{tsrName}</p>
+          <p className="break-words text-xs text-gray-500">{tsrName}</p>
           {description && (
             <p className="text-xs text-gray-500">{description}</p>
           )}
         </div>
       </div>
 
-      <div className="p-4 sm:p-6">
+      <div className="p-3 sm:p-6">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <article className="rounded-xl bg-white border border-gray-100 p-4">
             <div className="flex items-center gap-2 text-gray-500">
@@ -374,11 +374,11 @@ export default function TSRSummary() {
   const loading = tsrsLoading || summaryLoading || bestPerformanceLoading;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-gray-100 bg-white p-5  sm:p-6">
-        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div className="min-w-0 space-y-5 md:space-y-6">
+      <section className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 sm:p-6">
+        <div className="mt-1 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
           <div
-            className="relative w-full sm:w-94"
+            className="relative w-full min-w-0 sm:w-94"
             onBlur={(event) => {
               if (
                 !event.currentTarget.contains(
@@ -398,7 +398,7 @@ export default function TSRSummary() {
               aria-expanded={tsrDropdownOpen}
               disabled={tsrsLoading || tsrs.length === 0}
               onClick={() => setTsrDropdownOpen((open) => !open)}
-              className="flex w-full items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-left text-sm text-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex min-h-11 w-full items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-left text-sm text-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <span className="truncate">
                 {selectedTsr
@@ -471,7 +471,7 @@ export default function TSRSummary() {
             type="button"
             onClick={() => setRefreshKey((key) => key + 1)}
             disabled={loading}
-            className="inline-flex items-center bg-gray-50 justify-center gap-2 self-end rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 sm:ml-auto sm:self-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 sm:ml-auto sm:w-auto"
           >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
             Refresh
@@ -492,14 +492,14 @@ export default function TSRSummary() {
         {summaryError && (
           <div
             role="alert"
-            className="flex flex-col gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-5 sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
           >
             <p className="text-sm font-medium text-rose-700">{summaryError}</p>
             <button
               type="button"
               onClick={() => setRefreshKey((key) => key + 1)}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60 sm:self-auto"
+              className="inline-flex min-h-11 items-center justify-center gap-2 self-stretch rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60 sm:self-auto"
             >
               <RefreshCw size={14} />
               Retry
@@ -510,7 +510,7 @@ export default function TSRSummary() {
         {summaryLoading ? (
           <SummarySkeleton />
         ) : summary ? (
-          <div className="space-y-5 mt-5">
+          <div className="mt-4 space-y-4 sm:mt-5 sm:space-y-5">
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
               {periods.map(({ key, title, description }) => (
                 <PeriodSection

@@ -108,7 +108,7 @@ export default function ReportsPage() {
   } = summary;
 
   return (
-    <div className="space-y-7 pb-8">
+    <div className="min-w-0 space-y-5 pb-8 md:space-y-7">
       <SalesOverview summary={overview} />
       <SalesGrowth growth={growth} />
       <SalesByStatus data={statuses} />

@@ -70,16 +70,16 @@ function PendingPanel<T>({
 }) {
   return (
     <section className="min-w-0 flex-1 rounded-2xl border border-gray-100 bg-white">
-      <header className="flex items-center gap-2.5 border-b border-gray-100 px-6 py-4">
+      <header className="flex items-center gap-2.5 border-b border-gray-100 px-4 py-4 md:px-6">
         <span
-          className={`flex h-8 w-8 items-center justify-center rounded-lg ${iconClass}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClass}`}
         >
           <Icon size={15} strokeWidth={2.25} />
         </span>
         <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
       </header>
 
-      <div className="px-6 py-2">
+      <div className="px-4 py-2 md:px-6">
         {loading ? (
           <div
             className="space-y-2 py-2"
@@ -152,9 +152,9 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5 md:space-y-6">
       <SalesChart />
-      <div className="flex flex-col gap-5 lg:flex-row">
+      <div className="flex min-w-0 flex-col gap-4 md:gap-5 lg:flex-row">
         <PendingPanel
           title="Pending orders"
           icon={ShoppingCart}

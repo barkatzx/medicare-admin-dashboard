@@ -92,20 +92,31 @@ const TSR = () => {
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-2xl bg-white border border-gray-100">
-        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex flex-col gap-4 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-center justify-between gap-3 sm:justify-start">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
               <UsersIcon size={15} strokeWidth={2.25} />
-            </span>
-            <div>
-              <h1 className="text-sm font-semibold text-gray-900">
-                TSR &amp; Admin List
-              </h1>
-              <p className="text-[11px] text-gray-500">
-                {tsrUsers.length} {tsrUsers.length === 1 ? "user" : "users"}
-              </p>
+              </span>
+              <div>
+                <h1 className="text-sm font-semibold text-gray-900">
+                  TSR &amp; Admin List
+                </h1>
+                <p className="text-[11px] text-gray-500">
+                  {tsrUsers.length} {tsrUsers.length === 1 ? "user" : "users"}
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={loading}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60 sm:hidden"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
           </div>
 
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
@@ -127,7 +138,7 @@ const TSR = () => {
               type="button"
               onClick={handleRefresh}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="hidden items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60 sm:inline-flex"
             >
               <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
               Refresh
@@ -166,8 +177,9 @@ const TSR = () => {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                   <th className="px-6 py-3">User</th>
@@ -275,13 +287,82 @@ const TSR = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+
+            <ul className="divide-y divide-gray-100 md:hidden">
+              {pageUsers.map((user) => (
+                <li key={user.id} className="min-w-0 p-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-xs font-bold uppercase text-white">
+                      {user.name?.charAt(0) || "U"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-semibold text-gray-900">
+                        {user.name || "N/A"}
+                      </p>
+                      <p className="mt-0.5 break-all text-xs text-gray-500">
+                        {user.email}
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset ${
+                        user.role === "admin"
+                          ? "bg-purple-50 text-purple-700 ring-purple-100"
+                          : "bg-blue-50 text-blue-700 ring-blue-100"
+                      }`}
+                    >
+                      {user.role === "admin" ? "Admin" : "TSR"}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-600 min-[380px]:grid-cols-2">
+                    <p className="flex min-w-0 items-center gap-1.5 tabular-nums">
+                      <Phone size={13} className="shrink-0 text-gray-400" />
+                      <span className="truncate">{user.phone_number}</span>
+                    </p>
+                    <p className="flex items-center gap-1.5 tabular-nums">
+                      <Calendar
+                        size={13}
+                        className="shrink-0 text-gray-400"
+                      />
+                      <span>
+                        {user.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString()
+                          : "N/A"}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setUserForLocation(user)}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100 transition-all hover:bg-emerald-100"
+                      title="View location"
+                      aria-label={`View location for ${user.name || user.email}`}
+                    >
+                      <MapPin size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserToDelete(user)}
+                      className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100"
+                      title="Delete user"
+                      aria-label={`Delete ${user.name || user.email}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         {pageUsers.length > 0 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-6 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-4 sm:px-6">
+            <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
               <p className="text-xs font-medium tabular-nums text-gray-500">
                 Showing{" "}
                 <span className="font-semibold text-gray-700">
@@ -295,13 +376,13 @@ const TSR = () => {
                 users
               </p>
               {totalPages > 1 && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex max-w-full items-center gap-1.5 overflow-x-auto">
                   <button
                     type="button"
                     onClick={() => setCurrentPage((value) => value - 1)}
                     disabled={page <= 1 || loading}
                     aria-label="Previous page"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
                   >
                     <ChevronLeft size={14} />
                   </button>
@@ -329,7 +410,7 @@ const TSR = () => {
                       number === "..." ? (
                         <span
                           key={`ellipsis-${index}`}
-                          className="px-1 text-xs font-medium text-gray-400"
+                          className="shrink-0 px-1 text-xs font-medium text-gray-400"
                         >
                           …
                         </span>
@@ -340,7 +421,7 @@ const TSR = () => {
                           onClick={() => setCurrentPage(number)}
                           disabled={loading}
                           aria-current={page === number ? "page" : undefined}
-                          className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
+                          className={`h-10 min-w-10 shrink-0 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
                             page === number
                               ? "bg-emerald-500 text-white"
                               : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
@@ -355,7 +436,7 @@ const TSR = () => {
                     onClick={() => setCurrentPage((value) => value + 1)}
                     disabled={page >= totalPages || loading}
                     aria-label="Next page"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
                   >
                     <ChevronRight size={14} />
                   </button>

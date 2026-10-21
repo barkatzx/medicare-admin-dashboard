@@ -88,7 +88,7 @@ function SkeletonBlock({ className }: { className: string }) {
 
 function OrderedProductsSkeleton() {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div>
         <SkeletonBlock className="h-8 w-56" />
         <SkeletonBlock className="mt-3 h-4 w-72 max-w-full" />
@@ -126,11 +126,11 @@ function OrderProductsTable({
   );
 
   return (
-    <section className="bg-white p-6 rounded-xl">
+    <section className="min-w-0 rounded-xl bg-white p-4 md:p-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 pb-3.5 border-b border-[#eeeeee]">
+      <div className="flex items-center justify-between gap-3 border-b border-[#eeeeee] pb-3.5">
         <div>
-          <h1 className="text-lg font-bold">Today Shipments</h1>
+          <h1 className="text-base font-bold md:text-lg">Today Shipments</h1>
         </div>
         <ShipmentPDF groups={distributorGroups} />
       </div>
@@ -169,15 +169,17 @@ function OrderProductsTable({
               return (
                 <section
                   key={distributor}
-                  className="pt-3.5 pb-3.5 border-b border-[#eeeeee] last:border-b-0"
+                  className="min-w-0 border-b border-[#eeeeee] py-3.5 last:border-b-0"
                 >
                   {/* Distributor sub-header */}
-                  <div className="mb-2 text-center">
-                    <h2 className="text-xl font-bold text-gray-900">
+                  <div className="mb-3 text-center md:mb-2">
+                    <h2 className="break-words text-lg font-bold text-gray-900 md:text-xl">
                       {distributor}
                     </h2>
                     {address ? (
-                      <p className="mt-0.5 text-sm text-gray-500">{address}</p>
+                      <p className="mt-0.5 break-words text-xs text-gray-500 md:text-sm">
+                        {address}
+                      </p>
                     ) : null}
                     <p className="mt-0.5 text-xs text-gray-500">
                       {groupProducts.length} Product
@@ -186,7 +188,87 @@ function OrderProductsTable({
                   </div>
 
                   {/* Rounded, bordered table — same recipe as the invoice */}
-                  <div className="rounded-[10px] overflow-hidden border border-[#eeeeee]">
+                  <div className="space-y-2 md:hidden">
+                    {orderedGroupProducts.map((product, index) => (
+                      <article
+                        key={`${product.productName}-${index}`}
+                        className="min-w-0 rounded-xl border border-gray-100 bg-gray-50/60 p-3"
+                      >
+                        <div className="flex min-w-0 items-start gap-2">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-[10px] font-semibold tabular-nums text-gray-500 ring-1 ring-inset ring-gray-200">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="break-words text-sm font-semibold leading-snug text-gray-900">
+                              {product.productName}
+                            </h3>
+                            <p className="mt-1 break-words text-xs text-gray-500">
+                              {product.category?.name ?? "N/A"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2 border-t border-gray-200 pt-2.5">
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                              Qty
+                            </p>
+                            <p className="mt-0.5 truncate text-xs font-semibold tabular-nums text-gray-800">
+                              {product.quantity}
+                            </p>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                              MRP
+                            </p>
+                            <p className="mt-0.5 truncate text-xs font-semibold tabular-nums text-gray-800">
+                              {formatSalesCurrency(product.price)}
+                            </p>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+                              TP
+                            </p>
+                            <p className="mt-0.5 truncate text-xs font-semibold tabular-nums text-gray-800">
+                              {product.tp === null
+                                ? "N/A"
+                                : formatSalesCurrency(product.tp)}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+
+                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-blue-50 p-3 text-blue-700">
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-semibold uppercase tracking-wide">
+                          Total qty
+                        </p>
+                        <p className="mt-0.5 truncate text-sm font-bold tabular-nums">
+                          {quantityTotal}
+                        </p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-semibold uppercase tracking-wide">
+                          Total MRP
+                        </p>
+                        <p className="mt-0.5 truncate text-xs font-bold tabular-nums">
+                          {formatSalesCurrency(unitPriceTotal)}
+                        </p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] font-semibold uppercase tracking-wide">
+                          Total TP
+                        </p>
+                        <p className="mt-0.5 truncate text-xs font-bold tabular-nums">
+                          {tpTotal === null
+                            ? "N/A"
+                            : formatSalesCurrency(tpTotal)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="hidden overflow-hidden rounded-[10px] border border-[#eeeeee] md:block">
                     <table className="w-full table-fixed border-collapse text-[11.5px]">
                       <caption className="sr-only">
                         Today shipment products for {distributor}

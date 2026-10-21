@@ -305,15 +305,15 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div className="min-w-0 space-y-5 md:space-y-6">
+      <div className="grid min-w-0 grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
         {/* ─── Main column ─────────────────────────────────────── */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-5 md:space-y-6 lg:col-span-2">
           {/* Profile */}
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 md:px-6">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                   <User size={15} strokeWidth={2.25} />
                 </span>
                 <div>
@@ -329,7 +329,7 @@ export default function SettingsPage() {
               {!isEditing && (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                  className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 md:min-h-0"
                 >
                   <Edit size={13} />
                   Edit
@@ -337,7 +337,7 @@ export default function SettingsPage() {
               )}
             </div>
 
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               {isEditing ? (
                 <div className="space-y-5">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -392,14 +392,15 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="flex gap-3 pt-1">
-                    <Button onClick={handleUpdateProfile} className="gap-2">
+                  <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:gap-3">
+                    <Button onClick={handleUpdateProfile} className="min-h-11 gap-2 sm:min-h-0">
                       <Save size={15} />
                       Save changes
                     </Button>
                     <Button
                       variant="secondary"
                       onClick={() => setIsEditing(false)}
+                      className="min-h-11 sm:min-h-0"
                     >
                       Cancel
                     </Button>
@@ -431,10 +432,10 @@ export default function SettingsPage() {
           </div>
 
           {/* Addresses */}
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 md:px-6">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                   <MapPin size={15} strokeWidth={2.25} />
                 </span>
                 <div>
@@ -460,14 +461,14 @@ export default function SettingsPage() {
                   });
                   setIsAddressModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 md:min-h-0"
               >
                 <Plus size={13} />
                 Add
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               {addresses.length === 0 ? (
                 <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
@@ -503,7 +504,7 @@ export default function SettingsPage() {
                             <Home size={13} />
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-gray-900">
+                            <p className="break-words text-sm font-semibold text-gray-900">
                               {address.street}
                             </p>
                             <p className="mt-0.5 truncate text-xs font-medium text-gray-500">
@@ -527,7 +528,7 @@ export default function SettingsPage() {
                         )}
                       </div>
 
-                      <div className="mt-3 flex items-center justify-end gap-1.5 border-t border-gray-100 pt-3">
+                      <div className="mt-3 flex items-center justify-end gap-2 border-t border-gray-100 pt-3">
                         <button
                           onClick={() => {
                             setEditingAddress(address);
@@ -541,7 +542,7 @@ export default function SettingsPage() {
                             });
                             setIsAddressModalOpen(true);
                           }}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100"
+                          className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100 md:h-7 md:w-7"
                           title="Edit address"
                         >
                           <Edit size={13} />
@@ -553,14 +554,14 @@ export default function SettingsPage() {
                               onClick={() =>
                                 handleSetDefaultAddress(address.id)
                               }
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-100 transition-all hover:bg-amber-100"
+                              className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-100 transition-all hover:bg-amber-100 md:h-7 md:w-7"
                               title="Set as default"
                             >
                               <Star size={13} />
                             </button>
                             <button
                               onClick={() => handleDeleteAddress(address.id)}
-                              className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100"
+                              className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100 md:h-7 md:w-7"
                               title="Delete address"
                             >
                               <Trash2 size={13} />
@@ -577,11 +578,11 @@ export default function SettingsPage() {
         </div>
 
         {/* ─── Sidebar ─────────────────────────────────────────── */}
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-5 md:space-y-6">
           {/* Security */}
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-            <div className="flex items-center gap-2.5 border-b border-gray-100 px-6 py-4">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center gap-2.5 border-b border-gray-100 px-4 py-4 md:px-6">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                 <Shield size={15} strokeWidth={2.25} />
               </span>
               <div>
@@ -626,10 +627,10 @@ export default function SettingsPage() {
           </div>
 
           {/* Sessions */}
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+            <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 md:px-6">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
                   <Monitor size={15} strokeWidth={2.25} />
                 </span>
                 <div>
@@ -645,7 +646,7 @@ export default function SettingsPage() {
 
             <div className="p-4">
               {deviceInfo && (
-                <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3 rounded-xl bg-gray-50 px-3 py-3 sm:px-4">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-gray-600 ring-1 ring-inset ring-gray-100">
                     {deviceInfo.deviceType === "Mobile" ? (
                       <Smartphone size={16} />
@@ -663,7 +664,7 @@ export default function SettingsPage() {
                       {deviceInfo.deviceType} · {deviceInfo.os}
                     </p>
                   </div>
-                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200/60">
+                  <span className="inline-flex shrink-0 items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200/60">
                     This device
                   </span>
                 </div>
@@ -754,15 +755,18 @@ export default function SettingsPage() {
               </div>
             )}
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:gap-3">
             <Button
               variant="secondary"
               onClick={() => setIsPasswordModalOpen(false)}
-              className="flex-1"
+              className="min-h-11 flex-1 sm:min-h-0"
             >
               Cancel
             </Button>
-            <Button onClick={handleChangePassword} className="flex-1">
+            <Button
+              onClick={handleChangePassword}
+              className="min-h-11 flex-1 sm:min-h-0"
+            >
               Update password
             </Button>
           </div>
@@ -790,7 +794,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                 City <span className="text-rose-500">*</span>
@@ -819,7 +823,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                 Postal code
@@ -862,15 +866,18 @@ export default function SettingsPage() {
             </span>
           </label>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:gap-3">
             <Button
               variant="secondary"
               onClick={() => setIsAddressModalOpen(false)}
-              className="flex-1"
+              className="min-h-11 flex-1 sm:min-h-0"
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveAddress} className="flex-1">
+            <Button
+              onClick={handleSaveAddress}
+              className="min-h-11 flex-1 sm:min-h-0"
+            >
               {editingAddress ? "Update address" : "Add address"}
             </Button>
           </div>

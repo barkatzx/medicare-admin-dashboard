@@ -110,7 +110,7 @@ function ErrorState({
 
 function TableSkeleton() {
   return (
-    <div className="space-y-4 p-6" aria-label="Loading TSR performance">
+    <div className="space-y-3 p-4 md:space-y-4 md:p-6" aria-label="Loading TSR performance">
       {Array.from({ length: 5 }, (_, index) => (
         <div
           key={index}
@@ -162,7 +162,7 @@ export default function TsrSalesPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5 md:space-y-6">
       {error ? (
         <ErrorState message={error} onRetry={() => void loadData()} />
       ) : (
@@ -170,38 +170,38 @@ export default function TsrSalesPage() {
           {!loading && (
             <section
               aria-label="TSR order summary"
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4"
             >
-              <article className="rounded-2xl border border-gray-100 bg-white p-5">
-                <p className="text-sm font-medium text-gray-500">
+              <article className="min-w-0 rounded-2xl border border-gray-100 bg-white p-3 sm:p-5">
+                <p className="text-xs font-medium text-gray-500 sm:text-sm">
                   Total TSR Orders
                 </p>
-                <p className="mt-3 text-2xl font-bold tabular-nums text-gray-900">
+                <p className="mt-2 text-xl font-bold tabular-nums text-gray-900 sm:mt-3 sm:text-2xl">
                   {orderCount(totalOrders)}
                 </p>
-                <p className="mt-1 text-xs text-gray-500">Across all TSRs</p>
+                <p className="mt-1 text-[11px] text-gray-500 sm:text-xs">Across all TSRs</p>
               </article>
-              <article className="rounded-2xl border border-gray-100 bg-white p-5">
-                <p className="text-sm font-medium text-gray-500">
+              <article className="min-w-0 rounded-2xl border border-gray-100 bg-white p-3 sm:p-5">
+                <p className="text-xs font-medium text-gray-500 sm:text-sm">
                   Total TSR Order Value
                 </p>
-                <p className="mt-3 truncate text-2xl font-bold tabular-nums text-gray-900">
+                <p className="mt-2 truncate text-xl font-bold tabular-nums text-gray-900 sm:mt-3 sm:text-2xl">
                   {currency(totalOrderValue)}
                 </p>
-                <p className="mt-1 text-xs text-gray-500">Across all TSRs</p>
+                <p className="mt-1 text-[11px] text-gray-500 sm:text-xs">Across all TSRs</p>
               </article>
               {statusTotals.map(({ status, count, value }) => (
                 <article
                   key={status}
-                  className="rounded-2xl border border-gray-100 bg-white p-5"
+                  className="min-w-0 rounded-2xl border border-gray-100 bg-white p-3 sm:p-5"
                 >
-                  <p className="text-sm font-medium text-gray-500">
+                  <p className="text-xs font-medium text-gray-500 sm:text-sm">
                     {statusLabels[status]} Orders
                   </p>
-                  <p className="mt-3 text-2xl font-bold tabular-nums text-gray-900">
+                  <p className="mt-2 text-xl font-bold tabular-nums text-gray-900 sm:mt-3 sm:text-2xl">
                     {orderCount(count)}
                   </p>
-                  <p className="mt-1 text-sm font-semibold tabular-nums text-gray-600">
+                  <p className="mt-1 truncate text-xs font-semibold tabular-nums text-gray-600 sm:text-sm">
                     {currency(value)}
                   </p>
                 </article>
@@ -209,10 +209,10 @@ export default function TsrSalesPage() {
             </section>
           )}
 
-          <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-            <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+            <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
                   <Users size={16} />
                 </span>
                 <div>
@@ -224,7 +224,8 @@ export default function TsrSalesPage() {
                   </p>
                 </div>
               </div>
-              <label className="relative w-full sm:max-w-xs">
+              <div className="flex min-w-0 gap-2 md:contents">
+              <label className="relative min-w-0 flex-1 md:w-full md:flex-none md:max-w-xs">
                 <Search
                   size={16}
                   className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
@@ -242,7 +243,7 @@ export default function TsrSalesPage() {
                 type="button"
                 onClick={() => void loadData()}
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 self-start rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-60 sm:self-auto"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-60 md:min-h-0 md:self-auto md:px-4 md:py-2.5"
               >
                 <RefreshCw
                   size={15}
@@ -250,6 +251,7 @@ export default function TsrSalesPage() {
                 />
                 Refresh
               </button>
+              </div>
             </div>
 
             {loading ? (
@@ -264,7 +266,70 @@ export default function TsrSalesPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              <ul className="divide-y divide-gray-100 md:hidden">
+                {filteredTsrs.map((tsr) => (
+                  <li key={tsr.id} className="min-w-0 p-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold uppercase text-emerald-700 ring-1 ring-inset ring-emerald-100">
+                        {tsr.name?.trim().charAt(0) || "T"}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-semibold text-gray-900">
+                          {tsr.name?.trim() || "—"}
+                        </p>
+                        <p className="mt-0.5 break-all text-xs text-gray-500">
+                          {tsr.email || "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          Phone
+                        </p>
+                        <p className="mt-0.5 break-words text-xs font-medium text-gray-700">
+                          {tsr.phone_number || tsr.phone || "—"}
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          Territory
+                        </p>
+                        <p className="mt-0.5 break-words text-xs font-medium text-gray-700">
+                          {territoryText(tsr)}
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          Total orders
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold tabular-nums text-gray-800">
+                          {orderCount(tsr.totalOrders)}
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          Total value
+                        </p>
+                        <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-gray-800">
+                          {currency(tsr.totalOrderValue)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/dashboard/tsr-info/tsr-sales/${encodeURIComponent(tsr.id)}`}
+                      className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                    >
+                      View Details
+                      <ArrowRight size={13} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -317,6 +382,7 @@ export default function TsrSalesPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </section>
         </>

@@ -77,7 +77,7 @@ export default function SalesByStatus({ data }: SalesByStatusProps) {
   ];
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 sm:p-8">
+    <section className="min-w-0 overflow-hidden rounded-3xl border border-gray-100 bg-white p-4 md:p-8">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -93,7 +93,7 @@ export default function SalesByStatus({ data }: SalesByStatusProps) {
           <div
             role="tablist"
             aria-label="Sales by status view"
-            className="inline-flex w-fit items-center rounded-full bg-gray-100 p-1"
+            className="inline-flex w-full items-center rounded-full bg-gray-100 p-1 sm:w-fit"
           >
             {tabs.map(({ key, label, icon: Icon }) => {
               const isActive = activeTab === key;
@@ -106,7 +106,7 @@ export default function SalesByStatus({ data }: SalesByStatusProps) {
                   aria-controls={`panel-${key}`}
                   id={`tab-${key}`}
                   onClick={() => setActiveTab(key)}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-colors duration-200 ${
+                  className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full px-2 py-2 text-xs font-semibold transition-colors duration-200 sm:flex-none sm:px-4 ${
                     isActive
                       ? "bg-gray-900 text-white"
                       : "text-gray-500 hover:text-gray-800"
@@ -134,13 +134,13 @@ export default function SalesByStatus({ data }: SalesByStatusProps) {
           </p>
         </div>
       ) : (
-        <div className="mt-8">
+        <div className="mt-5 md:mt-8">
           {/* Chart canvas */}
           <div
             id={`panel-${activeTab}`}
             role="tabpanel"
             aria-labelledby={`tab-${activeTab}`}
-            className="relative h-[280px]"
+            className="relative h-[250px] sm:h-[280px]"
           >
             {activeTab === "pie" ? (
               <>
@@ -155,8 +155,8 @@ export default function SalesByStatus({ data }: SalesByStatusProps) {
                       cy="92%"
                       startAngle={180}
                       endAngle={0}
-                      innerRadius={112}
-                      outerRadius={160}
+                      innerRadius="80%"
+                      outerRadius="100%"
                       paddingAngle={2}
                       cornerRadius={6}
                       stroke="none"
@@ -176,10 +176,10 @@ export default function SalesByStatus({ data }: SalesByStatusProps) {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-x-0 bottom-[8%] flex flex-col items-center">
-                  <span className="text-5xl font-bold tabular-nums tracking-tight text-gray-900">
+                  <span className="text-3xl font-bold tabular-nums tracking-tight text-gray-900 sm:text-5xl">
                     {formatSalesNumber(totalOrders)}
                   </span>
-                  <span className="mt-1 text-sm text-gray-500">
+                  <span className="mt-1 text-center text-xs text-gray-500 sm:text-sm">
                     total orders ·{" "}
                     <span className="font-medium tabular-nums text-gray-700">
                       {formatSalesCurrency(totalSales)}
@@ -254,7 +254,7 @@ export default function SalesByStatus({ data }: SalesByStatusProps) {
               return (
                 <div
                   key={status.status}
-                  className="rounded-xl border border-gray-100 bg-white p-4"
+                  className="min-w-0 rounded-xl border border-gray-100 bg-white p-3 sm:p-4"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="flex min-w-0 items-center gap-2">
@@ -270,7 +270,7 @@ export default function SalesByStatus({ data }: SalesByStatusProps) {
                       {pct}%
                     </span>
                   </div>
-                  <p className="mt-2 text-xl font-semibold tabular-nums tracking-tight text-gray-900">
+                  <p className="mt-2 truncate text-lg font-semibold tabular-nums tracking-tight text-gray-900 sm:text-xl">
                     {activeTab === "pie"
                       ? formatSalesNumber(value)
                       : formatSalesCurrency(value)}

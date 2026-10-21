@@ -3,6 +3,7 @@
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import { api } from "@/config/api";
+import type { User } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   deleteUser,
@@ -16,7 +17,6 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  Mail,
   Phone,
   RefreshCw,
   Search,
@@ -158,6 +158,37 @@ export default function UsersPage() {
     (user) => user.isApproved && user.role === "customer",
   );
 
+  const handleRefresh = () => {
+    dispatch(fetchUsers(buildQuery(pagination.page, pagination.limit)));
+    setCountRefresh((count) => count + 1);
+  };
+
+  const renderUserActions = (user: User) => (
+    <div className="flex items-center justify-end gap-2">
+      <button
+        onClick={() => handlePromote(user.id)}
+        disabled={promotionLoadingIds.includes(user.id)}
+        aria-label={`Promote ${user.name || "user"} to TSR`}
+        className="inline-flex h-10 items-center gap-1 rounded-lg bg-blue-50 px-3 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 md:h-8 md:px-2.5"
+        title="Promote customer to TSR"
+      >
+        {promotionLoadingIds.includes(user.id) ? (
+          <RefreshCw size={13} className="animate-spin" />
+        ) : (
+          <ArrowUpRight size={13} />
+        )}
+      </button>
+      <button
+        onClick={() => handleDeleteClick(user)}
+        aria-label={`Delete ${user.name || "user"}`}
+        className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100 md:h-8 md:w-8"
+        title="Delete user"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+
   if (loading && users.length === 0 && !hasLoaded) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -172,24 +203,34 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* ─── Active Users Table ──────────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-              <UserCheck size={15} strokeWidth={2.25} />
-            </span>
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">
-                Active customers
-              </h2>
-              <p className="text-[11px] text-gray-500">
-                {activeCustomerTotal === null
-                  ? "Total users unavailable"
-                  : `${activeCustomerTotal} ${
-                      activeCustomerTotal === 1 ? "user" : "users"
-                    }`}
-              </p>
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex flex-col gap-4 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-center justify-between gap-3 sm:justify-start">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                <UserCheck size={15} strokeWidth={2.25} />
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">
+                  Active customers
+                </h2>
+                <p className="text-[11px] text-gray-500">
+                  {activeCustomerTotal === null
+                    ? "Total users unavailable"
+                    : `${activeCustomerTotal} ${
+                        activeCustomerTotal === 1 ? "user" : "users"
+                      }`}
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 sm:hidden"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
             <div className="relative w-full sm:w-64">
@@ -206,13 +247,8 @@ export default function UsersPage() {
               />
             </div>
             <button
-              onClick={() => {
-                dispatch(
-                  fetchUsers(buildQuery(pagination.page, pagination.limit)),
-                );
-                setCountRefresh((count) => count + 1);
-              }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900"
+              onClick={handleRefresh}
+              className="hidden items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 sm:inline-flex"
             >
               <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
               Refresh
@@ -240,8 +276,9 @@ export default function UsersPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                   <th className="px-6 py-3">User</th>
@@ -305,42 +342,69 @@ export default function UsersPage() {
                       </span>
                     </td>
 
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {user.role === "customer" && (
-                          <button
-                            onClick={() => handlePromote(user.id)}
-                            disabled={promotionLoadingIds.includes(user.id)}
-                            className="inline-flex h-8 items-center gap-1 rounded-lg bg-blue-50 px-2.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            title="Promote customer to TSR"
-                          >
-                            {promotionLoadingIds.includes(user.id) ? (
-                              <RefreshCw size={13} className="animate-spin" />
-                            ) : (
-                              <ArrowUpRight size={13} />
-                            )}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeleteClick(user)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100"
-                          title="Delete user"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
+                    <td className="px-6 py-4">{renderUserActions(user)}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+
+            <ul className="divide-y divide-gray-100 md:hidden">
+              {activeUsers.map((user) => (
+                <li key={user.id} className="min-w-0 p-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-xs font-bold uppercase text-white">
+                      {user.name?.charAt(0) || "U"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-semibold text-gray-900">
+                        {user.name || "N/A"}
+                      </p>
+                      <p className="mt-0.5 break-all text-xs text-gray-500">
+                        {user.email}
+                      </p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200/60">
+                      <CheckCircle size={11} />
+                      Active
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-gray-600 min-[380px]:grid-cols-2">
+                    <p className="min-w-0 truncate">
+                      <span className="text-gray-400">Pharmacy: </span>
+                      {user.pharmacy_name || "N/A"}
+                    </p>
+                    <p className="flex min-w-0 items-center gap-1.5 tabular-nums">
+                      <Phone size={13} className="shrink-0 text-gray-400" />
+                      <span className="truncate">{user.phone_number}</span>
+                    </p>
+                    <p className="flex items-center gap-1.5 tabular-nums">
+                      <Calendar
+                        size={13}
+                        className="shrink-0 text-gray-400"
+                      />
+                      <span>
+                        {user.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString()
+                          : "N/A"}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex justify-end border-t border-gray-100 pt-3">
+                    {renderUserActions(user)}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         {/* ─── Pagination ────────────────────────────────────────── */}
         {pagination.pages > 1 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-6 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-4 sm:px-6">
+            <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
               <p className="text-xs font-medium tabular-nums text-gray-500">
                 Showing{" "}
                 <span className="font-semibold text-gray-700">
@@ -357,11 +421,11 @@ export default function UsersPage() {
                 users
               </p>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex max-w-full items-center gap-1.5 overflow-x-auto">
                 <button
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={!pagination.hasPrevPage || loading}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -383,7 +447,7 @@ export default function UsersPage() {
                     p === "..." ? (
                       <span
                         key={`ellipsis-${idx}`}
-                        className="px-1 text-xs font-medium text-gray-400"
+                        className="shrink-0 px-1 text-xs font-medium text-gray-400"
                       >
                         …
                       </span>
@@ -392,7 +456,7 @@ export default function UsersPage() {
                         key={p}
                         onClick={() => handlePageChange(p as number)}
                         disabled={loading}
-                        className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
+                        className={`h-10 min-w-10 shrink-0 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
                           pagination.page === p
                             ? "bg-emerald-500 text-white"
                             : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
@@ -406,7 +470,7 @@ export default function UsersPage() {
                 <button
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={!pagination.hasNextPage || loading}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
                 >
                   <ChevronRight size={14} />
                 </button>

@@ -48,6 +48,10 @@ export default function TrendingProductsPage() {
     }
   };
 
+  const handleRefresh = () => {
+    dispatch(fetchTrendingProducts(currentPage) as any);
+  };
+
   if (error && !loading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -79,12 +83,12 @@ export default function TrendingProductsPage() {
   const categoryCount = new Set(trendingProducts.map((p) => p.categoryId)).size;
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* ─── Trending Products Table ─────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600">
               <Star size={15} strokeWidth={2.25} className="fill-current" />
             </span>
             <div>
@@ -97,6 +101,16 @@ export default function TrendingProductsPage() {
               </p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            aria-label="Refresh trending products"
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 ${
+              loading ? "animate-spin" : ""
+            } md:hidden`}
+          >
+            <RefreshCw size={16} />
+          </button>
         </div>
 
         <div className="relative">
@@ -121,8 +135,9 @@ export default function TrendingProductsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+            <>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                     {/* <th className="w-14 px-6 py-3">#</th> */}
@@ -235,6 +250,7 @@ export default function TrendingProductsPage() {
                             <button
                               onClick={() => handleRemoveTrending(product.id)}
                               disabled={isUpdating}
+                              aria-label={`Remove ${product.name} from trending`}
                               className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 ring-1 ring-inset ring-yellow-100 transition-all hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-100 disabled:opacity-50"
                               title="Remove from trending"
                             >
@@ -253,13 +269,111 @@ export default function TrendingProductsPage() {
                     );
                   })}
                 </tbody>
-              </table>
-            </div>
-          )}
+                  </table>
+                </div>
+
+                <ul className="divide-y divide-gray-100 md:hidden">
+                  {trendingProducts.map((product, index) => {
+                    const defaultImage =
+                      product.images?.find((img) => img.isDefault) ||
+                      product.images?.[0];
+                    const isUpdating = updatingId === product.id;
+                    const isLow = product.stock <= 20;
+
+                    return (
+                      <li key={product.id} className="min-w-0 p-4">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
+                            {defaultImage?.url ? (
+                              <Image
+                                src={defaultImage.url}
+                                alt={product.name || "Product"}
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <Package size={20} className="text-gray-300" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-2">
+                              <p className="break-words text-sm font-semibold text-gray-900">
+                                {product.name}
+                              </p>
+                              {index === 0 && (
+                                <span className="shrink-0 rounded-full bg-yellow-50 px-2 py-0.5 text-[10px] font-semibold text-yellow-700">
+                                  Top
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 truncate text-xs text-gray-500">
+                              {product.category?.name || "Uncategorized"}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
+                              isLow
+                                ? "bg-rose-50 text-rose-700"
+                                : "bg-emerald-50 text-emerald-700"
+                            }`}
+                          >
+                            {product.stock} in stock
+                          </span>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                          <div className="min-w-0">
+                            <p className="text-gray-400">Distributor</p>
+                            <p className="mt-0.5 truncate font-medium text-gray-700">
+                              {product.distributor ?? "N/A"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">MRP</p>
+                            <p className="mt-0.5 font-semibold tabular-nums text-gray-900">
+                              ৳{product.price.toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400">TP</p>
+                            <p className="mt-0.5 font-medium tabular-nums text-gray-700">
+                              {product.tp === null || product.tp === undefined
+                                ? "N/A"
+                                : `৳${product.tp.toLocaleString()}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex justify-end border-t border-gray-100 pt-3">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTrending(product.id)}
+                            disabled={isUpdating}
+                            aria-label={`Remove ${product.name} from trending`}
+                            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-yellow-50 px-3 text-yellow-700 ring-1 ring-inset ring-yellow-100 transition-colors hover:bg-rose-50 hover:text-rose-600 hover:ring-rose-100 disabled:opacity-50"
+                          >
+                            {isUpdating ? (
+                              <Loader2 size={15} className="animate-spin" />
+                            ) : (
+                              <Star size={15} className="fill-current" />
+                            )}
+                            <span className="text-xs font-medium">
+                              Remove from trending
+                            </span>
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
         </div>
         {pagination.totalPages > 1 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-6 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-4 sm:px-6">
+              <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
               <p className="text-xs font-medium tabular-nums text-gray-500">
                 Page{" "}
                 <span className="font-semibold text-gray-700">
@@ -274,13 +388,13 @@ export default function TrendingProductsPage() {
                 </span>
               </p>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex max-w-full items-center gap-1.5 overflow-x-auto">
                 <button
                   onClick={() =>
                     setCurrentPage((page) => Math.max(1, page - 1))
                   }
                   disabled={loading || !pagination.hasPrevPage}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
                   aria-label="Previous page"
                 >
                   <ChevronLeft size={14} />
@@ -299,7 +413,7 @@ export default function TrendingProductsPage() {
                         key={page}
                         onClick={() => setCurrentPage(page)}
                         disabled={loading}
-                        className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
+                        className={`h-10 min-w-10 shrink-0 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
                           page === currentPage
                             ? "bg-yellow-500 text-white"
                             : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
@@ -319,7 +433,7 @@ export default function TrendingProductsPage() {
                     )
                   }
                   disabled={loading || !pagination.hasNextPage}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
                   aria-label="Next page"
                 >
                   <ChevronRight size={14} />

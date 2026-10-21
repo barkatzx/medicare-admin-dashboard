@@ -53,7 +53,7 @@ export default function TopCustomers({ customers }: TopCustomersProps) {
     .reverse();
 
   return (
-    <section className="min-w-0 rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+    <section className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] md:p-6">
       {/* Header */}
 
       {customers.length === 0 ? (
@@ -72,9 +72,9 @@ export default function TopCustomers({ customers }: TopCustomersProps) {
         <div className="space-y-5">
           {/* Leader spotlight */}
           {leader && (
-            <article className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50/40 p-5">
+            <article className="relative min-w-0 overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50/40 p-4 sm:p-5">
               <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-emerald-100/50 blur-2xl" />
-              <div className="relative flex items-center justify-between gap-4">
+              <div className="relative flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-sm">
                     <Crown size={18} strokeWidth={2.25} />
@@ -98,8 +98,8 @@ export default function TopCustomers({ customers }: TopCustomersProps) {
                   </div>
                 </div>
 
-                <div className="shrink-0 text-right">
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-gray-900">
+                <div className="shrink-0 text-left sm:text-right">
+                  <p className="text-xl font-bold tabular-nums tracking-tight text-gray-900 sm:text-2xl">
                     {formatSalesCurrency(leader.totalSales)}
                   </p>
                   <p className="mt-0.5 text-[11px] font-medium text-gray-400">
@@ -123,7 +123,7 @@ export default function TopCustomers({ customers }: TopCustomersProps) {
           )}
 
           {/* Recharts horizontal bar chart */}
-          <div className="h-[320px] w-full">
+          <div className="h-[300px] w-full sm:h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}

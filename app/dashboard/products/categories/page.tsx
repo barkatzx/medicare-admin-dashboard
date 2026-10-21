@@ -195,9 +195,9 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-6 md:space-y-8">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
         {[
           {
             label: "Total Categories",
@@ -230,15 +230,19 @@ export default function CategoriesPage() {
         ].map(({ label, value, icon: Icon, gradient, color }) => (
           <div
             key={label}
-            className="group relative overflow-hidden rounded-2xl bg-white p-6 border border-gray-100 transition-all duration-300"
+            className="group relative min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 transition-all duration-300 md:p-6"
           >
             <div className="relative flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 font-medium">{label}</p>
-                <p className={`text-3xl font-bold mt-1 ${color}`}>{value}</p>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-gray-500 md:text-sm">
+                  {label}
+                </p>
+                <p className={`mt-1 text-2xl font-bold md:text-3xl ${color}`}>
+                  {value}
+                </p>
               </div>
               <div
-                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center transform transition-transform duration-300`}
+                className={`hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-300 sm:flex ${gradient}`}
               >
                 <Icon size={22} className="text-white" />
               </div>
@@ -248,8 +252,8 @@ export default function CategoriesPage() {
       </div>
 
       {/* Search and Refresh */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:gap-4">
+        <div className="relative min-w-0 flex-1">
           <Search
             className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
             size={18}
@@ -265,33 +269,35 @@ export default function CategoriesPage() {
             className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
           />
         </div>
-        <button
-          onClick={handleRefresh}
-          className="px-5 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex items-center gap-2 font-medium"
-        >
-          <RefreshCw size={16} />
-          Refresh
-        </button>
-        <Button
-          onClick={handleOpenCreateModal}
-          className="flex items-center gap-2 bg-blue-600"
-        >
-          <Plus size={16} className="mr-2" />
-          Add Category
-        </Button>
+        <div className="grid grid-cols-2 gap-3 sm:contents">
+          <button
+            onClick={handleRefresh}
+            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 font-medium transition-colors hover:bg-gray-200 sm:px-5"
+          >
+            <RefreshCw size={16} />
+            Refresh
+          </button>
+          <Button
+            onClick={handleOpenCreateModal}
+            className="flex min-h-11 items-center justify-center gap-2 bg-blue-600"
+          >
+            <Plus size={16} />
+            Add Category
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl bg-white border border-gray-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-          <div className="flex items-center gap-2">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
             <div className="p-1.5 bg-blue-100 rounded-lg">
               <Folder size={16} className="text-blue-600" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-base font-semibold text-gray-900 md:text-lg">
               Category List
             </h2>
-            <span className="px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full ml-2">
+            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
               {filteredCategories.length} categories
             </span>
           </div>
@@ -318,7 +324,7 @@ export default function CategoriesPage() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
@@ -396,6 +402,7 @@ export default function CategoriesPage() {
                           <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => handleOpenEditModal(category)}
+                              aria-label={`Edit ${category.name}`}
                               className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-200 rounded-lg transition-all duration-200"
                               title="Edit category"
                             >
@@ -403,6 +410,7 @@ export default function CategoriesPage() {
                             </button>
                             <button
                               onClick={() => handleOpenDeleteModal(category)}
+                              aria-label={`Delete ${category.name}`}
                               className="p-2 text-red-600 bg-red-50 hover:bg-red-200 rounded-lg transition-all duration-200"
                               title="Delete category"
                             >
@@ -417,9 +425,74 @@ export default function CategoriesPage() {
               </table>
             </div>
 
+            <ul className="divide-y divide-gray-100 md:hidden">
+              {paginatedCategories.map((category, index) => {
+                const productCount = getProductCount(category.id);
+
+                return (
+                  <li key={category.id} className="min-w-0 p-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 text-sm font-semibold text-blue-700">
+                        <Feather size={17} />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-semibold text-gray-900">
+                          {category.name}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-400">
+                          {(currentPage - 1) * itemsPerPage + index + 1}
+                        </p>
+                      </div>
+                      {countsLoading ? (
+                        <div className="h-6 w-16 shrink-0 animate-pulse rounded-full bg-gray-200" />
+                      ) : (
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            productCount > 0
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {productCount}{" "}
+                          {productCount === 1 ? "product" : "products"}
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="mt-3 break-words text-xs leading-relaxed text-gray-600">
+                      {category.description || (
+                        <span className="italic text-gray-400">
+                          No description
+                        </span>
+                      )}
+                    </p>
+
+                    <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(category)}
+                        aria-label={`Edit ${category.name}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors hover:bg-blue-100"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDeleteModal(category)}
+                        aria-label={`Delete ${category.name}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
             {totalPages > 1 && (
-              <div className="px-6 py-4 border-t border-gray-100 bg-gray-50">
-                <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="border-t border-gray-100 bg-gray-50 px-4 py-4 sm:px-6">
+                <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
                   <p className="text-sm text-gray-600">
                     Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
                     {Math.min(
@@ -428,15 +501,16 @@ export default function CategoriesPage() {
                     )}{" "}
                     of {filteredCategories.length} entries
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex max-w-full items-center gap-1.5 overflow-x-auto sm:gap-2">
                     <button
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="p-2 rounded-xl border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                      aria-label="Previous page"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 md:h-auto md:w-auto md:p-2"
                     >
                       <ChevronLeft size={16} />
                     </button>
-                    <div className="flex gap-1">
+                    <div className="flex shrink-0 gap-1">
                       {Array.from(
                         { length: Math.min(5, totalPages) },
                         (_, i) => {
@@ -450,7 +524,7 @@ export default function CategoriesPage() {
                             <button
                               key={pageNum}
                               onClick={() => setCurrentPage(pageNum)}
-                              className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
+                              className={`min-h-10 min-w-10 rounded-lg px-3 py-1 text-sm font-medium transition-all md:min-h-0 md:min-w-0 ${
                                 currentPage === pageNum
                                   ? "bg-blue-600 text-white border border-blue-600"
                                   : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -467,7 +541,8 @@ export default function CategoriesPage() {
                         setCurrentPage((p) => Math.min(totalPages, p + 1))
                       }
                       disabled={currentPage === totalPages}
-                      className="p-2 rounded-xl border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                      aria-label="Next page"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 md:h-auto md:w-auto md:p-2"
                     >
                       <ChevronRight size={16} />
                     </button>

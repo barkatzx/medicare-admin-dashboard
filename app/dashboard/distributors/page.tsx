@@ -293,19 +293,19 @@ export default function DistributorsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white ">
-        <div className="flex flex-col gap-3 border-b border-gray-100 px-6 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+    <div className="min-w-0 space-y-6">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
               <Store size={15} strokeWidth={2.25} />
             </span>
-            <h2 className="text-sm font-semibold text-gray-900">
+            <h2 className="min-w-0 text-sm font-semibold text-gray-900">
               Distributors ({filteredDistributors.length})
             </h2>
           </div>
 
-          <div className="flex w-full items-center gap-2 md:max-w-xl">
+          <div className="flex w-full min-w-0 flex-col gap-3 md:max-w-xl md:flex-row md:items-center md:gap-2">
             <label className="relative block flex-1">
               <Search
                 size={15}
@@ -323,21 +323,28 @@ export default function DistributorsPage() {
               />
             </label>
 
-            <button
-              onClick={() => dispatch(fetchDistributors())}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 hover:text-gray-900"
-              title="Refresh"
-              type="button"
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            </button>
-            <Button
-              onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-lg"
-            >
-              <Plus size={15} strokeWidth={2.5} />
-              Add Distributor
-            </Button>
+            <div className="grid grid-cols-2 gap-2 md:contents">
+              <button
+                onClick={() => dispatch(fetchDistributors())}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 md:h-10 md:min-h-0 md:w-10 md:shrink-0 md:px-0"
+                title="Refresh"
+                aria-label="Refresh distributors"
+                type="button"
+              >
+                <RefreshCw
+                  size={14}
+                  className={loading ? "animate-spin" : ""}
+                />
+                <span className="md:hidden">Refresh</span>
+              </button>
+              <Button
+                onClick={handleOpenCreateModal}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2.5 text-sm md:min-h-0 md:px-4 md:text-lg"
+              >
+                <Plus size={15} strokeWidth={2.5} />
+                Add Distributor
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -356,8 +363,9 @@ export default function DistributorsPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                   <th className="px-6 py-3">Distributor name</th>
@@ -409,6 +417,7 @@ export default function DistributorsPage() {
 
                         <button
                           onClick={() => handleOpenEditModal(distributor)}
+                          aria-label={`Edit ${distributor.name}`}
                           className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100"
                           title="Edit distributor"
                           type="button"
@@ -418,6 +427,7 @@ export default function DistributorsPage() {
 
                         <button
                           onClick={() => handleOpenDeleteModal(distributor)}
+                          aria-label={`Delete ${distributor.name}`}
                           disabled={
                             isDeleting &&
                             deletingDistributor?.id === distributor.id
@@ -433,13 +443,74 @@ export default function DistributorsPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+
+            <ul className="divide-y divide-gray-100 md:hidden">
+              {paginatedDistributors.map((distributor) => (
+                <li key={distributor.id} className="min-w-0 p-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
+                      {distributor.name?.charAt(0) || "D"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-semibold text-gray-900">
+                        {distributor.name}
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-gray-600">
+                      {productCountsLoading
+                        ? "…"
+                        : (productCounts[distributor.id] ?? "—")}{" "}
+                      products
+                    </span>
+                  </div>
+
+                  <p className="mt-3 break-words text-xs leading-relaxed text-gray-600">
+                    {formatAddress(distributor) || "No address provided"}
+                  </p>
+
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-3">
+                    <Link
+                      href={`/dashboard/distributors/${distributor.id}`}
+                      className="inline-flex min-h-10 min-w-0 items-center gap-1.5 rounded-lg bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-100 transition-colors hover:bg-emerald-100"
+                    >
+                      <Eye size={16} />
+                      <span>View products</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditModal(distributor)}
+                        aria-label={`Edit ${distributor.name}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 transition-colors hover:bg-blue-100"
+                      >
+                        <Edit size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenDeleteModal(distributor)}
+                        disabled={
+                          isDeleting &&
+                          deletingDistributor?.id === distributor.id
+                        }
+                        aria-label={`Delete ${distributor.name}`}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
         {/* ─── Pagination ────────────────────────────────────────── */}
         {filteredDistributors.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-gray-100 bg-gray-50/60 px-6 py-4">
+          <div className="flex flex-col items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/60 px-4 py-4 sm:flex-row sm:px-6">
             <p className="text-xs font-medium tabular-nums text-gray-500">
               Showing{" "}
               <span className="font-semibold text-gray-700">
@@ -463,7 +534,7 @@ export default function DistributorsPage() {
                   setCurrentPage((previous) => Math.max(1, previous - 1))
                 }
                 disabled={currentPage === 1}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 md:h-8"
               >
                 Previous
               </button>
@@ -480,7 +551,7 @@ export default function DistributorsPage() {
                   )
                 }
                 disabled={currentPage === totalPages}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 md:h-8"
               >
                 Next
               </button>

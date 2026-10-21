@@ -51,7 +51,7 @@ export default function TopCategories({ categories }: TopCategoriesProps) {
     .reverse();
 
   return (
-    <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+    <section className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] md:p-6">
       {categories.length === 0 ? (
         <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-4 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
@@ -68,9 +68,9 @@ export default function TopCategories({ categories }: TopCategoriesProps) {
         <div className="space-y-5">
           {/* Leader spotlight */}
           {leader && (
-            <article className="relative overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50/40 p-5">
+            <article className="relative min-w-0 overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50/40 p-4 sm:p-5">
               <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-violet-100/50 blur-2xl" />
-              <div className="relative flex items-start justify-between gap-4">
+              <div className="relative flex items-start justify-between gap-2 sm:gap-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-sm">
                     <Medal size={18} strokeWidth={2.25} />
@@ -86,7 +86,7 @@ export default function TopCategories({ categories }: TopCategoriesProps) {
                 </div>
 
                 <div className="shrink-0 text-right">
-                  <p className="text-2xl font-bold tabular-nums tracking-tight text-gray-900">
+                  <p className="text-xl font-bold tabular-nums tracking-tight text-gray-900 sm:text-2xl">
                     {formatSalesNumber(leader.totalSold)}
                   </p>
                   <p className="mt-0.5 text-[11px] font-medium text-gray-400">
@@ -110,7 +110,7 @@ export default function TopCategories({ categories }: TopCategoriesProps) {
           )}
 
           {/* Recharts horizontal bar chart */}
-          <div className="h-[300px] w-full">
+          <div className="h-[280px] w-full sm:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}

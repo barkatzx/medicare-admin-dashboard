@@ -15,7 +15,7 @@ export default function SalesGrowth({ growth }: SalesGrowthProps) {
   ] as const;
 
   return (
-    <section className="rounded-2xl border border-gray-100 bg-white p-6">
+    <section className="rounded-2xl border border-gray-100 bg-white p-4 md:p-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {periods.map(([label, value]) => {
           const isPositive = value > 0;

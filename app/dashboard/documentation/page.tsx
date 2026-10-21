@@ -1330,14 +1330,14 @@ export default function DocumentationPage() {
     <div className="-m-4 min-h-screen bg-[#F6F8F9] text-slate-800 sm:-m-6">
       {/* Top bar */}
       <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
-          <div className="mr-2">
+        <div className="mx-auto flex max-w-[1280px] flex-col items-stretch gap-3 px-4 py-3 md:flex-row md:flex-nowrap md:items-center md:px-6">
+          <div className="md:mr-2">
             <p className="text-sm font-semibold text-slate-900">Medicare API</p>
             <p className="text-[11px] text-slate-500">
               v1 reference · {allTotal} endpoints
             </p>
           </div>
-          <div className="relative min-w-[220px] flex-1">
+          <div className="relative w-full min-w-0 flex-1 md:min-w-[220px]">
             <Search
               size={15}
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -1364,8 +1364,8 @@ export default function DocumentationPage() {
               </kbd>
             )}
           </div>
-          <div className="flex items-center gap-1 rounded-lg bg-[#0E1B22] py-1 pl-3 pr-1">
-            <code className="max-w-[260px] truncate font-mono text-[12px] text-slate-200">
+          <div className="flex w-full min-w-0 items-center gap-1 rounded-lg bg-[#0E1B22] py-1 pl-3 pr-1 md:w-auto">
+            <code className="min-w-0 flex-1 truncate font-mono text-[12px] text-slate-200 md:max-w-[260px] md:flex-none">
               {baseUrl}
             </code>
             <CopyButton value={baseUrl} label="" />
@@ -1373,10 +1373,10 @@ export default function DocumentationPage() {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1280px] gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[230px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1280px] gap-5 px-4 py-5 sm:px-6 sm:py-8 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-8">
         {/* Sidebar */}
-        <aside className="lg:sticky lg:top-[84px] lg:h-[calc(100vh-110px)] lg:overflow-y-auto">
-          <div className="mb-5 space-y-3">
+        <aside className="min-w-0 lg:sticky lg:top-[84px] lg:h-[calc(100vh-110px)] lg:overflow-y-auto">
+          <div className="mb-4 space-y-3 lg:mb-5">
             <div>
               <p className="mb-1.5 text-xs font-medium text-slate-500">
                 Method
@@ -1387,7 +1387,7 @@ export default function DocumentationPage() {
                     key={m}
                     onClick={() => setMethod(method === m ? null : m)}
                     aria-pressed={method === m}
-                    className={`rounded-md px-2 py-1 font-mono text-[11px] font-semibold ring-1 ring-inset transition ${
+                    className={`min-h-9 rounded-md px-2 py-1 font-mono text-[11px] font-semibold ring-1 ring-inset transition lg:min-h-0 ${
                       method === m
                         ? `${methodTone[m]} ring-current`
                         : "bg-white text-slate-500 ring-slate-200 hover:ring-slate-300"
@@ -1408,7 +1408,7 @@ export default function DocumentationPage() {
                     key={a}
                     onClick={() => setAccess(access === a ? null : a)}
                     aria-pressed={access === a}
-                    className={`rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ring-inset transition ${
+                    className={`min-h-9 rounded-md px-2 py-1 text-[11px] font-semibold ring-1 ring-inset transition lg:min-h-0 ${
                       access === a
                         ? `${accessTone[a]} ring-current`
                         : "bg-white text-slate-500 ring-slate-200 hover:ring-slate-300"
@@ -1421,7 +1421,34 @@ export default function DocumentationPage() {
             </div>
           </div>
 
-          <nav aria-label="Sections" className="border-l border-slate-200">
+          <nav
+            aria-label="Sections"
+            className="flex gap-1 overflow-x-auto border-b border-slate-200 pb-2 lg:hidden"
+          >
+            {groups.map((g) => (
+              <a
+                key={g.id}
+                href={`#${g.id}`}
+                className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition hover:border-teal-600 hover:text-slate-900"
+              >
+                <span>{g.title}</span>
+                <span className="text-[10px] tabular-nums text-slate-400">
+                  {g.endpoints.length}
+                </span>
+              </a>
+            ))}
+            <a
+              href="#access"
+              className="inline-flex min-h-9 shrink-0 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:border-teal-600 hover:text-slate-900"
+            >
+              Role access
+            </a>
+          </nav>
+
+          <nav
+            aria-label="Sections"
+            className="hidden border-l border-slate-200 lg:block"
+          >
             {groups.map((g) => (
               <a
                 key={g.id}
@@ -1444,11 +1471,11 @@ export default function DocumentationPage() {
         </aside>
 
         {/* Content */}
-        <main className="min-w-0 space-y-10">
+        <main className="min-w-0 space-y-8 sm:space-y-10">
           {/* Intro */}
           {!filtering && (
             <section>
-              <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-slate-900">
+              <h1 className="max-w-2xl text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                 Everything you need to sell, ship and manage medicine orders
                 through one API.
               </h1>
@@ -1622,7 +1649,53 @@ export default function DocumentationPage() {
                 an approved account. Admins skip the approval check. TSR
                 territory routes check the TSR role only.
               </p>
-              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+              <div className="mt-4 space-y-3 md:hidden">
+                {roleMatrix.map((r) => (
+                  <article
+                    key={r.group}
+                    className="rounded-xl border border-slate-200 bg-white p-4"
+                  >
+                    <h3 className="text-sm font-semibold text-slate-800">
+                      {r.group}
+                    </h3>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {ACCESS.map((role, index) => {
+                        const allowed = [
+                          r.public,
+                          r.customer,
+                          r.admin,
+                          r.tsr,
+                        ][index];
+                        return (
+                          <div
+                            key={role}
+                            className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2"
+                          >
+                            <span className="truncate text-xs text-slate-600">
+                              {role}
+                            </span>
+                            {allowed ? (
+                              <Check
+                                size={14}
+                                className="shrink-0 text-teal-600"
+                                aria-label={`${role} allowed`}
+                              />
+                            ) : (
+                              <span
+                                className="shrink-0 text-slate-300"
+                                aria-label={`${role} not allowed`}
+                              >
+                                –
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="mt-4 hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
                 <table className="w-full min-w-[640px] text-left text-[13px]">
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-slate-500">

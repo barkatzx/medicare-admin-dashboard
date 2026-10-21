@@ -249,7 +249,7 @@ export default function TsrSalesDetailPage() {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5 md:space-y-6">
       {profileError ? (
         <ErrorPanel
           message={profileError}
@@ -259,8 +259,8 @@ export default function TsrSalesDetailPage() {
         <LoadingPanel label="Loading TSR profile…" />
       ) : (
         <>
-          <section className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-6">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+          <section className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 sm:p-6">
+            <div className="grid min-w-0 gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                   TSR profile
@@ -273,16 +273,18 @@ export default function TsrSalesDetailPage() {
                     <Mail size={15} className="shrink-0 text-gray-400" />
                     <span className="break-all">{profile.email || "—"}</span>
                   </p>
-                  <p className="flex items-center gap-2">
+                  <p className="flex min-w-0 items-center gap-2">
                     <Phone size={15} className="shrink-0 text-gray-400" />
-                    {profile.phone_number || profile.phone || "—"}
+                    <span className="break-all">
+                      {profile.phone_number || profile.phone || "—"}
+                    </span>
                   </p>
                   <p className="flex items-start gap-2">
                     <MapPin
                       size={15}
                       className="mt-0.5 shrink-0 text-gray-400"
                     />
-                    <span>
+                    <span className="break-words">
                       {profile.fullAddress?.trim() ||
                         territory?.fullAddress?.trim() ||
                         "—"}
@@ -291,16 +293,16 @@ export default function TsrSalesDetailPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-gray-50 p-4">
+              <div className="min-w-0 rounded-xl bg-gray-50 p-3 sm:p-4">
                 <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
                   <MapPin size={14} />
                   Territory
                 </p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:mt-4 sm:gap-4">
                   {territoryRows.map(({ label, area }) => (
                     <div key={label} className="min-w-0">
                       <p className="text-xs text-gray-400">{label}</p>
-                      <p className="mt-1 truncate text-sm font-semibold text-gray-800">
+                      <p className="mt-1 break-words text-xs font-semibold text-gray-800 sm:text-sm">
                         {areaName(area)}
                       </p>
                     </div>
@@ -314,10 +316,10 @@ export default function TsrSalesDetailPage() {
         </>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
               <Package size={16} />
             </span>
             <div>
@@ -328,8 +330,8 @@ export default function TsrSalesDetailPage() {
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-            <label className="relative min-w-0 sm:w-64">
+          <div className="flex min-w-0 flex-col gap-3 md:w-auto md:flex-row md:items-center">
+            <label className="relative min-w-0 md:w-64">
               <Search
                 size={16}
                 className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
@@ -360,7 +362,7 @@ export default function TsrSalesDetailPage() {
                   setPage(1);
                 }}
                 aria-label="Filter orders by status"
-                className="min-w-36 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-50"
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 focus:border-emerald-300 focus:outline-none focus:ring-4 focus:ring-emerald-50 md:min-w-36 md:flex-none md:min-h-0"
               >
                 {ORDER_STATUSES.map((option) => (
                   <option key={option} value={option}>
@@ -396,7 +398,88 @@ export default function TsrSalesDetailPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <ul className="divide-y divide-gray-100 md:hidden">
+            {orders.map((order) => {
+              const user = order.user;
+              return (
+                <li
+                  key={order.id || order.orderId || ""}
+                  className="min-w-0 p-4"
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <code className="inline-block max-w-full truncate whitespace-nowrap rounded-lg bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
+                        #{(order.orderId || order.id || "—").slice(-8)}
+                      </code>
+                      <p className="mt-2 break-words text-sm font-semibold text-gray-900">
+                        {user?.name?.trim() || "—"}
+                      </p>
+                      <p className="mt-0.5 break-words text-xs text-gray-500">
+                        {user?.pharmacy_name || order.pharmacy?.name || "—"}
+                      </p>
+                    </div>
+                    <span className="inline-flex shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-700">
+                      {statusLabel(order.status)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        Order value
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-semibold tabular-nums text-gray-800">
+                        {currency(order.totalAmount ?? order.totalOrderValue)}
+                      </p>
+                    </div>
+                    <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        Phone
+                      </p>
+                      <p className="mt-0.5 break-words text-xs font-medium text-gray-700">
+                        {user?.phone_number || user?.phone || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                      Email
+                    </p>
+                    <p className="mt-0.5 break-all text-xs font-medium text-gray-700">
+                      {user?.email || "—"}
+                    </p>
+                  </div>
+
+                  <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                      Address
+                    </p>
+                    <p className="mt-0.5 break-words text-xs leading-5 text-gray-700">
+                      {user?.fullAddress?.trim() || "—"}
+                    </p>
+                    <p className="break-words text-xs leading-5 text-gray-500">
+                      {[
+                        user?.upazila?.name,
+                        user?.district?.name,
+                        user?.division?.name,
+                      ]
+                        .map((part) => part?.trim())
+                        .filter(Boolean)
+                        .join(", ") || "—"}
+                    </p>
+                  </div>
+
+                  <p className="mt-3 text-xs text-gray-500">
+                    {order.createdAt ? orderDate(order.createdAt) : "—"}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -469,10 +552,11 @@ export default function TsrSalesDetailPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {!ordersError && !ordersLoading && (
-          <div className="flex flex-col gap-3 border-t border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex flex-col gap-3 border-t border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <p className="text-xs text-gray-500">
               {pagination
                 ? `Showing ${pagination.total === 0 ? 0 : (currentPage - 1) * pagination.limit + 1}–${Math.min(currentPage * pagination.limit, pagination.total)} of ${formatSalesNumber(pagination.total)} orders`
@@ -483,7 +567,7 @@ export default function TsrSalesDetailPage() {
                 type="button"
                 onClick={() => setPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage <= 1}
-                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0"
               >
                 <ChevronLeft size={14} />
                 Previous
@@ -495,7 +579,7 @@ export default function TsrSalesDetailPage() {
                 type="button"
                 onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage >= totalPages}
-                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0"
               >
                 Next
                 <ChevronRight size={14} />

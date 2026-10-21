@@ -44,7 +44,7 @@ export default function TopProducts({ products }: TopProductsProps) {
   const rankedData = [...chartData].reverse();
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 text-gray-900 sm:p-8">
+    <section className="min-w-0 overflow-hidden rounded-3xl border border-gray-100 bg-white p-4 text-gray-900 md:p-8">
       {products.length === 0 ? (
         <div className="mt-6 flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-gray-100 bg-gray-50/50 px-4 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white ring-1 ring-gray-100">
@@ -58,9 +58,9 @@ export default function TopProducts({ products }: TopProductsProps) {
           </p>
         </div>
       ) : (
-        <div className="mt-8 grid items-center gap-8 lg:grid-cols-[440px_1fr]">
+        <div className="mt-5 grid min-w-0 items-center gap-5 md:mt-8 md:gap-8 lg:grid-cols-[440px_1fr]">
           {/* Recharts donut */}
-          <div className="relative mx-auto h-[420px] w-full max-w-[440px]">
+          <div className="relative mx-auto h-[300px] w-full max-w-[440px] sm:h-[360px] lg:h-[420px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Tooltip
@@ -90,8 +90,8 @@ export default function TopProducts({ products }: TopProductsProps) {
                   data={rankedData}
                   dataKey="sold"
                   nameKey="name"
-                  innerRadius={130}
-                  outerRadius={190}
+                  innerRadius="62%"
+                  outerRadius="90%"
                   paddingAngle={3}
                   cornerRadius={8}
                   startAngle={90}
@@ -109,7 +109,7 @@ export default function TopProducts({ products }: TopProductsProps) {
             {leader && (
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
                 <Crown size={22} className="text-cyan-500" />
-                <p className="mt-2 text-5xl font-bold tabular-nums tracking-tight text-gray-900">
+                <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-gray-900 sm:text-5xl">
                   {formatSalesNumber(leader.totalSold)}
                 </p>
                 <p className="mt-1 max-w-[160px] truncate text-sm text-gray-500">
@@ -120,7 +120,7 @@ export default function TopProducts({ products }: TopProductsProps) {
           </div>
 
           {/* Ranked list */}
-          <ol className="space-y-2 rounded-2xl bg-gray-50 p-3">
+          <ol className="min-w-0 space-y-2 rounded-2xl bg-gray-50 p-2 sm:p-3">
             {rankedData.map((entry, index) => {
               const product = products[index];
               const widthPct = maxSold > 0 ? (entry.sold / maxSold) * 100 : 0;

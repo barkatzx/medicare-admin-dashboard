@@ -117,12 +117,12 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* ─── Orders Table ────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
+        <div className="flex flex-col gap-4 border-b border-gray-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
               <CheckCircle size={15} strokeWidth={2.25} />
             </span>
             <div>
@@ -135,7 +135,7 @@ export default function OrdersPage() {
               </p>
             </div>
           </div>
-          <div className="relative w-full sm:max-w-xs">
+          <div className="relative w-full min-w-0 sm:max-w-xs">
             <Search
               className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
               size={16}
@@ -175,7 +175,85 @@ export default function OrdersPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <ul className="divide-y divide-gray-100 md:hidden">
+              {filteredOrders.map((order) => {
+                const isPaid = order.payment?.status === "paid";
+
+                return (
+                  <li key={order.id} className="min-w-0 p-4">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <code className="inline-block max-w-full truncate rounded-lg bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
+                          #{order.id.slice(-8)}
+                        </code>
+                        <div className="mt-2 flex min-w-0 items-center gap-2">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[11px] font-bold uppercase text-emerald-600 ring-1 ring-inset ring-emerald-100">
+                            {order.user.name?.charAt(0) ?? "?"}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-gray-900">
+                              {order.user.name}
+                            </p>
+                            <p className="truncate text-xs text-gray-500">
+                              {order.user.phone_number}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold capitalize ring-1 ring-inset ${getStatusColor(order.status)}`}
+                      >
+                        {getStatusIcon(order.status)}
+                        {order.status}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          Amount
+                        </p>
+                        <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-gray-900">
+                          {parseFloat(order.totalAmount).toLocaleString()} ৳
+                        </p>
+                      </div>
+                      <div className="min-w-0 rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                          Payment
+                        </p>
+                        <span
+                          className={`mt-1 inline-flex max-w-full items-center gap-1.5 truncate rounded-full px-2 py-1 text-[11px] font-semibold capitalize ring-1 ring-inset ${
+                            isPaid
+                              ? "bg-emerald-50 text-emerald-700 ring-emerald-200/60"
+                              : "bg-amber-50 text-amber-700 ring-amber-200/60"
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                              isPaid ? "bg-emerald-500" : "bg-amber-500"
+                            }`}
+                          />
+                          {order.payment?.status ?? "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-1.5 text-xs font-medium tabular-nums text-gray-500">
+                      <Calendar size={13} />
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2 border-t border-gray-100 pt-3">
+                      <InvoiceView order={order} />
+                      <InvoicePDF order={order} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -270,12 +348,13 @@ export default function OrdersPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {/* ─── Pagination ────────────────────────────────────────── */}
         {pagination && pagination.totalPages > 1 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-6 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-4 md:px-6">
+            <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
               <p className="text-xs font-medium tabular-nums text-gray-500">
                 Showing{" "}
                 <span className="font-semibold text-gray-700">
@@ -299,7 +378,7 @@ export default function OrdersPage() {
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={fetching || currentPage === 1}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
                 >
                   <ChevronLeft size={14} />
                 </button>
@@ -318,7 +397,7 @@ export default function OrdersPage() {
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
                         disabled={fetching}
-                        className={`h-8 min-w-8 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all ${
+                        className={`h-10 min-w-10 rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
                           isActive
                             ? "bg-emerald-600 text-white"
                             : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
@@ -337,7 +416,7 @@ export default function OrdersPage() {
                     )
                   }
                   disabled={fetching || currentPage === pagination.totalPages}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
                 >
                   <ChevronRight size={14} />
                 </button>
