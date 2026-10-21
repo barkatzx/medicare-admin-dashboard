@@ -431,16 +431,13 @@ export default function CategoriesPage() {
 
                 return (
                   <li key={category.id} className="min-w-0 p-4">
-                    <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 text-sm font-semibold text-blue-700">
                         <Feather size={17} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-sm font-semibold text-gray-900">
                           {category.name}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
-                          {(currentPage - 1) * itemsPerPage + index + 1}
                         </p>
                       </div>
                       {countsLoading ? (
