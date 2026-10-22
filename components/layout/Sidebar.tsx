@@ -8,6 +8,7 @@ import {
   BadgeAlert,
   BarChart3,
   BookOpen,
+  Briefcase,
   Boxes,
   ChevronLeft,
   ChevronRight,
@@ -53,7 +54,7 @@ interface NavLinkItem {
   icon: LucideIcon;
 }
 
-type GroupKey = "tsr" | "customers" | "inventory" | "orders";
+type GroupKey = "tsr" | "customers" | "inventory" | "orders" | "careers";
 
 const tsrItems: SubItem[] = [
   {
@@ -172,6 +173,23 @@ const orderItems: SubItem[] = [
   },
 ];
 
+const careerItems: SubItem[] = [
+  {
+    name: "Open Jobs",
+    href: "/dashboard/careers/jobs",
+    icon: Briefcase,
+    color: "text-blue-500",
+    bg: "bg-blue-50",
+  },
+  {
+    name: "Application",
+    href: "/dashboard/careers/applications",
+    icon: ClipboardList,
+    color: "text-indigo-500",
+    bg: "bg-indigo-50",
+  },
+];
+
 const groups: {
   key: GroupKey;
   label: string;
@@ -187,6 +205,7 @@ const groups: {
     items: inventoryItems,
   },
   { key: "orders", label: "Orders", icon: ShoppingCart, items: orderItems },
+  { key: "careers", label: "Careers", icon: Briefcase, items: careerItems },
 ];
 
 const topLink: NavLinkItem = {
@@ -438,6 +457,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
       customers: isGroupActive(pathname, customerItems),
       inventory: isGroupActive(pathname, inventoryItems),
       orders: isGroupActive(pathname, orderItems),
+      careers: isGroupActive(pathname, careerItems),
     }),
   );
 
@@ -547,6 +567,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
       count: pendingOrdersCount,
       href: "/dashboard/orders/pending-orders",
     },
+    careers: { count: 0 },
   };
 
   return (
@@ -660,7 +681,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
               <NavLink
                 key={item.href}
                 item={item}
-                active={pathname === item.href}
+                active={matchesPath(pathname, item.href)}
                 showText={showText}
                 isCollapsed={isCollapsed}
               />
