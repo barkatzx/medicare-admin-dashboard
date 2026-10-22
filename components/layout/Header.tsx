@@ -22,6 +22,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -372,6 +373,20 @@ export default function Header({
           >
             <Menu size={22} />
           </button>
+
+          <Link
+            href="/dashboard"
+            aria-label="MediCarePLC dashboard"
+            className="flex h-10 w-10 flex-none items-center justify-center rounded-full border border-gray-100 bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Image
+              src="/logo.png"
+              alt="MediCarePLC"
+              width={28}
+              height={28}
+              className="rounded-full object-cover"
+            />
+          </Link>
 
           <button
             type="button"
