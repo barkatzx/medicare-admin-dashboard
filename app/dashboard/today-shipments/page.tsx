@@ -126,21 +126,21 @@ function OrderProductsTable({
   );
 
   return (
-    <section className="min-w-0 rounded-xl bg-white p-4 md:p-6">
+    <section className="min-w-0 rounded-xl bg-white p-3 md:rounded-2xl md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 border-b border-[#eeeeee] pb-3.5">
-        <div>
-          <h1 className="text-base font-bold md:text-lg">Today Shipments</h1>
-        </div>
+      <div className="flex items-center justify-between gap-3 border-b border-[#eeeeee] pb-3">
+        <h1 className="text-sm font-semibold md:text-lg md:font-bold">
+          Today Shipments
+        </h1>
         <ShipmentPDF groups={distributorGroups} />
       </div>
 
       {distributorGroups.length === 0 ? (
-        <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center border-b border-[#eeeeee]">
+        <div className="flex min-h-[220px] flex-col items-center justify-center border-b border-[#eeeeee] px-4 text-center md:min-h-[240px]">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50">
             <PackageOpen size={20} className="text-gray-300" />
           </div>
-          <p className="mt-3 text-[12px] font-medium text-gray-500">
+          <p className="mt-3 text-xs font-medium text-gray-500 md:text-[12px]">
             No today shipment products found.
           </p>
         </div>
@@ -172,94 +172,80 @@ function OrderProductsTable({
                   className="min-w-0 border-b border-[#eeeeee] py-3.5 last:border-b-0"
                 >
                   {/* Distributor sub-header */}
-                  <div className="mb-3 text-center md:mb-2">
-                    <h2 className="break-words text-lg font-bold text-gray-900 md:text-xl">
-                      {distributor}
-                    </h2>
-                    {address ? (
-                      <p className="mt-0.5 break-words text-xs text-gray-500 md:text-sm">
-                        {address}
-                      </p>
-                    ) : null}
-                    <p className="mt-0.5 text-xs text-gray-500">
-                      {groupProducts.length} Product
+                  <div className="mb-2.5 flex items-start justify-between gap-2 md:mb-2 md:block md:text-center">
+                    <div className="min-w-0">
+                      <h2 className="break-words text-sm font-semibold text-gray-900 md:text-xl md:font-bold">
+                        {distributor}
+                      </h2>
+                      {address ? (
+                        <p className="mt-0.5 break-words text-[11px] text-gray-500 md:mt-0.5 md:text-sm">
+                          {address}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 md:hidden">
+                      {groupProducts.length} item
                       {groupProducts.length === 1 ? "" : "s"}
-                    </p>
+                    </span>
                   </div>
 
-                  {/* Rounded, bordered table — same recipe as the invoice */}
+                  {/* Mobile list – redesigned */}
                   <div className="space-y-2 md:hidden">
                     {orderedGroupProducts.map((product, index) => (
                       <article
                         key={`${product.productName}-${index}`}
-                        className="min-w-0 rounded-xl border border-gray-100 bg-gray-50/60 p-3"
+                        className="min-w-0 rounded-lg border border-gray-100 px-3 py-2.5"
                       >
                         <div className="flex min-w-0 items-start gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-[10px] font-semibold tabular-nums text-gray-500 ring-1 ring-inset ring-gray-200">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gray-50 text-[10px] font-semibold tabular-nums text-gray-500">
                             {index + 1}
                           </span>
                           <div className="min-w-0 flex-1">
-                            <h3 className="break-words text-sm font-semibold leading-snug text-gray-900">
+                            <h3 className="break-words text-xs font-medium leading-snug text-gray-900">
                               {product.productName}
                             </h3>
-                            <p className="mt-1 break-words text-xs text-gray-500">
+                            <p className="mt-0.5 break-words text-[11px] text-gray-500">
                               {product.category?.name ?? "N/A"}
                             </p>
                           </div>
                         </div>
-                        <div className="mt-3 grid grid-cols-3 gap-2 border-t border-gray-200 pt-2.5">
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
-                              Qty
-                            </p>
-                            <p className="mt-0.5 truncate text-xs font-semibold tabular-nums text-gray-800">
-                              {product.quantity}
-                            </p>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
-                              MRP
-                            </p>
-                            <p className="mt-0.5 truncate text-xs font-semibold tabular-nums text-gray-800">
-                              {formatSalesCurrency(product.price)}
-                            </p>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
-                              TP
-                            </p>
-                            <p className="mt-0.5 truncate text-xs font-semibold tabular-nums text-gray-800">
-                              {product.tp === null
-                                ? "N/A"
-                                : formatSalesCurrency(product.tp)}
-                            </p>
-                          </div>
+                        <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-gray-50 pt-1.5">
+                          <span className="text-[11px] tabular-nums text-gray-500">
+                            {product.quantity} ×{" "}
+                            {formatSalesCurrency(product.price)}
+                          </span>
+                          <span className="text-[11px] tabular-nums text-gray-400">
+                            TP{" "}
+                            {product.tp === null
+                              ? "N/A"
+                              : formatSalesCurrency(product.tp)}
+                          </span>
                         </div>
                       </article>
                     ))}
 
-                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-blue-50 p-3 text-blue-700">
+                    <div className="flex items-center justify-between gap-2 rounded-lg bg-blue-50 px-3 py-2">
                       <div className="min-w-0">
-                        <p className="text-[9px] font-semibold uppercase tracking-wide">
-                          Total qty
+                        <p className="text-[9px] font-semibold uppercase tracking-wide text-blue-700/70">
+                          Qty
                         </p>
-                        <p className="mt-0.5 truncate text-sm font-bold tabular-nums">
+                        <p className="mt-0.5 truncate text-sm font-bold tabular-nums text-blue-700">
                           {quantityTotal}
                         </p>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-semibold uppercase tracking-wide">
+                      <div className="min-w-0 text-right">
+                        <p className="text-[9px] font-semibold uppercase tracking-wide text-blue-700/70">
                           Total MRP
                         </p>
-                        <p className="mt-0.5 truncate text-xs font-bold tabular-nums">
+                        <p className="mt-0.5 truncate text-xs font-bold tabular-nums text-blue-700">
                           {formatSalesCurrency(unitPriceTotal)}
                         </p>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] font-semibold uppercase tracking-wide">
+                      <div className="min-w-0 text-right">
+                        <p className="text-[9px] font-semibold uppercase tracking-wide text-blue-700/70">
                           Total TP
                         </p>
-                        <p className="mt-0.5 truncate text-xs font-bold tabular-nums">
+                        <p className="mt-0.5 truncate text-xs font-bold tabular-nums text-blue-700">
                           {tpTotal === null
                             ? "N/A"
                             : formatSalesCurrency(tpTotal)}
@@ -268,6 +254,7 @@ function OrderProductsTable({
                     </div>
                   </div>
 
+                  {/* Desktop table – unchanged */}
                   <div className="hidden overflow-hidden rounded-[10px] border border-[#eeeeee] md:block">
                     <table className="w-full table-fixed border-collapse text-[11.5px]">
                       <caption className="sr-only">
@@ -354,13 +341,11 @@ function OrderProductsTable({
                             {quantityTotal}
                           </td>
                           <td className="bg-blue-50 px-2 py-2 text-right text-[9px] font-bold leading-tight text-blue-700">
-                            {/* <span className="block">Total Unit Price Amount</span> */}
                             <span className="mt-1 block whitespace-nowrap text-[11px] tabular-nums">
                               {formatSalesCurrency(unitPriceTotal)}
                             </span>
                           </td>
                           <td className="bg-blue-50 px-2 py-2 text-right text-[9px] font-bold leading-tight text-blue-700">
-                            {/* <span className="block">Total TP Price</span> */}
                             <span className="mt-1 block whitespace-nowrap text-[11px] tabular-nums">
                               {tpTotal === null
                                 ? "N/A"
@@ -461,23 +446,23 @@ export default function TodayShipmentsPage() {
   if (hasError || !orderedProducts) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="max-w-md rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-rose-50 text-rose-600">
-            <Activity size={22} />
+        <div className="max-w-md rounded-xl border border-gray-100 bg-white p-6 text-center md:rounded-2xl md:p-8 md:shadow-sm">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-rose-50 text-rose-600 md:mb-4 md:h-12 md:w-12 md:rounded-xl">
+            <Activity size={20} className="md:size-[22px]" />
           </div>
-          <h1 className="text-lg font-semibold text-gray-900">
+          <h1 className="text-base font-semibold text-gray-900 md:text-lg">
             Ordered products unavailable
           </h1>
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-1.5 text-xs text-gray-500 md:mt-2 md:text-sm">
             Unable to load ordered products. Check your connection and try
             again.
           </p>
           <button
             type="button"
             onClick={() => void loadOrderedProducts()}
-            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:mt-5 md:px-4 md:py-2.5 md:text-sm"
           >
-            <RefreshCw size={15} />
+            <RefreshCw size={14} className="md:size-[15px]" />
             Retry
           </button>
         </div>
@@ -486,7 +471,7 @@ export default function TodayShipmentsPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 pb-6 md:space-y-6 md:pb-8">
       <OrderProductsTable
         products={orderedProducts.products}
         addresses={addresses}

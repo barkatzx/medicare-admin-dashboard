@@ -12,7 +12,6 @@ import {
 } from "@/store/slices/distributorSlice";
 import {
   AlertTriangle,
-  ArrowRight,
   Edit,
   Eye,
   Plus,
@@ -135,7 +134,8 @@ export default function DistributorsPage() {
         distributors.map(async (distributor) => ({
           distributorId: distributor.id,
           distributorName: distributor.name,
-          count: (await api.getDistributorProducts(distributor.id)).length,
+          count: (await api.getDistributorProductsPage(distributor.id, 1, 1))
+            .pagination.total,
         })),
       );
 
@@ -293,23 +293,26 @@ export default function DistributorsPage() {
   }
 
   return (
-    <div className="min-w-0 space-y-6">
-      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <div className="flex flex-col gap-3 border-b border-gray-100 px-4 py-4 md:flex-row md:items-center md:justify-between md:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <Store size={15} strokeWidth={2.25} />
+    <div className="min-w-0 space-y-4 md:space-y-6">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white md:rounded-2xl">
+        <div className="flex flex-col gap-2 border-b border-gray-100 px-3 py-3 md:flex-row md:items-center md:justify-between md:gap-3 md:px-6 md:py-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 md:h-8 md:w-8">
+              <Store size={14} strokeWidth={2.25} className="md:size-[15px]" />
             </span>
-            <h2 className="min-w-0 text-sm font-semibold text-gray-900">
-              Distributors ({filteredDistributors.length})
+            <h2 className="min-w-0 truncate text-sm font-semibold text-gray-900 md:text-base">
+              Distributors
             </h2>
+            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 md:px-2.5 md:text-xs">
+              {filteredDistributors.length}
+            </span>
           </div>
 
-          <div className="flex w-full min-w-0 flex-col gap-3 md:max-w-xl md:flex-row md:items-center md:gap-2">
+          <div className="flex w-full min-w-0 flex-col gap-2 md:max-w-xl md:flex-row md:items-center">
             <label className="relative block flex-1">
               <Search
                 size={15}
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               />
               <input
                 value={searchTerm}
@@ -319,14 +322,14 @@ export default function DistributorsPage() {
                 }}
                 type="text"
                 placeholder="Search distributor"
-                className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-4 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50"
+                className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-4 md:focus:ring-4 md:focus:ring-blue-50"
               />
             </label>
 
             <div className="grid grid-cols-2 gap-2 md:contents">
               <button
                 onClick={() => dispatch(fetchDistributors())}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 md:h-10 md:min-h-0 md:w-10 md:shrink-0 md:px-0"
+                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 md:h-10 md:min-h-0 md:w-10 md:shrink-0 md:rounded-xl md:px-0"
                 title="Refresh"
                 aria-label="Refresh distributors"
                 type="button"
@@ -339,24 +342,24 @@ export default function DistributorsPage() {
               </button>
               <Button
                 onClick={handleOpenCreateModal}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2.5 text-sm md:min-h-0 md:px-4 md:text-lg"
+                className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs md:h-10 md:min-h-0 md:w-10 md:rounded-xl md:px-0"
               >
                 <Plus size={15} strokeWidth={2.5} />
-                Add Distributor
+                <span className="md:hidden">Add</span>
               </Button>
             </div>
           </div>
         </div>
 
         {filteredDistributors.length === 0 ? (
-          <div className="flex min-h-[280px] flex-col items-center justify-center px-4 text-center">
+          <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center md:min-h-[280px]">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
               <Truck size={22} className="text-gray-300" />
             </div>
-            <p className="mt-4 text-sm font-medium text-gray-500">
+            <p className="mt-3 text-sm font-medium text-gray-500 md:mt-4">
               No distributors found
             </p>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-[11px] text-gray-400 md:text-xs">
               {searchTerm
                 ? "Try adjusting your search terms"
                 : "Add your first distributor to get started"}
@@ -364,129 +367,129 @@ export default function DistributorsPage() {
           </div>
         ) : (
           <>
+            {/* Desktop table – unchanged */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                  <th className="px-6 py-3">Distributor name</th>
-                  <th className="px-6 py-3">Address</th>
-                  <th className="px-6 py-3 text-right">Products</th>
-                  <th className="px-6 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {paginatedDistributors.map((distributor) => (
-                  <tr
-                    key={distributor.id}
-                    className="group transition-colors hover:bg-gray-50/80"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
-                          {distributor.name?.charAt(0) || "D"}
-                        </span>
-                        <span className="truncate text-sm font-semibold text-gray-900">
-                          {distributor.name}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td className="max-w-xs px-6 py-4 text-sm text-gray-600">
-                      {formatAddress(distributor) || "—"}
-                    </td>
-
-                    <td className="px-6 py-4 text-right text-sm font-semibold tabular-nums">
-                      {productCountsLoading
-                        ? "…"
-                        : (productCounts[distributor.id] ?? "—")}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link
-                          href={`/dashboard/distributors/${distributor.id}`}
-                          className="group/link inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-100 transition-all hover:bg-emerald-100"
-                        >
-                          <Eye size={18} />
-                          View products
-                          <ArrowRight
-                            size={12}
-                            className="transition-transform duration-200 group-hover/link:translate-x-0.5"
-                          />
-                        </Link>
-
-                        <button
-                          onClick={() => handleOpenEditModal(distributor)}
-                          aria-label={`Edit ${distributor.name}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100"
-                          title="Edit distributor"
-                          type="button"
-                        >
-                          <Edit size={14} />
-                        </button>
-
-                        <button
-                          onClick={() => handleOpenDeleteModal(distributor)}
-                          aria-label={`Delete ${distributor.name}`}
-                          disabled={
-                            isDeleting &&
-                            deletingDistributor?.id === distributor.id
-                          }
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-                          title="Delete distributor"
-                          type="button"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    <th className="px-6 py-3">Distributor name</th>
+                    <th className="px-6 py-3">Address</th>
+                    <th className="px-6 py-3 text-right">Products</th>
+                    <th className="px-6 py-3 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedDistributors.map((distributor) => (
+                    <tr
+                      key={distributor.id}
+                      className="group transition-colors hover:bg-gray-50/80"
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
+                            {distributor.name?.charAt(0) || "D"}
+                          </span>
+                          <span className="truncate text-sm font-semibold text-gray-900">
+                            {distributor.name}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="max-w-xs px-6 py-4 text-sm text-gray-600">
+                        {formatAddress(distributor) || "—"}
+                      </td>
+
+                      <td className="px-6 py-4 text-right text-sm font-semibold tabular-nums">
+                        {productCountsLoading
+                          ? "…"
+                          : (productCounts[distributor.id] ?? "—")}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/dashboard/distributors/${distributor.id}`}
+                            className="group/link flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-100 transition-all hover:bg-emerald-100"
+                          >
+                            <Eye size={18} />
+                          </Link>
+
+                          <button
+                            onClick={() => handleOpenEditModal(distributor)}
+                            aria-label={`Edit ${distributor.name}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 transition-all hover:bg-blue-100"
+                            title="Edit distributor"
+                            type="button"
+                          >
+                            <Edit size={14} />
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenDeleteModal(distributor)}
+                            aria-label={`Delete ${distributor.name}`}
+                            disabled={
+                              isDeleting &&
+                              deletingDistributor?.id === distributor.id
+                            }
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-all hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            title="Delete distributor"
+                            type="button"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
 
+            {/* Mobile list – redesigned */}
             <ul className="divide-y divide-gray-100 md:hidden">
               {paginatedDistributors.map((distributor) => (
-                <li key={distributor.id} className="min-w-0 p-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
+                <li
+                  key={distributor.id}
+                  className="min-w-0 px-3 py-3 active:bg-gray-50"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold uppercase text-blue-600">
                       {distributor.name?.charAt(0) || "D"}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-semibold text-gray-900">
+                      <p className="truncate text-sm font-medium text-gray-900">
                         {distributor.name}
                       </p>
+                      <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                        {formatAddress(distributor) || "No address"}
+                      </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold tabular-nums text-gray-600">
+                    <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-gray-600">
                       {productCountsLoading
                         ? "…"
-                        : (productCounts[distributor.id] ?? "—")}{" "}
-                      products
+                        : (productCounts[distributor.id] ?? "—")}
                     </span>
                   </div>
 
-                  <p className="mt-3 break-words text-xs leading-relaxed text-gray-600">
-                    {formatAddress(distributor) || "No address provided"}
-                  </p>
-
-                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-gray-100 pt-3">
-                    <Link
-                      href={`/dashboard/distributors/${distributor.id}`}
-                      className="inline-flex min-h-10 min-w-0 items-center gap-1.5 rounded-lg bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-100 transition-colors hover:bg-emerald-100"
-                    >
-                      <Eye size={16} />
-                      <span>View products</span>
-                      <ArrowRight size={12} />
-                    </Link>
-                    <div className="flex shrink-0 items-center gap-2">
+                  <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
+                    <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                      Actions
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/dashboard/distributors/${distributor.id}`}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition-colors active:scale-95"
+                        aria-label={`View ${distributor.name}`}
+                      >
+                        <Eye size={14} />
+                      </Link>
                       <button
                         type="button"
                         onClick={() => handleOpenEditModal(distributor)}
                         aria-label={`Edit ${distributor.name}`}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 ring-1 ring-inset ring-blue-100 transition-colors hover:bg-blue-100"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors active:scale-95"
                       >
-                        <Edit size={15} />
+                        <Edit size={14} />
                       </button>
                       <button
                         type="button"
@@ -496,9 +499,9 @@ export default function DistributorsPage() {
                           deletingDistributor?.id === distributor.id
                         }
                         aria-label={`Delete ${distributor.name}`}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-100 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 transition-colors active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
@@ -508,39 +511,49 @@ export default function DistributorsPage() {
           </>
         )}
 
-        {/* ─── Pagination ────────────────────────────────────────── */}
+        {/* Pagination – compact on mobile */}
         {filteredDistributors.length > 0 && (
-          <div className="flex flex-col items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/60 px-4 py-4 sm:flex-row sm:px-6">
-            <p className="text-xs font-medium tabular-nums text-gray-500">
-              Showing{" "}
-              <span className="font-semibold text-gray-700">
+          <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/60 px-3 py-3 sm:px-6 sm:py-4">
+            <p className="text-[11px] font-medium tabular-nums text-gray-500 sm:text-xs">
+              <span className="hidden sm:inline">
+                Showing{" "}
+                <span className="font-semibold text-gray-700">
+                  {(currentPage - 1) * itemsPerPage + 1}–
+                  {Math.min(
+                    currentPage * itemsPerPage,
+                    filteredDistributors.length,
+                  )}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-gray-700">
+                  {filteredDistributors.length}
+                </span>{" "}
+                distributors
+              </span>
+              <span className="sm:hidden">
                 {(currentPage - 1) * itemsPerPage + 1}–
                 {Math.min(
                   currentPage * itemsPerPage,
                   filteredDistributors.length,
-                )}
-              </span>{" "}
-              of{" "}
-              <span className="font-semibold text-gray-700">
-                {filteredDistributors.length}
-              </span>{" "}
-              distributors
+                )}{" "}
+                of {filteredDistributors.length}
+              </span>
             </p>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() =>
                   setCurrentPage((previous) => Math.max(1, previous - 1))
                 }
                 disabled={currentPage === 1}
-                className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 md:h-8"
+                className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:px-3 md:h-8"
               >
                 Previous
               </button>
 
-              <span className="min-w-20 text-center text-xs font-medium tabular-nums text-gray-500">
-                Page {currentPage} of {totalPages}
+              <span className="min-w-[60px] text-center text-xs font-medium tabular-nums text-gray-500 sm:min-w-20">
+                {currentPage}/{totalPages}
               </span>
 
               <button
@@ -551,7 +564,7 @@ export default function DistributorsPage() {
                   )
                 }
                 disabled={currentPage === totalPages}
-                className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 md:h-8"
+                className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:px-3 md:h-8"
               >
                 Next
               </button>

@@ -24,11 +24,11 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 text-purple-600 transition-all duration-200 hover:bg-purple-200 hover:scale-105 sm:h-8 sm:w-8"
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600 transition-all duration-200 active:scale-95 hover:bg-purple-100 sm:h-8 sm:w-8 sm:bg-purple-100"
         title="View Invoice"
         aria-label="View invoice"
       >
-        <FileText size={16} />
+        <FileText size={14} className="sm:size-4" />
       </button>
 
       <Modal
@@ -39,50 +39,50 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
       >
         <div className="min-w-0 bg-white text-gray-900">
           {/* Header */}
-          <div className="flex flex-col gap-3 border-b border-[#eeeeee] pb-3.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-            <div className="flex items-center gap-2.5">
-              <div className="bg-gray-100 p-2 rounded-lg">
+          <div className="flex flex-col gap-2.5 border-b border-[#eeeeee] pb-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:pb-3.5">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-gray-100 p-1.5 sm:p-2">
                 <img
                   src="/logo.png"
                   alt="MediCarePLC"
-                  className="w-9 h-9 object-contain rounded-lg"
+                  className="h-8 w-8 rounded-lg object-contain sm:h-9 sm:w-9"
                 />
               </div>
               <div>
-                <p className="text-[17px] font-bold leading-none tracking-tight text-blue-700">
+                <p className="text-[15px] font-bold leading-none tracking-tight text-blue-700 sm:text-[17px]">
                   MediCarePLC
                 </p>
-                <p className="text-[11px] text-gray-500 mt-1">
+                <p className="mt-0.5 text-[10px] text-gray-500 sm:mt-1 sm:text-[11px]">
                   Your Trusted B2B Sales Partner
                 </p>
               </div>
             </div>
             <div className="text-left sm:text-right">
-              <p className="text-[18px] font-bold tracking-[0.10em] leading-none mb-1.5 text-blue-700">
+              <p className="mb-1 text-[16px] font-bold leading-none tracking-[0.10em] text-blue-700 sm:mb-1.5 sm:text-[18px]">
                 INVOICE
               </p>
-              <p className="text-[11px] text-gray-500 leading-relaxed">
+              <p className="text-[10px] leading-relaxed text-gray-500 sm:text-[11px]">
                 Invoice No:{" "}
                 <span className="font-semibold text-gray-900">
                   #{invoiceNo}
                 </span>
               </p>
-              <p className="text-[11px] text-gray-500 leading-relaxed">
+              <p className="text-[10px] leading-relaxed text-gray-500 sm:text-[11px]">
                 Order Date: {invoiceDate}
               </p>
             </div>
           </div>
 
           {/* Billed / Shipped */}
-          <div className="grid grid-cols-1 gap-4 border-b border-[#eeeeee] py-3.5 sm:grid-cols-2 sm:gap-6">
+          <div className="grid grid-cols-1 gap-3 border-b border-[#eeeeee] py-3 sm:grid-cols-2 sm:gap-6 sm:py-3.5">
             <div>
-              <p className="text-[9.5px] font-bold uppercase tracking-[0.10em] text-blue-700 mb-1.5">
+              <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.10em] text-blue-700 sm:mb-1.5 sm:text-[9.5px]">
                 Billed To
               </p>
-              <p className="text-[13px] font-semibold leading-tight">
+              <p className="text-xs font-semibold leading-tight sm:text-[13px]">
                 {order.user.name}
               </p>
-              <div className="text-[11.5px] text-gray-500 leading-relaxed mt-0.5">
+              <div className="mt-0.5 text-[11px] leading-relaxed text-gray-500 sm:text-[11.5px]">
                 {order.user.pharmacy_name && (
                   <>
                     {order.user.pharmacy_name}
@@ -100,15 +100,15 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
               </div>
             </div>
             <div>
-              <p className="text-[9.5px] font-bold uppercase tracking-[0.10em] text-blue-700 mb-1.5">
+              <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.10em] text-blue-700 sm:mb-1.5 sm:text-[9.5px]">
                 Shipped To
               </p>
               {order.shippingAddress ? (
                 <>
-                  <p className="text-[13px] font-semibold leading-tight">
+                  <p className="text-xs font-semibold leading-tight sm:text-[13px]">
                     {order.shippingAddress.city || "Delivery Address"}
                   </p>
-                  <div className="text-[11.5px] text-gray-500 leading-relaxed mt-0.5">
+                  <div className="mt-0.5 text-[11px] leading-relaxed text-gray-500 sm:text-[11.5px]">
                     {order.shippingAddress.street}
                     <br />
                     {order.shippingAddress.city}
@@ -123,7 +123,7 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
                   </div>
                 </>
               ) : (
-                <p className="text-[11.5px] text-gray-500">
+                <p className="text-[11px] text-gray-500 sm:text-[11.5px]">
                   No shipping address available
                 </p>
               )}
@@ -131,54 +131,42 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
           </div>
 
           {/* Order Summary table */}
-          <div className="min-w-0 pt-3.5">
+          <div className="min-w-0 pt-3">
+            {/* Mobile list – redesigned */}
             <div className="space-y-2 sm:hidden">
               {order.items?.map((item: any, idx: number) => (
                 <article
                   key={item.id ?? idx}
-                  className={`min-w-0 rounded-lg border border-[#eeeeee] p-3 ${
-                    idx % 2 === 1 ? "bg-[#f7f7f7]" : "bg-white"
-                  }`}
+                  className="min-w-0 rounded-lg border border-gray-100 px-3 py-2.5"
                 >
-                  <p className="break-words text-xs font-semibold leading-5 text-gray-900">
+                  <p className="break-words text-xs font-medium leading-5 text-gray-900">
                     {item.product.name}
                   </p>
-                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-[#eeeeee] pt-2">
-                    <div>
-                      <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">
-                        Quantity
-                      </p>
-                      <p className="mt-0.5 text-xs font-medium tabular-nums text-gray-700">
-                        {item.quantity}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">
-                        Unit price
-                      </p>
-                      <p className="mt-0.5 text-xs font-medium tabular-nums text-gray-700">
-                        {parseFloat(item.price).toLocaleString()} ৳
-                      </p>
-                    </div>
-                    <div className="col-span-2">
-                      <p className="text-[9px] font-bold uppercase tracking-wide text-gray-400">
-                        Total
-                      </p>
-                      <p className="mt-0.5 text-xs font-semibold tabular-nums text-gray-900">
-                        {(
-                          parseFloat(item.price) * item.quantity
-                        ).toLocaleString()}{" "}
-                        ৳
-                      </p>
-                    </div>
+                  <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-gray-50 pt-1.5">
+                    <span className="text-[11px] tabular-nums text-gray-500">
+                      {item.quantity} ×{" "}
+                      {parseFloat(item.price).toLocaleString()} ৳
+                    </span>
+                    <span className="text-xs font-semibold tabular-nums text-gray-900">
+                      {(
+                        parseFloat(item.price) * item.quantity
+                      ).toLocaleString()}{" "}
+                      ৳
+                    </span>
                   </div>
                 </article>
               ))}
-              <div className="rounded-lg bg-blue-50 px-3 py-2 text-right text-xs font-bold tabular-nums text-blue-700">
-                Total Amount: {parseFloat(order.totalAmount).toLocaleString()} ৳
+              <div className="flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-blue-700/70">
+                  Total
+                </span>
+                <span className="text-xs font-bold tabular-nums text-blue-700">
+                  {parseFloat(order.totalAmount).toLocaleString()} ৳
+                </span>
               </div>
             </div>
 
+            {/* Desktop table – unchanged */}
             <div className="hidden overflow-x-auto rounded-[10px] border border-[#eeeeee] sm:block">
               <table className="w-full border-collapse text-[11.5px]">
                 <thead>

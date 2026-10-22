@@ -31,7 +31,6 @@ export default function CategoriesPage() {
   const dispatch = useAppDispatch();
   const { categories, loading } = useAppSelector((state) => state.categories);
 
-  // ✅ Per-category product counts fetched from API (not from paginated Redux store)
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>(
     {},
   );
@@ -51,7 +50,6 @@ export default function CategoriesPage() {
     dispatch(fetchCategories());
   }, [dispatch]);
 
-  // ✅ Fetch real product counts per category once categories are loaded
   useEffect(() => {
     if (categories.length === 0) return;
 
@@ -80,12 +78,11 @@ export default function CategoriesPage() {
     fetchCounts();
   }, [categories]);
 
-  // ✅ Uses real API counts, not in-memory Redux products
   const getProductCount = (categoryId: string) =>
     categoryCounts[categoryId] ?? 0;
 
   const handleRefresh = () => {
-    dispatch(fetchCategories()); // useEffect above will re-fetch counts when categories updates
+    dispatch(fetchCategories());
   };
 
   const handleOpenCreateModal = () => {
@@ -173,7 +170,6 @@ export default function CategoriesPage() {
     currentPage * itemsPerPage,
   );
 
-  // ✅ Stats derived from real API counts
   const totalProducts = Object.values(categoryCounts).reduce(
     (a, b) => a + b,
     0,
@@ -195,9 +191,9 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="min-w-0 space-y-6 md:space-y-8">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
+    <div className="min-w-0 space-y-4 md:space-y-8">
+      {/* Stats – compact on mobile */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4">
         {[
           {
             label: "Total Categories",
@@ -214,14 +210,14 @@ export default function CategoriesPage() {
             color: "text-emerald-600",
           },
           {
-            label: "Categories with Products",
+            label: "With Products",
             value: countsLoading ? "..." : categoriesWithProducts,
             icon: Layers,
             gradient: "from-purple-500 to-pink-600",
             color: "text-purple-600",
           },
           {
-            label: "Empty Categories",
+            label: "Empty",
             value: countsLoading ? "..." : emptyCategories,
             icon: AlertCircle,
             gradient: "from-amber-500 to-orange-600",
@@ -230,14 +226,16 @@ export default function CategoriesPage() {
         ].map(({ label, value, icon: Icon, gradient, color }) => (
           <div
             key={label}
-            className="group relative min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 transition-all duration-300 md:p-6"
+            className="group relative min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white p-3 transition-all duration-300 md:rounded-2xl md:p-6"
           >
             <div className="relative flex items-center justify-between">
               <div className="min-w-0">
-                <p className="text-xs font-medium text-gray-500 md:text-sm">
+                <p className="text-[11px] font-medium text-gray-500 md:text-sm">
                   {label}
                 </p>
-                <p className={`mt-1 text-2xl font-bold md:text-3xl ${color}`}>
+                <p
+                  className={`mt-0.5 text-xl font-bold md:mt-1 md:text-3xl ${color}`}
+                >
                   {value}
                 </p>
               </div>
@@ -251,64 +249,64 @@ export default function CategoriesPage() {
         ))}
       </div>
 
-      {/* Search and Refresh */}
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:gap-4">
+      {/* Search and actions – compact on mobile */}
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-4">
         <div className="relative min-w-0 flex-1">
           <Search
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={16}
           />
           <input
             type="text"
-            placeholder="Search categories by name or description..."
+            placeholder="Search categories..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+            className="w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white md:pl-12 md:pr-4 md:py-3 md:rounded-xl"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:contents">
+        <div className="grid grid-cols-2 gap-2 sm:contents">
           <button
             onClick={handleRefresh}
-            className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 font-medium transition-colors hover:bg-gray-200 sm:px-5"
+            className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2.5 text-xs font-medium transition-colors hover:bg-gray-200 sm:min-h-11 sm:rounded-xl sm:px-5 sm:py-3 sm:text-sm"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={14} />
             Refresh
           </button>
           <Button
             onClick={handleOpenCreateModal}
-            className="flex min-h-11 items-center justify-center gap-2 bg-blue-600"
+            className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2.5 text-xs sm:min-h-11 sm:rounded-xl sm:px-5 sm:py-3 sm:text-sm"
           >
-            <Plus size={16} />
-            Add Category
+            <Plus size={14} />
+            Add
           </Button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white">
-        <div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-4 py-4 sm:px-6">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-100 bg-white md:rounded-2xl">
+        <div className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white px-3 py-3 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="p-1.5 bg-blue-100 rounded-lg">
-              <Folder size={16} className="text-blue-600" />
+            <div className="rounded-lg bg-blue-100 p-1.5">
+              <Folder size={14} className="text-blue-600 md:size-4" />
             </div>
-            <h2 className="text-base font-semibold text-gray-900 md:text-lg">
-              Category List
+            <h2 className="text-sm font-semibold text-gray-900 md:text-lg">
+              Categories
             </h2>
-            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-              {filteredCategories.length} categories
+            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 md:px-2.5 md:text-xs">
+              {filteredCategories.length}
             </span>
           </div>
         </div>
 
         {filteredCategories.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Folder size={32} className="text-gray-400" />
+          <div className="flex flex-col items-center justify-center py-12 md:py-16">
+            <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 md:mb-4 md:h-20 md:w-20">
+              <Folder size={28} className="text-gray-400 md:size-8" />
             </div>
-            <p className="text-gray-500 font-medium">
+            <p className="text-sm font-medium text-gray-500 md:text-base">
               {searchTerm
                 ? "No categories match your search"
                 : "No categories found"}
@@ -316,7 +314,7 @@ export default function CategoriesPage() {
             {!searchTerm && (
               <button
                 onClick={handleOpenCreateModal}
-                className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                className="mt-3 text-xs font-medium text-blue-600 hover:text-blue-700 md:mt-4 md:text-sm"
               >
                 Create your first category
               </button>
@@ -324,6 +322,7 @@ export default function CategoriesPage() {
           </div>
         ) : (
           <>
+            {/* Desktop table – unchanged */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full">
                 <thead>
@@ -340,9 +339,6 @@ export default function CategoriesPage() {
                     <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Products
                     </th>
-                    {/* <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      ID
-                    </th> */}
                     <th className="text-left py-3 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
@@ -380,7 +376,6 @@ export default function CategoriesPage() {
                             </span>
                           )}
                         </td>
-                        {/* ✅ Dedicated Products column with real count */}
                         <td className="py-3 px-6">
                           {countsLoading ? (
                             <div className="h-5 w-12 bg-gray-200 rounded animate-pulse" />
@@ -393,11 +388,6 @@ export default function CategoriesPage() {
                             </span>
                           )}
                         </td>
-                        {/* <td className="py-3 px-6">
-                          <code className="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">
-                            {category.id.slice(-8)}
-                          </code>
-                        </td> */}
                         <td className="py-3 px-6">
                           <div className="flex items-center gap-1.5">
                             <button
@@ -425,85 +415,103 @@ export default function CategoriesPage() {
               </table>
             </div>
 
+            {/* Mobile list – redesigned */}
             <ul className="divide-y divide-gray-100 md:hidden">
-              {paginatedCategories.map((category, index) => {
+              {paginatedCategories.map((category) => {
                 const productCount = getProductCount(category.id);
 
                 return (
-                  <li key={category.id} className="min-w-0 p-4">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 text-sm font-semibold text-blue-700">
+                  <li
+                    key={category.id}
+                    className="min-w-0 px-3 py-3 active:bg-gray-50"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700">
                         <Feather size={17} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="break-words text-sm font-semibold text-gray-900">
+                        <p className="truncate text-sm font-medium text-gray-900">
                           {category.name}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                          {category.description || (
+                            <span className="italic text-gray-400">
+                              No description
+                            </span>
+                          )}
                         </p>
                       </div>
                       {countsLoading ? (
-                        <div className="h-6 w-16 shrink-0 animate-pulse rounded-full bg-gray-200" />
+                        <div className="h-6 w-14 shrink-0 animate-pulse rounded-full bg-gray-200" />
                       ) : (
                         <span
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                             productCount > 0
-                              ? "bg-emerald-50 text-emerald-700"
+                              ? "bg-emerald-50 text-emerald-600"
                               : "bg-gray-100 text-gray-500"
                           }`}
                         >
-                          {productCount}{" "}
-                          {productCount === 1 ? "product" : "products"}
+                          {productCount}
                         </span>
                       )}
                     </div>
 
-                    <p className="mt-3 break-words text-xs leading-relaxed text-gray-600">
-                      {category.description || (
-                        <span className="italic text-gray-400">
-                          No description
-                        </span>
-                      )}
-                    </p>
-
-                    <div className="mt-3 flex justify-end gap-2 border-t border-gray-100 pt-3">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditModal(category)}
-                        aria-label={`Edit ${category.name}`}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors hover:bg-blue-100"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDeleteModal(category)}
-                        aria-label={`Delete ${category.name}`}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors hover:bg-red-100"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                        Actions
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(category)}
+                          aria-label={`Edit ${category.name}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors active:scale-95"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDeleteModal(category)}
+                          aria-label={`Delete ${category.name}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors active:scale-95"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   </li>
                 );
               })}
             </ul>
 
+            {/* Pagination – compact on mobile */}
             {totalPages > 1 && (
-              <div className="border-t border-gray-100 bg-gray-50 px-4 py-4 sm:px-6">
-                <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                  <p className="text-sm text-gray-600">
-                    Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                    {Math.min(
-                      currentPage * itemsPerPage,
-                      filteredCategories.length,
-                    )}{" "}
-                    of {filteredCategories.length} entries
+              <div className="border-t border-gray-100 bg-gray-50 px-3 py-3 sm:px-6 sm:py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] text-gray-500 sm:text-sm">
+                    <span className="hidden sm:inline">
+                      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                      {Math.min(
+                        currentPage * itemsPerPage,
+                        filteredCategories.length,
+                      )}{" "}
+                      of {filteredCategories.length} entries
+                    </span>
+                    <span className="sm:hidden">
+                      {(currentPage - 1) * itemsPerPage + 1}–
+                      {Math.min(
+                        currentPage * itemsPerPage,
+                        filteredCategories.length,
+                      )}{" "}
+                      of {filteredCategories.length}
+                    </span>
                   </p>
-                  <div className="flex max-w-full items-center gap-1.5 overflow-x-auto sm:gap-2">
+                  <div className="flex max-w-full items-center gap-1 overflow-x-auto sm:gap-2">
                     <button
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                       aria-label="Previous page"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 md:h-auto md:w-auto md:p-2"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10 sm:rounded-xl md:h-auto md:w-auto md:p-2"
                     >
                       <ChevronLeft size={16} />
                     </button>
@@ -521,7 +529,7 @@ export default function CategoriesPage() {
                             <button
                               key={pageNum}
                               onClick={() => setCurrentPage(pageNum)}
-                              className={`min-h-10 min-w-10 rounded-lg px-3 py-1 text-sm font-medium transition-all md:min-h-0 md:min-w-0 ${
+                              className={`flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-all sm:h-10 sm:min-w-10 sm:px-3 sm:text-sm md:min-h-0 md:min-w-0 ${
                                 currentPage === pageNum
                                   ? "bg-blue-600 text-white border border-blue-600"
                                   : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -539,7 +547,7 @@ export default function CategoriesPage() {
                       }
                       disabled={currentPage === totalPages}
                       aria-label="Next page"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 md:h-auto md:w-auto md:p-2"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10 sm:rounded-xl md:h-auto md:w-auto md:p-2"
                     >
                       <ChevronRight size={16} />
                     </button>

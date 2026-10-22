@@ -68,6 +68,51 @@ export async function deleteDistributor(id: string): Promise<void> {
   await requestDistributorRoute("DELETE", `/${id}`);
 }
 
+export interface DistributorProductsPage {
+  products: any[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export async function getDistributorProductsPage(
+  id: string,
+  page = 1,
+  limit = 20,
+): Promise<DistributorProductsPage> {
+  const result = await requestDistributorRoute(
+    "GET",
+    `/${id}/products?page=${page}&limit=${limit}`,
+  );
+
+  const products: any[] = Array.isArray(result)
+    ? result
+    : Array.isArray(result?.products)
+      ? result.products
+      : Array.isArray(result?.data)
+        ? result.data
+        : [];
+  const p = result?.pagination;
+  const total = typeof p?.total === "number" ? p.total : products.length;
+  const pageLimit = typeof p?.limit === "number" ? p.limit : limit;
+
+  return {
+    products,
+    pagination: {
+      page: typeof p?.page === "number" ? p.page : page,
+      limit: pageLimit,
+      total,
+      totalPages:
+        typeof p?.totalPages === "number"
+          ? p.totalPages
+          : Math.max(1, Math.ceil(total / pageLimit)),
+    },
+  };
+}
+
 export async function getDistributorProducts(id: string): Promise<any[]> {
   const result = await requestDistributorRoute("GET", `/${id}/products`);
 

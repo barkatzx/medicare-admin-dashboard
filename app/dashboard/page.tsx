@@ -69,17 +69,19 @@ function PendingPanel<T>({
   renderItem: (item: T) => ReactNode;
 }) {
   return (
-    <section className="min-w-0 flex-1 rounded-2xl border border-gray-100 bg-white">
-      <header className="flex items-center gap-2.5 border-b border-gray-100 px-4 py-4 md:px-6">
+    <section className="min-w-0 flex-1 rounded-xl border border-gray-100 bg-white md:rounded-2xl">
+      <header className="flex items-center gap-2 border-b border-gray-100 px-3 py-3 md:gap-2.5 md:px-6 md:py-4">
         <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClass}`}
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg md:h-8 md:w-8 ${iconClass}`}
         >
-          <Icon size={15} strokeWidth={2.25} />
+          <Icon size={14} strokeWidth={2.25} className="md:size-[15px]" />
         </span>
-        <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+        <h2 className="text-sm font-semibold text-gray-900 md:text-base">
+          {title}
+        </h2>
       </header>
 
-      <div className="px-4 py-2 md:px-6">
+      <div className="px-3 py-1.5 md:px-6 md:py-2">
         {loading ? (
           <div
             className="space-y-2 py-2"
@@ -88,23 +90,27 @@ function PendingPanel<T>({
             {Array.from({ length: DISPLAY_LIMIT }, (_, i) => (
               <div
                 key={i}
-                className="h-14 animate-pulse rounded-xl bg-gray-100"
+                className="h-12 animate-pulse rounded-lg bg-gray-100 md:h-14 md:rounded-xl"
               />
             ))}
           </div>
         ) : error ? (
-          <div className="my-3 rounded-xl bg-rose-50 p-4 ring-1 ring-inset ring-rose-100">
-            <p className="text-sm font-medium text-rose-700">{error}</p>
+          <div className="my-2 rounded-lg bg-rose-50 p-3 ring-1 ring-inset ring-rose-100 md:my-3 md:rounded-xl md:p-4">
+            <p className="text-xs font-medium text-rose-700 md:text-sm">
+              {error}
+            </p>
           </div>
         ) : items.length === 0 ? (
-          <div className="flex min-h-[200px] flex-col items-center justify-center py-8 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
-              <Icon size={22} className="text-gray-300" />
+          <div className="flex min-h-[180px] flex-col items-center justify-center py-6 text-center md:min-h-[200px] md:py-8">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 md:h-12 md:w-12">
+              <Icon size={18} className="text-gray-300 md:size-[22px]" />
             </div>
-            <p className="mt-4 text-sm font-medium text-gray-500">
+            <p className="mt-3 text-sm font-medium text-gray-500 md:mt-4">
               {emptyTitle}
             </p>
-            <p className="mt-1 text-xs text-gray-400">{emptyHint}</p>
+            <p className="mt-1 text-[11px] text-gray-400 md:text-xs">
+              {emptyHint}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -152,9 +158,9 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <div className="min-w-0 space-y-5 md:space-y-6">
+    <div className="min-w-0 space-y-4 md:space-y-6">
       <SalesChart />
-      <div className="flex min-w-0 flex-col gap-4 md:gap-5 lg:flex-row">
+      <div className="flex min-w-0 flex-col gap-3 md:gap-5 lg:flex-row">
         <PendingPanel
           title="Pending orders"
           icon={ShoppingCart}
@@ -167,27 +173,27 @@ export default function DashboardPage() {
           renderItem={(order) => (
             <div
               key={order.id}
-              className="flex items-center justify-between gap-3 py-3.5"
+              className="flex items-center justify-between gap-2 py-3 md:gap-3 md:py-3.5"
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-50 text-[11px] font-bold uppercase text-amber-600 ring-1 ring-inset ring-amber-100">
+              <div className="flex min-w-0 items-center gap-2.5 md:gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-xs font-bold uppercase text-amber-600 md:rounded-full md:text-[11px] md:ring-1 md:ring-inset md:ring-amber-100">
                   {order.user?.name?.charAt(0) || "?"}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-gray-900">
+                  <p className="truncate text-sm font-medium text-gray-900 md:font-semibold">
                     {order.user?.name || "Customer"}
                   </p>
                   <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-gray-500">
-                    <Clock size={11} className="shrink-0" />
+                    <Clock size={10} className="shrink-0 md:size-[11px]" />
                     {new Date(order.createdAt).toLocaleDateString()}
                   </p>
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-sm font-semibold tabular-nums text-gray-900">
+                <p className="text-xs font-semibold tabular-nums text-gray-900 md:text-sm">
                   {Number(order.totalAmount).toLocaleString()} ৳
                 </p>
-                <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold capitalize text-amber-700 ring-1 ring-inset ring-amber-200/60">
+                <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold capitalize text-amber-600 md:px-2 md:ring-1 md:ring-inset md:ring-amber-200/60">
                   {order.status}
                 </span>
               </div>
@@ -207,14 +213,14 @@ export default function DashboardPage() {
           renderItem={(user) => (
             <div
               key={user.id}
-              className="flex items-center justify-between gap-3 py-3.5"
+              className="flex items-center justify-between gap-2 py-3 md:gap-3 md:py-3.5"
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold uppercase text-blue-600 ring-1 ring-inset ring-blue-100">
+              <div className="flex min-w-0 items-center gap-2.5 md:gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold uppercase text-blue-600 md:rounded-full md:text-[11px] md:ring-1 md:ring-inset md:ring-blue-100">
                   {user.name?.charAt(0) || "U"}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-gray-900">
+                  <p className="truncate text-sm font-medium text-gray-900 md:font-semibold">
                     {user.name || "Unnamed user"}
                   </p>
                   <p className="truncate text-[11px] font-medium text-gray-500">
@@ -228,8 +234,8 @@ export default function DashboardPage() {
                     ? new Date(user.createdAt).toLocaleDateString()
                     : "—"}
                 </p>
-                <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200/60">
-                  Pending approval
+                <span className="mt-0.5 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 md:px-2 md:ring-1 md:ring-inset md:ring-amber-200/60">
+                  Pending
                 </span>
               </div>
             </div>

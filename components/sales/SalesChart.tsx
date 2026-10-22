@@ -44,23 +44,25 @@ const CustomTooltip = ({
 }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="border border-gray-100 rounded-xl shadow-xl p-4 min-w-[180px]">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+    <div className="min-w-[160px] rounded-lg border border-gray-100 bg-white p-3 shadow-xl md:min-w-[180px] md:rounded-xl md:p-4">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 md:mb-3 md:text-xs">
         {label}
       </p>
       {payload.map((entry: any) => (
         <div
           key={entry.dataKey}
-          className="flex items-center justify-between gap-6 mb-1.5"
+          className="mb-1.5 flex items-center justify-between gap-4 last:mb-0 md:gap-6"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2">
             <span
-              className="inline-block w-2.5 h-2.5 rounded-full"
+              className="inline-block h-2 w-2 rounded-full md:h-2.5 md:w-2.5"
               style={{ backgroundColor: entry.color }}
             />
-            <span className="text-xs text-gray-600">{entry.name}</span>
+            <span className="text-[11px] text-gray-600 md:text-xs">
+              {entry.name}
+            </span>
           </div>
-          <span className="text-xs font-bold text-gray-900">
+          <span className="text-[11px] font-bold text-gray-900 md:text-xs">
             {entry.dataKey === "sales" || entry.dataKey === "avgOrderValue"
               ? `৳${Number(entry.value).toLocaleString()}`
               : Number(entry.value).toLocaleString()}
@@ -86,17 +88,17 @@ const StatCard = ({
   gradient: string;
   icon: React.ElementType;
 }) => (
-  <div className={`rounded-2xl p-4 ${gradient}`}>
-    <div className="flex items-center justify-between mb-3">
-      <Icon size={18} className="text-white/80" />
+  <div className={`rounded-xl p-3 md:rounded-2xl md:p-4 ${gradient}`}>
+    <div className="mb-2 flex items-center justify-between md:mb-3">
+      <Icon size={16} className="text-white/80 md:size-[18px]" />
       {sub && (
-        <span className="text-[10px] font-semibold text-white/70 uppercase tracking-wider">
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-white/70 md:text-[10px]">
           {sub}
         </span>
       )}
     </div>
-    <p className="text-xl font-bold text-white">{value}</p>
-    <p className="text-xs text-white/70 mt-0.5">{label}</p>
+    <p className="text-base font-bold text-white md:text-xl">{value}</p>
+    <p className="mt-0.5 text-[10px] text-white/70 md:text-xs">{label}</p>
   </div>
 );
 
@@ -113,9 +115,9 @@ const PeriodBtn = ({
 }) => (
   <button
     onClick={onClick}
-    className={`min-h-10 w-full rounded-xl px-1 py-2 text-xs font-medium transition-all duration-200 sm:w-auto sm:px-4 sm:text-sm ${
+    className={`min-h-8 w-full rounded-lg px-1 py-1.5 text-[11px] font-medium transition-all duration-200 md:min-h-10 md:rounded-xl md:px-4 md:py-2 md:text-sm sm:w-auto ${
       active
-        ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+        ? "bg-blue-600 text-white shadow-sm shadow-blue-200 md:shadow-md"
         : "text-gray-500 hover:bg-gray-100"
     }`}
   >
@@ -161,19 +163,24 @@ export default function SalesChart() {
   const isLoading = loading && !chartData.length;
 
   return (
-    <div className="min-w-0 space-y-5 rounded-2xl border border-gray-100 bg-white p-4 md:space-y-8 md:p-6">
+    <div className="min-w-0 space-y-4 rounded-xl border border-gray-100 bg-white p-3 md:space-y-8 md:rounded-2xl md:p-6">
       {/* Header */}
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:gap-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-base font-bold text-gray-900 sm:text-lg">
-            <TrendingUp size={20} className="text-blue-600" />
-            <span>Sales Overview With Analysis</span>
+          <h2 className="flex items-center gap-1.5 text-sm font-bold text-gray-900 sm:text-lg md:gap-2 md:text-base">
+            <TrendingUp
+              size={16}
+              className="shrink-0 text-blue-600 md:size-5"
+            />
+            <span className="truncate">Sales Overview</span>
           </h2>
-          <p className="text-sm text-gray-400 mt-0.5">{periodLabel}</p>
+          <p className="mt-0.5 text-[11px] text-gray-400 md:text-sm">
+            {periodLabel}
+          </p>
         </div>
 
         {/* Period Tabs */}
-        <div className="grid w-full grid-cols-4 items-center gap-1 rounded-xl bg-gray-50 p-1 sm:w-auto">
+        <div className="grid w-full grid-cols-4 items-center gap-1 rounded-lg bg-gray-50 p-1 md:rounded-xl sm:w-auto">
           {(["daily", "weekly", "monthly", "yearly"] as Period[]).map((p) => (
             <PeriodBtn
               key={p}
@@ -215,13 +222,15 @@ export default function SalesChart() {
       </div>
 
       {/* Chart Type Toggle */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-gray-400 font-medium">Chart style:</span>
+      <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+        <span className="text-[11px] font-medium text-gray-400 md:text-xs">
+          Chart style:
+        </span>
         {(["area", "composed"] as ChartType[]).map((t) => (
           <button
             key={t}
             onClick={() => setChartType(t)}
-            className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+            className={`rounded-md px-2 py-1 text-[11px] font-medium transition-all md:rounded-lg md:px-3 md:text-xs ${
               chartType === t
                 ? "bg-blue-600 text-white"
                 : "bg-gray-100 text-gray-500 hover:bg-gray-200"
@@ -235,145 +244,154 @@ export default function SalesChart() {
       {/* Chart */}
       <div className="relative">
         {isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 rounded-xl z-10">
-            <Loader2 size={28} className="text-blue-500 animate-spin mb-2" />
-            <p className="text-sm text-gray-400">Loading…</p>
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/80 md:rounded-xl">
+            <Loader2
+              size={24}
+              className="mb-2 animate-spin text-blue-500 md:size-7"
+            />
+            <p className="text-xs text-gray-400 md:text-sm">Loading…</p>
           </div>
         )}
 
-        <div className="h-[280px] w-full sm:h-[340px]">
-        <ResponsiveContainer width="100%" height="100%">
-          {chartType === "area" ? (
-            <AreaChart
-              data={chartData}
-              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            >
-              <defs>
-                <linearGradient id="gradSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gradOrders" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f0f0f0"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                yAxisId="left"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v) =>
-                  `৳${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
-                }
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                wrapperStyle={{ fontSize: 12, paddingTop: 16 }}
-              />
-              <Area
-                yAxisId="left"
-                type="monotone"
-                dataKey="sales"
-                name="Revenue (৳)"
-                stroke="#3b82f6"
-                strokeWidth={2.5}
-                fill="url(#gradSales)"
-                dot={false}
-                activeDot={{ r: 5, strokeWidth: 0 }}
-              />
-              <Area
-                yAxisId="right"
-                type="monotone"
-                dataKey="orders"
-                name="Orders"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                fill="url(#gradOrders)"
-                dot={false}
-                activeDot={{ r: 5, strokeWidth: 0 }}
-              />
-            </AreaChart>
-          ) : (
-            <ComposedChart
-              data={chartData}
-              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#f0f0f0"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                yAxisId="left"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v) =>
-                  `৳${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
-                }
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend
-                iconType="circle"
-                iconSize={8}
-                wrapperStyle={{ fontSize: 12, paddingTop: 16 }}
-              />
-              <Bar
-                yAxisId="left"
-                dataKey="sales"
-                name="Revenue (৳)"
-                fill="#3b82f6"
-                radius={[6, 6, 0, 0]}
-                maxBarSize={40}
-                opacity={0.85}
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="orders"
-                name="Orders"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                dot={{ fill: "#10b981", r: 4, strokeWidth: 0 }}
-                activeDot={{ r: 6, strokeWidth: 0 }}
-              />
-            </ComposedChart>
-          )}
-        </ResponsiveContainer>
+        <div className="h-[220px] w-full sm:h-[300px] md:h-[340px]">
+          <ResponsiveContainer width="100%" height="100%">
+            {chartType === "area" ? (
+              <AreaChart
+                data={chartData}
+                margin={{ top: 8, right: 4, left: -12, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="gradSales" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="gradOrders" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#f0f0f0"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: "#9ca3af" }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  yAxisId="left"
+                  tick={{ fontSize: 10, fill: "#9ca3af" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={36}
+                  tickFormatter={(v) =>
+                    `৳${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+                  }
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fontSize: 10, fill: "#9ca3af" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend
+                  iconType="circle"
+                  iconSize={7}
+                  wrapperStyle={{ fontSize: 11, paddingTop: 10 }}
+                />
+                <Area
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="sales"
+                  name="Revenue (৳)"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fill="url(#gradSales)"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
+                />
+                <Area
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="orders"
+                  name="Orders"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fill="url(#gradOrders)"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 0 }}
+                />
+              </AreaChart>
+            ) : (
+              <ComposedChart
+                data={chartData}
+                margin={{ top: 8, right: 4, left: -12, bottom: 0 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#f0f0f0"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 10, fill: "#9ca3af" }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  yAxisId="left"
+                  tick={{ fontSize: 10, fill: "#9ca3af" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={36}
+                  tickFormatter={(v) =>
+                    `৳${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`
+                  }
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tick={{ fontSize: 10, fill: "#9ca3af" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend
+                  iconType="circle"
+                  iconSize={7}
+                  wrapperStyle={{ fontSize: 11, paddingTop: 10 }}
+                />
+                <Bar
+                  yAxisId="left"
+                  dataKey="sales"
+                  name="Revenue (৳)"
+                  fill="#3b82f6"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={28}
+                  opacity={0.85}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="orders"
+                  name="Orders"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={{ fill: "#10b981", r: 3, strokeWidth: 0 }}
+                  activeDot={{ r: 5, strokeWidth: 0 }}
+                />
+              </ComposedChart>
+            )}
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
