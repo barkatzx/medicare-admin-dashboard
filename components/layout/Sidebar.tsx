@@ -354,7 +354,7 @@ function NavGroup({
               {label}
             </span>
             {badge > 0 && !open && (
-              <span className="bg-red-100 text-red-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
+              <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full mr-2">
                 {badge}
               </span>
             )}
@@ -402,7 +402,7 @@ function NavGroup({
                   {sub.name}
                 </span>
                 {sub.href === badgeHref && badge > 0 && (
-                  <span className="ml-auto bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+                  <span className="ml-auto bg-red-600 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
                     {badge}
                   </span>
                 )}
@@ -422,10 +422,7 @@ interface SidebarProps {
   onMobileClose: () => void;
 }
 
-export default function Sidebar({
-  isMobileOpen,
-  onMobileClose,
-}: SidebarProps) {
+export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -476,7 +473,7 @@ export default function Sidebar({
       if (event.key !== "Tab" || !sidebarRef.current) return;
       const focusableItems = Array.from(
         sidebarRef.current.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled])',
+          "a[href], button:not([disabled])",
         ),
       ).filter((item) => item.getClientRects().length > 0);
       const firstItem = focusableItems[0];
@@ -572,7 +569,7 @@ export default function Sidebar({
         inert={!isDesktopViewport && !isMobileOpen}
         className={`fixed left-0 top-0 bottom-0 w-64 ${isCollapsed ? "md:w-20" : "md:w-64"} ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        } bg-[#F9FAFB] rounded-none md:left-3 md:top-3 md:bottom-3 md:rounded-2xl flex flex-col transition-all duration-300 z-50 md:z-30 border border-gray-100 md:translate-x-0`}
+        } bg-[#f9fafb] rounded-none md:left-3 md:top-3 md:bottom-3 md:rounded-2xl flex flex-col transition-all duration-300 z-50 md:z-30 border border-gray-100 md:translate-x-0`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={(event) => {
