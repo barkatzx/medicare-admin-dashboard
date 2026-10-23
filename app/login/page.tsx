@@ -6,7 +6,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { login } from "@/store/slices/authSlice";
 import { Eye, EyeOff, Lock, Mail, Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const submittingRef = useRef(false);
 
   const dispatch = useAppDispatch();
   const router = useRouter();
@@ -32,18 +33,20 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (loading || submittingRef.current) return;
+
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
 
+    submittingRef.current = true;
     try {
-      const result = await dispatch(login({ email, password })).unwrap();
-      if (result.user.role === "admin") {
-        router.push("/dashboard");
-      }
-    } catch (error) {
-      // already handled in slice
+      await dispatch(login({ email, password })).unwrap();
+    } catch {
+      // The rejected thunk reports the login error through the auth slice.
+    } finally {
+      submittingRef.current = false;
     }
   };
 

@@ -1,8 +1,11 @@
 "use client";
 
 import Button from "@/components/ui/Button";
+import Loading from "@/components/ui/loading";
 import Modal from "@/components/ui/Modal";
-import { api } from "@/config/api";
+import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
+import Table from "@/components/ui/Table";
 import type { User } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -15,11 +18,8 @@ import {
   ArrowUpRight,
   Calendar,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   Phone,
   RefreshCw,
-  Search,
   Trash2,
   UserCheck,
   Users as UsersIcon,
@@ -30,17 +30,15 @@ import toast from "react-hot-toast";
 
 export default function UsersPage() {
   const dispatch = useAppDispatch();
-  const { users, loading, pagination, promotionLoadingIds } = useAppSelector(
-    (state) => state.users,
-  );
+  const { users, loading, error, pagination, promotionLoadingIds } =
+    useAppSelector((state) => state.users);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCustomerTotal, setActiveCustomerTotal] = useState<number | null>(
     null,
   );
-  const [countRefresh, setCountRefresh] = useState(0);
 
   const [hasLoaded, setHasLoaded] = useState(false);
   const search = useDebouncedValue(searchTerm.trim());
@@ -48,71 +46,20 @@ export default function UsersPage() {
   const buildQuery = (page: number, limit: number) => ({
     page,
     limit,
-    ...(search && {
-      search,
-      role: "customer" as const,
-      isApproved: true,
-    }),
+    role: "customer" as const,
+    isApproved: true,
+    ...(search && { search }),
   });
 
   useEffect(() => {
-    dispatch(fetchUsers(buildQuery(1, 20))).finally(() => setHasLoaded(true));
+    dispatch(fetchUsers(buildQuery(1, 20))).then((result) => {
+      setHasLoaded(true);
+      if (fetchUsers.fulfilled.match(result) && !search) {
+        setActiveCustomerTotal(result.payload.pagination.total);
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, search]);
-
-  useEffect(() => {
-    let isCurrent = true;
-
-    const countActiveCustomers = async () => {
-      try {
-        const pageSize = 100;
-        const firstPage = await api.getUsers(1, pageSize);
-        let activeCount = firstPage.users.filter(
-          (user) => user.isApproved && user.role === "customer",
-        ).length;
-
-        for (
-          let firstPageNumber = 2;
-          firstPageNumber <= firstPage.pagination.pages;
-          firstPageNumber += 5
-        ) {
-          const pageNumbers = Array.from(
-            {
-              length: Math.min(
-                5,
-                firstPage.pagination.pages - firstPageNumber + 1,
-              ),
-            },
-            (_, index) => firstPageNumber + index,
-          );
-          const pages = await Promise.all(
-            pageNumbers.map((page) => api.getUsers(page, pageSize)),
-          );
-          activeCount += pages.reduce(
-            (total, page) =>
-              total +
-              page.users.filter(
-                (user) => user.isApproved && user.role === "customer",
-              ).length,
-            0,
-          );
-        }
-
-        if (isCurrent) setActiveCustomerTotal(activeCount);
-      } catch (error) {
-        console.error("Failed to load total active customers:", error);
-        if (isCurrent) setActiveCustomerTotal(null);
-        if (isCurrent) {
-          toast.error("Unable to load the total active customer count.");
-        }
-      }
-    };
-
-    void countActiveCustomers();
-    return () => {
-      isCurrent = false;
-    };
-  }, [countRefresh]);
 
   const handlePageChange = (newPage: number) => {
     dispatch(fetchUsers(buildQuery(newPage, pagination.limit)));
@@ -122,7 +69,10 @@ export default function UsersPage() {
     try {
       await dispatch(promoteUserToTSR(userId)).unwrap();
       toast.success("User promoted to TSR");
-      setCountRefresh((count) => count + 1);
+      setActiveCustomerTotal((total) =>
+        total === null ? null : Math.max(0, total - 1),
+      );
+      await dispatch(fetchUsers(buildQuery(pagination.page, pagination.limit)));
       window.dispatchEvent(new Event("usersUpdated"));
     } catch (error) {
       toast.error(
@@ -133,7 +83,7 @@ export default function UsersPage() {
     }
   };
 
-  const handleDeleteClick = (user: any) => {
+  const handleDeleteClick = (user: User) => {
     setUserToDelete(user);
     setIsDeleteModalOpen(true);
   };
@@ -141,15 +91,16 @@ export default function UsersPage() {
   const handleDelete = async () => {
     if (!userToDelete) return;
     setDeletingId(userToDelete.id);
-    try {
-      await dispatch(deleteUser(userToDelete.id)).unwrap();
+    const result = await dispatch(deleteUser(userToDelete.id));
+    if (deleteUser.fulfilled.match(result)) {
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
-      setCountRefresh((count) => count + 1);
-    } catch (error: any) {
-    } finally {
-      setDeletingId(null);
+      setActiveCustomerTotal((total) =>
+        total === null ? null : Math.max(0, total - 1),
+      );
+      await dispatch(fetchUsers(buildQuery(pagination.page, pagination.limit)));
     }
+    setDeletingId(null);
   };
 
   const activeUsers = users.filter(
@@ -158,7 +109,6 @@ export default function UsersPage() {
 
   const handleRefresh = () => {
     dispatch(fetchUsers(buildQuery(pagination.page, pagination.limit)));
-    setCountRefresh((count) => count + 1);
   };
 
   const renderUserActions = (user: User) => (
@@ -213,14 +163,7 @@ export default function UsersPage() {
   );
 
   if (loading && users.length === 0 && !hasLoaded) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent" />
-          <p className="text-sm font-medium text-gray-500">Loading users…</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Loading users…" />;
   }
 
   return (
@@ -243,7 +186,9 @@ export default function UsersPage() {
                 </h2>
                 <p className="text-[11px] text-gray-500 md:text-xs">
                   {activeCustomerTotal === null
-                    ? "Total unavailable"
+                    ? hasLoaded && error
+                      ? "Total unavailable"
+                      : "Loading total…"
                     : `${activeCustomerTotal} ${
                         activeCustomerTotal === 1 ? "user" : "users"
                       }`}
@@ -260,19 +205,16 @@ export default function UsersPage() {
             </button>
           </div>
           <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center md:gap-3">
-            <div className="relative w-full md:w-64">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={15}
-              />
-              <input
-                type="text"
-                placeholder="Search by email or phone…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-4 md:focus:ring-4 md:focus:ring-emerald-50"
-              />
-            </div>
+            <SearchInput
+              label="Search users by email or phone"
+              placeholder="Search by email or phone…"
+              value={searchTerm}
+              onChange={setSearchTerm}
+              loading={loading}
+              containerClassName="relative w-full md:w-64"
+              inputClassName="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-10 md:focus:ring-4 md:focus:ring-emerald-50"
+              iconClassName="text-gray-400"
+            />
             <button
               onClick={handleRefresh}
               className="hidden items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 md:inline-flex"
@@ -284,12 +226,7 @@ export default function UsersPage() {
         </div>
 
         {loading && activeUsers.length === 0 ? (
-          <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center md:min-h-[280px]">
-            <div className="mb-3 h-9 w-9 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent md:mb-4 md:h-10 md:w-10" />
-            <p className="text-xs font-medium text-gray-500 md:text-sm">
-              Loading users…
-            </p>
-          </div>
+          <Loading message="Loading users…" variant="section" />
         ) : activeUsers.length === 0 ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center md:min-h-[280px]">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
@@ -307,7 +244,7 @@ export default function UsersPage() {
         ) : (
           <>
             {/* Desktop table – unchanged */}
-            <div className="hidden overflow-x-auto md:block">
+            <Table view="desktop">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -377,144 +314,66 @@ export default function UsersPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Table>
 
             {/* Mobile list – redesigned */}
-            <ul className="divide-y divide-gray-100 md:hidden">
-              {activeUsers.map((user) => (
-                <li
-                  key={user.id}
-                  className="min-w-0 px-3 py-3 active:bg-gray-50"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-xs font-bold uppercase text-white">
-                      {user.name?.charAt(0) || "U"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">
-                        {user.name || "N/A"}
-                      </p>
-                      <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                        {user.pharmacy_name || "N/A"}
-                        {user.phone_number ? ` · ${user.phone_number}` : ""}
-                      </p>
-                      <div className="mt-0.5 flex items-center gap-1.5">
-                        <Calendar
-                          size={10}
-                          className="shrink-0 text-gray-400"
-                        />
-                        <span className="text-[11px] tabular-nums text-gray-400">
-                          {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString()
-                            : "N/A"}
-                        </span>
+            <Table view="mobile">
+              <ul className="divide-y divide-gray-100">
+                {activeUsers.map((user) => (
+                  <li
+                    key={user.id}
+                    className="min-w-0 px-3 py-3 active:bg-gray-50"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 text-xs font-bold uppercase text-white">
+                        {user.name?.charAt(0) || "U"}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {user.name || "N/A"}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                          {user.pharmacy_name || "N/A"}
+                          {user.phone_number ? ` · ${user.phone_number}` : ""}
+                        </p>
+                        <div className="mt-0.5 flex items-center gap-1.5">
+                          <Calendar
+                            size={10}
+                            className="shrink-0 text-gray-400"
+                          />
+                          <span className="text-[11px] tabular-nums text-gray-400">
+                            {user.createdAt
+                              ? new Date(user.createdAt).toLocaleDateString()
+                              : "N/A"}
+                          </span>
+                        </div>
                       </div>
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
+                        <CheckCircle size={10} />
+                        Active
+                      </span>
                     </div>
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
-                      <CheckCircle size={10} />
-                      Active
-                    </span>
-                  </div>
 
-                  <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
-                    <span className="text-[10px] uppercase tracking-wide text-gray-400">
-                      Actions
-                    </span>
-                    {renderMobileUserActions(user)}
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                        Actions
+                      </span>
+                      {renderMobileUserActions(user)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Table>
           </>
         )}
 
-        {/* ─── Pagination – compact on mobile ──────────────────── */}
-        {pagination.pages > 1 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-3 py-3 sm:px-6 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-medium tabular-nums text-gray-500 sm:text-xs">
-                <span className="hidden sm:inline">
-                  Showing{" "}
-                  <span className="font-semibold text-gray-700">
-                    {(pagination.page - 1) * pagination.limit + 1}–
-                    {Math.min(
-                      pagination.page * pagination.limit,
-                      pagination.total,
-                    )}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-gray-700">
-                    {pagination.total}
-                  </span>{" "}
-                  users
-                </span>
-                <span className="sm:hidden">
-                  {(pagination.page - 1) * pagination.limit + 1}–
-                  {Math.min(
-                    pagination.page * pagination.limit,
-                    pagination.total,
-                  )}{" "}
-                  of {pagination.total}
-                </span>
-              </p>
-
-              <div className="flex max-w-full items-center gap-1 overflow-x-auto sm:gap-1.5">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={!pagination.hasPrevPage || loading}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-
-                {Array.from({ length: pagination.pages }, (_, i) => i + 1)
-                  .filter(
-                    (p) =>
-                      p === 1 ||
-                      p === pagination.pages ||
-                      Math.abs(p - pagination.page) <= 1,
-                  )
-                  .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                    if (idx > 0 && p - (arr[idx - 1] as number) > 1)
-                      acc.push("...");
-                    acc.push(p);
-                    return acc;
-                  }, [])
-                  .map((p, idx) =>
-                    p === "..." ? (
-                      <span
-                        key={`ellipsis-${idx}`}
-                        className="shrink-0 px-1 text-xs font-medium text-gray-400"
-                      >
-                        …
-                      </span>
-                    ) : (
-                      <button
-                        key={p}
-                        onClick={() => handlePageChange(p as number)}
-                        disabled={loading}
-                        className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
-                          pagination.page === p
-                            ? "bg-emerald-500 text-white"
-                            : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ),
-                  )}
-
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={!pagination.hasNextPage || loading}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <Pagination
+          pagination={pagination}
+          currentPage={pagination.page}
+          loading={loading}
+          recordLabel="users"
+          onPageChange={handlePageChange}
+        />
       </div>
 
       {/* ─── Delete Confirmation Modal ───────────────────────────── */}

@@ -2,8 +2,14 @@ import { apiClient } from "../client";
 import type { Category } from "./categories.types";
 
 export async function getAllCategories(): Promise<Category[]> {
-  const result = await apiClient.request("/categories/");
-  if (result && result.categories && Array.isArray(result.categories)) {
+  const result = await apiClient.request<Category[] | { categories?: Category[] }>(
+    "/categories/",
+  );
+  if (
+    !Array.isArray(result) &&
+    result.categories &&
+    Array.isArray(result.categories)
+  ) {
     return result.categories;
   }
   if (Array.isArray(result)) {

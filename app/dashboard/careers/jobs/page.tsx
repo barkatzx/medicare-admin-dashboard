@@ -1,6 +1,10 @@
 "use client";
 
 import Button from "@/components/ui/Button";
+import Pagination from "@/components/ui/Pagination";
+import StatusBadge, {
+  type StatusBadgeTone,
+} from "@/components/ui/StatusBadge";
 import { careerApi } from "@/services/career/career.api";
 import type {
   CareerJob,
@@ -9,8 +13,6 @@ import type {
 import {
   Archive,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   MapPin,
   Plus,
   RefreshCw,
@@ -34,7 +36,12 @@ export default function CareerJobsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 1,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState<string | null>(null);
@@ -48,7 +55,7 @@ export default function CareerJobsPage() {
     try {
       const result = await careerApi.listJobs(query);
       setJobs(result.data);
-      setPages(result.pagination.pages || 1);
+      setPagination({ ...result.pagination, pages: result.pagination.pages || 1 });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to load jobs";
@@ -83,18 +90,18 @@ export default function CareerJobsPage() {
     }
   };
 
-  const getStatusTone = (jobStatus: CareerJobStatus) => {
+  const getStatusTone = (jobStatus: CareerJobStatus): StatusBadgeTone => {
     switch (jobStatus) {
       case "PUBLISHED":
-        return "bg-emerald-50 text-emerald-600";
+        return "success";
       case "DRAFT":
-        return "bg-gray-100 text-gray-600";
+        return "neutral";
       case "CLOSED":
-        return "bg-amber-50 text-amber-600";
+        return "warning";
       case "ARCHIVED":
-        return "bg-rose-50 text-rose-600";
+        return "danger";
       default:
-        return "bg-gray-100 text-gray-600";
+        return "neutral";
     }
   };
 
@@ -492,11 +499,11 @@ export default function CareerJobsPage() {
                         : ""}
                     </p>
                   </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${getStatusTone(job.status)}`}
-                  >
-                    {job.status.toLowerCase()}
-                  </span>
+                  <StatusBadge
+                    label={job.status.toLowerCase()}
+                    tone={getStatusTone(job.status)}
+                    className="shrink-0"
+                  />
                 </div>
 
                 <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-50 pt-2">
@@ -549,33 +556,12 @@ export default function CareerJobsPage() {
         )}
       </div>
 
-      {/* Pagination – compact on mobile, refined on desktop */}
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white p-2 md:justify-end md:gap-4 md:rounded-none md:border-0 md:bg-transparent md:p-0">
-        <span className="text-xs text-gray-500 max-md:order-2 md:text-sm md:tabular-nums">
-          Page <span className="font-semibold text-gray-900">{page}</span> of{" "}
-          <span className="font-semibold text-gray-900">{pages}</span>
-        </span>
-        <div className="flex items-center gap-1.5 max-md:contents md:gap-2">
-          <button
-            disabled={page <= 1 || loading}
-            onClick={() => setPage((current) => current - 1)}
-            aria-label="Previous page"
-            className="flex h-9 items-center justify-center gap-1 rounded-lg bg-gray-50 px-3 text-xs font-medium text-gray-700 transition-colors disabled:opacity-40 max-md:order-1 md:w-9 md:rounded-xl md:border md:border-gray-100 md:bg-white md:px-0 md:text-gray-600 md:hover:bg-gray-50 md:hover:text-gray-900 md:disabled:hover:bg-white"
-          >
-            <ChevronLeft size={16} />
-            <span className="md:hidden">Prev</span>
-          </button>
-          <button
-            disabled={page >= pages || loading}
-            onClick={() => setPage((current) => current + 1)}
-            aria-label="Next page"
-            className="flex h-9 items-center justify-center gap-1 rounded-lg bg-gray-50 px-3 text-xs font-medium text-gray-700 transition-colors disabled:opacity-40 max-md:order-3 md:w-9 md:rounded-xl md:border md:border-gray-100 md:bg-white md:px-0 md:text-gray-600 md:hover:bg-gray-50 md:hover:text-gray-900 md:disabled:hover:bg-white"
-          >
-            <span className="md:hidden">Next</span>
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        pagination={pagination}
+        currentPage={page}
+        loading={loading}
+        onPageChange={setPage}
+      />
     </section>
   );
 }

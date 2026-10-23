@@ -38,24 +38,28 @@ function requirePagination(value: unknown): Pagination {
 }
 
 export async function getTsrSalesSummary(): Promise<SummaryResponse> {
-  return apiClient.request("/admin/tsr-sales/summary");
+  return apiClient.request<SummaryResponse>("/admin/tsr-sales/summary");
 }
 
 export async function getTsrSalesAllSummary(
   tsrId: string,
 ): Promise<TsrSalesAllSummary> {
   const params = new URLSearchParams({ tsrId });
-  return apiClient.request(
+  return apiClient.request<TsrSalesAllSummary>(
     `/admin/tsr-sales/allsummary?${params.toString()}`,
   );
 }
 
 export async function getTsrSalesBestPerformance(): Promise<TsrSalesBestPerformance> {
-  return apiClient.request("/admin/tsr-sales/best-performance");
+  return apiClient.request<TsrSalesBestPerformance>(
+    "/admin/tsr-sales/best-performance",
+  );
 }
 
 export async function getTsrSalesTsrs(): Promise<TSRPerformance[]> {
-  const response = await apiClient.request("/admin/tsr-sales/tsrs");
+  const response = await apiClient.request<
+    TSRPerformance[] | { tsrs?: TSRPerformance[] }
+  >("/admin/tsr-sales/tsrs");
   const tsrs = Array.isArray(response) ? response : response?.tsrs;
   if (!Array.isArray(tsrs)) {
     throw new Error("TSR performance response is missing the TSR list.");
@@ -66,7 +70,7 @@ export async function getTsrSalesTsrs(): Promise<TSRPerformance[]> {
 export async function getTsrSalesTsr(
   tsrId: string,
 ): Promise<TSRDetailResponse> {
-  return apiClient.request(
+  return apiClient.request<TSRDetailResponse>(
     `/admin/tsr-sales/tsrs/${encodeURIComponent(tsrId)}`,
   );
 }
@@ -91,7 +95,7 @@ export async function getTsrSalesOrders(
     params.set("search", options.search.trim());
   }
 
-  const response = await apiClient.request(
+  const response = await apiClient.request<TSROrdersResponse>(
     `/admin/tsr-sales/tsrs/${encodeURIComponent(tsrId)}/orders?${params.toString()}`,
   );
   if (!Array.isArray(response?.orders)) {

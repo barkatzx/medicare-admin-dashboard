@@ -1,9 +1,23 @@
 // src/components/ui/Modal.tsx
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+
+const openDialogs: HTMLElement[] = [];
+let originalBodyOverflow: string | null = null;
+const subscribeToMount = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,6 +26,7 @@ interface ModalProps {
   children: ReactNode;
   size?: "sm" | "md" | "lg" | "xl" | "full";
   showCloseButton?: boolean;
+  isDismissible?: boolean;
 }
 
 export default function Modal({
@@ -21,40 +36,115 @@ export default function Modal({
   children,
   size = "md",
   showCloseButton = true,
+  isDismissible = true,
 }: ModalProps) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToMount,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
   const [isAnimating, setIsAnimating] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCloseRef = useRef(onClose);
+  const isDismissibleRef = useRef(isDismissible);
+  const titleId = useId();
 
   useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    isDismissibleRef.current = isDismissible;
+  }, [isDismissible]);
+
+  const handleClose = useCallback(() => {
+    if (!isDismissibleRef.current) return;
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    setIsAnimating(true);
+    closeTimeoutRef.current = setTimeout(() => {
+      onCloseRef.current();
+      setIsAnimating(false);
+      closeTimeoutRef.current = null;
+    }, 200);
   }, []);
 
-  useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-      // Prevent body scroll when modal is open
-      document.body.style.overflow = "hidden";
-      document.body.style.paddingRight = "0px";
-      setTimeout(() => setIsAnimating(false), 50);
-    } else {
-      // Restore body scroll when modal closes
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
-    };
-  }, [isOpen]);
+  useEffect(
+    () => () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    },
+    [],
+  );
 
-  const handleClose = () => {
+  useEffect(() => {
+    if (!isOpen || !mounted) return;
+
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const previouslyFocused = document.activeElement;
+    if (openDialogs.length === 0) {
+      originalBodyOverflow = document.body.style.overflow;
+    }
+    openDialogs.push(dialog);
+    document.body.style.overflow = "hidden";
     setIsAnimating(true);
-    setTimeout(() => {
-      onClose();
-      setIsAnimating(false);
-    }, 200);
-  };
+
+    const focusableElements = () =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.getClientRects().length > 0);
+
+    const focusFrame = requestAnimationFrame(() => {
+      (focusableElements()[0] ?? dialog).focus();
+    });
+    const animationTimeout = setTimeout(() => setIsAnimating(false), 50);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (openDialogs[openDialogs.length - 1] !== dialog) return;
+
+      if (event.key === "Escape" && isDismissible) {
+        event.preventDefault();
+        handleClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const elements = focusableElements();
+      if (elements.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      cancelAnimationFrame(focusFrame);
+      clearTimeout(animationTimeout);
+      document.removeEventListener("keydown", handleKeyDown);
+
+      const dialogIndex = openDialogs.indexOf(dialog);
+      if (dialogIndex !== -1) openDialogs.splice(dialogIndex, 1);
+      if (openDialogs.length === 0 && originalBodyOverflow !== null) {
+        document.body.style.overflow = originalBodyOverflow;
+        originalBodyOverflow = null;
+      }
+
+      if (previouslyFocused instanceof HTMLElement) previouslyFocused.focus();
+    };
+  }, [handleClose, isDismissible, isOpen, mounted]);
 
   const sizeClasses = {
     sm: "sm:max-w-md",
@@ -73,7 +163,9 @@ export default function Modal({
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
           isAnimating ? "opacity-0" : "opacity-100"
         }`}
-        onClick={handleClose}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) handleClose();
+        }}
       />
 
       {/* Modal Container */}
@@ -81,6 +173,11 @@ export default function Modal({
         <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6">
           {/* Modal Content */}
           <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
             className={`relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all duration-300 w-full ${sizeClasses[size]} ${
               isAnimating ? "scale-95 opacity-0" : "scale-100 opacity-100"
             }`}
@@ -103,11 +200,18 @@ export default function Modal({
                     />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+                <h3
+                  id={titleId}
+                  className="text-lg font-semibold text-gray-900"
+                >
+                  {title}
+                </h3>
               </div>
-              {showCloseButton && (
+              {showCloseButton && isDismissible && (
                 <button
+                  type="button"
                   onClick={handleClose}
+                  aria-label="Close dialog"
                   className="group relative flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition-all duration-200 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                 >
                   <X

@@ -1,18 +1,12 @@
 "use client";
 
 import { careerApi } from "@/services/career/career.api";
+import Pagination from "@/components/ui/Pagination";
 import type {
   CareerApplication,
   CareerApplicationStatus,
 } from "@/services/career/career.types";
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  RefreshCw,
-  Search,
-} from "lucide-react";
+import { CalendarDays, Eye, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -31,7 +25,12 @@ export default function CareerApplicationsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    pages: 1,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -44,7 +43,10 @@ export default function CareerApplicationsPage() {
     try {
       const result = await careerApi.listApplications(query);
       setApplications(result.data);
-      setPages(result.pagination.pages || 1);
+      setPagination({
+        ...result.pagination,
+        pages: result.pagination.pages || 1,
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unable to load applications";
@@ -422,36 +424,12 @@ export default function CareerApplicationsPage() {
         )}
       </div>
 
-      {/* Pagination – compact on mobile */}
-      <div className="flex items-center justify-between gap-3 md:justify-end">
-        <span className="text-[11px] text-gray-500 md:text-sm md:tabular-nums">
-          <span className="md:hidden">
-            {page}/{pages}
-          </span>
-          <span className="hidden md:inline">
-            Page <span className="font-semibold text-gray-900">{page}</span> of{" "}
-            <span className="font-semibold text-gray-900">{pages}</span>
-          </span>
-        </span>
-        <div className="flex items-center gap-1.5 md:gap-3">
-          <button
-            disabled={page <= 1 || loading}
-            onClick={() => setPage((current) => current - 1)}
-            aria-label="Previous page"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors disabled:opacity-40 md:h-9 md:w-9 md:rounded-xl md:border-gray-100 md:hover:bg-gray-50 md:hover:text-gray-900"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            disabled={page >= pages || loading}
-            onClick={() => setPage((current) => current + 1)}
-            aria-label="Next page"
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors disabled:opacity-40 md:h-9 md:w-9 md:rounded-xl md:border-gray-100 md:hover:bg-gray-50 md:hover:text-gray-900"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        pagination={pagination}
+        currentPage={page}
+        loading={loading}
+        onPageChange={setPage}
+      />
     </section>
   );
 }

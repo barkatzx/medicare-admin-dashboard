@@ -5,15 +5,10 @@ import {
   fetchTrendingProducts,
   updateTrendingStatus,
 } from "@/store/slices/trendingSlice";
-import {
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Package,
-  RefreshCw,
-  Star,
-} from "lucide-react";
+import Loading from "@/components/ui/loading";
+import Pagination from "@/components/ui/Pagination";
+import Table from "@/components/ui/Table";
+import { AlertCircle, Loader2, Package, RefreshCw, Star } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -117,12 +112,7 @@ export default function TrendingProductsPage() {
 
         <div className="relative">
           {loading && trendingProducts.length === 0 ? (
-            <div className="flex min-h-[240px] flex-col items-center justify-center md:min-h-[280px]">
-              <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-yellow-500 border-t-transparent md:h-10 md:w-10" />
-              <p className="mt-3 text-xs font-medium text-gray-500 md:text-sm">
-                Loading trending products…
-              </p>
-            </div>
+            <Loading message="Loading trending products…" variant="section" />
           ) : trendingProducts.length === 0 ? (
             <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center md:min-h-[280px]">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
@@ -138,7 +128,7 @@ export default function TrendingProductsPage() {
           ) : (
             <>
               {/* Desktop table – unchanged */}
-              <div className="hidden overflow-x-auto md:block">
+              <Table view="desktop">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -257,171 +247,116 @@ export default function TrendingProductsPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </Table>
 
               {/* Mobile list – redesigned */}
-              <ul className="divide-y divide-gray-100 md:hidden">
-                {trendingProducts.map((product, index) => {
-                  const defaultImage =
-                    product.images?.find((img) => img.isDefault) ||
-                    product.images?.[0];
-                  const isUpdating = updatingId === product.id;
-                  const isLow = product.stock <= 20;
+              <Table view="mobile">
+                <ul className="divide-y divide-gray-100">
+                  {trendingProducts.map((product, index) => {
+                    const defaultImage =
+                      product.images?.find((img) => img.isDefault) ||
+                      product.images?.[0];
+                    const isUpdating = updatingId === product.id;
+                    const isLow = product.stock <= 20;
 
-                  return (
-                    <li
-                      key={product.id}
-                      className="min-w-0 px-3 py-3 active:bg-gray-50"
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50">
-                          {defaultImage?.url ? (
-                            <Image
-                              src={defaultImage.url}
-                              alt={product.name || "Product"}
-                              fill
-                              sizes="40px"
-                              className="object-cover"
-                              unoptimized
-                            />
-                          ) : (
-                            <Package size={18} className="text-gray-300" />
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 items-center gap-1.5">
-                            <p className="truncate text-sm font-medium text-gray-900">
-                              {product.name}
+                    return (
+                      <li
+                        key={product.id}
+                        className="min-w-0 px-3 py-3 active:bg-gray-50"
+                      >
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50">
+                            {defaultImage?.url ? (
+                              <Image
+                                src={defaultImage.url}
+                                alt={product.name || "Product"}
+                                fill
+                                sizes="40px"
+                                className="object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <Package size={18} className="text-gray-300" />
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <p className="truncate text-sm font-medium text-gray-900">
+                                {product.name}
+                              </p>
+                              {index === 0 && (
+                                <span className="shrink-0 rounded-full bg-yellow-50 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-700">
+                                  Top
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                              {product.category?.name || "Uncategorized"}
+                              {product.distributor
+                                ? ` · ${product.distributor}`
+                                : ""}
                             </p>
-                            {index === 0 && (
-                              <span className="shrink-0 rounded-full bg-yellow-50 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-700">
-                                Top
+                            <div className="mt-0.5 flex items-center gap-2">
+                              <span className="text-xs font-semibold tabular-nums text-gray-900">
+                                ৳{product.price.toLocaleString()}
                               </span>
-                            )}
+                              {product.tp != null && (
+                                <span className="text-[11px] tabular-nums text-gray-400">
+                                  TP ৳{product.tp.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                            {product.category?.name || "Uncategorized"}
-                            {product.distributor
-                              ? ` · ${product.distributor}`
-                              : ""}
-                          </p>
-                          <div className="mt-0.5 flex items-center gap-2">
-                            <span className="text-xs font-semibold tabular-nums text-gray-900">
-                              ৳{product.price.toLocaleString()}
-                            </span>
-                            {product.tp != null && (
-                              <span className="text-[11px] tabular-nums text-gray-400">
-                                TP ৳{product.tp.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
+                              isLow
+                                ? "bg-rose-50 text-rose-600"
+                                : "bg-emerald-50 text-emerald-600"
+                            }`}
+                          >
+                            {product.stock}
+                          </span>
                         </div>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
-                            isLow
-                              ? "bg-rose-50 text-rose-600"
-                              : "bg-emerald-50 text-emerald-600"
-                          }`}
-                        >
-                          {product.stock}
-                        </span>
-                      </div>
 
-                      <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-400">
-                          Actions
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTrending(product.id)}
-                          disabled={isUpdating}
-                          aria-label={`Remove ${product.name} from trending`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 transition-colors active:scale-95 disabled:opacity-50"
-                        >
-                          {isUpdating ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Star size={14} className="fill-current" />
-                          )}
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                        <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
+                          <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                            Actions
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTrending(product.id)}
+                            disabled={isUpdating}
+                            aria-label={`Remove ${product.name} from trending`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-50 text-yellow-600 transition-colors active:scale-95 disabled:opacity-50"
+                          >
+                            {isUpdating ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Star size={14} className="fill-current" />
+                            )}
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Table>
             </>
           )}
         </div>
 
-        {/* Pagination – compact on mobile */}
-        {pagination.totalPages > 1 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-3 py-3 sm:px-6 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-medium tabular-nums text-gray-500 sm:text-xs">
-                <span className="font-semibold text-gray-700">
-                  {currentPage}
-                </span>
-                /{pagination.totalPages}
-                <span className="hidden text-gray-400 sm:inline">
-                  {" "}
-                  ({pagination.total} products)
-                </span>
-              </p>
-
-              <div className="flex max-w-full items-center gap-1 overflow-x-auto sm:gap-1.5">
-                <button
-                  onClick={() =>
-                    setCurrentPage((page) => Math.max(1, page - 1))
-                  }
-                  disabled={loading || !pagination.hasPrevPage}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                  aria-label="Previous page"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-
-                {Array.from(
-                  { length: Math.min(5, pagination.totalPages) },
-                  (_, index) => {
-                    const firstPage = Math.max(
-                      1,
-                      Math.min(currentPage - 2, pagination.totalPages - 4),
-                    );
-                    const page = firstPage + index;
-                    return (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        disabled={loading}
-                        className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
-                          page === currentPage
-                            ? "bg-yellow-500 text-white"
-                            : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                        aria-current={page === currentPage ? "page" : undefined}
-                      >
-                        {page}
-                      </button>
-                    );
-                  },
-                )}
-
-                <button
-                  onClick={() =>
-                    setCurrentPage((page) =>
-                      Math.min(pagination.totalPages, page + 1),
-                    )
-                  }
-                  disabled={loading || !pagination.hasNextPage}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                  aria-label="Next page"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <Pagination
+          pagination={{
+            page: currentPage,
+            limit: 20,
+            total: pagination.total,
+            pages: pagination.totalPages,
+          }}
+          currentPage={currentPage}
+          loading={loading}
+          recordLabel="products"
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

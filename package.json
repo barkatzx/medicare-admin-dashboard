@@ -4,7 +4,7 @@
     "clsx": "^2.0.0",
     "date-fns": "^3.0.6",
     "lucide-react": "^0.303.0",
-    "next": "^16.2.3",
+    "next": "^16.4.2",
     "next-redux-wrapper": "^8.1.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -18,7 +18,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
@@ -26,6 +26,8 @@
     "@types/react": "^18.3.28",
     "@types/react-dom": "^18.3.7",
     "autoprefixer": "^10.5.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.2",
     "postcss": "^8.5.9",
     "tailwindcss": "^4.2.2",
     "typescript": "6.0.2"

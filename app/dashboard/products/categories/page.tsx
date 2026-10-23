@@ -1,7 +1,11 @@
 "use client";
 
 import Button from "@/components/ui/Button";
+import Loading from "@/components/ui/loading";
 import Modal from "@/components/ui/Modal";
+import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
+import Table from "@/components/ui/Table";
 import { api } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -12,8 +16,6 @@ import {
 } from "@/store/slices/categorySlice";
 import {
   AlertCircle,
-  ChevronLeft,
-  ChevronRight,
   Edit,
   Feather,
   Folder,
@@ -21,7 +23,6 @@ import {
   Package,
   Plus,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -180,14 +181,7 @@ export default function CategoriesPage() {
   const emptyCategories = categories.length - categoriesWithProducts;
 
   if (loading && categories.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500 font-medium">Loading categories...</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Loading categories..." />;
   }
 
   return (
@@ -251,22 +245,17 @@ export default function CategoriesPage() {
 
       {/* Search and actions – compact on mobile */}
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-4">
-        <div className="relative min-w-0 flex-1">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={16}
-          />
-          <input
-            type="text"
-            placeholder="Search categories..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white md:pl-12 md:pr-4 md:py-3 md:rounded-xl"
-          />
-        </div>
+        <SearchInput
+          label="Search categories"
+          placeholder="Search categories..."
+          value={searchTerm}
+          onChange={(value) => {
+            setSearchTerm(value);
+            setCurrentPage(1);
+          }}
+          containerClassName="relative min-w-0 flex-1"
+          inputClassName="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent md:pl-12 md:pr-10 md:py-3 md:rounded-xl"
+        />
         <div className="grid grid-cols-2 gap-2 sm:contents">
           <button
             onClick={handleRefresh}
@@ -323,7 +312,7 @@ export default function CategoriesPage() {
         ) : (
           <>
             {/* Desktop table – unchanged */}
-            <div className="hidden overflow-x-auto md:block">
+            <Table view="desktop">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
@@ -413,150 +402,93 @@ export default function CategoriesPage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </Table>
 
             {/* Mobile list – redesigned */}
-            <ul className="divide-y divide-gray-100 md:hidden">
-              {paginatedCategories.map((category) => {
-                const productCount = getProductCount(category.id);
+            <Table view="mobile">
+              <ul className="divide-y divide-gray-100">
+                {paginatedCategories.map((category) => {
+                  const productCount = getProductCount(category.id);
 
-                return (
-                  <li
-                    key={category.id}
-                    className="min-w-0 px-3 py-3 active:bg-gray-50"
-                  >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700">
-                        <Feather size={17} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-900">
-                          {category.name}
-                        </p>
-                        <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                          {category.description || (
-                            <span className="italic text-gray-400">
-                              No description
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      {countsLoading ? (
-                        <div className="h-6 w-14 shrink-0 animate-pulse rounded-full bg-gray-200" />
-                      ) : (
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                            productCount > 0
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
-                        >
-                          {productCount}
+                  return (
+                    <li
+                      key={category.id}
+                      className="min-w-0 px-3 py-3 active:bg-gray-50"
+                    >
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 text-blue-700">
+                          <Feather size={17} />
                         </span>
-                      )}
-                    </div>
-
-                    <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
-                      <span className="text-[10px] uppercase tracking-wide text-gray-400">
-                        Actions
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(category)}
-                          aria-label={`Edit ${category.name}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors active:scale-95"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDeleteModal(category)}
-                          aria-label={`Delete ${category.name}`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors active:scale-95"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-gray-900">
+                            {category.name}
+                          </p>
+                          <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                            {category.description || (
+                              <span className="italic text-gray-400">
+                                No description
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        {countsLoading ? (
+                          <div className="h-6 w-14 shrink-0 animate-pulse rounded-full bg-gray-200" />
+                        ) : (
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              productCount > 0
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-gray-100 text-gray-500"
+                            }`}
+                          >
+                            {productCount}
+                          </span>
+                        )}
                       </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
 
-            {/* Pagination – compact on mobile */}
-            {totalPages > 1 && (
-              <div className="border-t border-gray-100 bg-gray-50 px-3 py-3 sm:px-6 sm:py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] text-gray-500 sm:text-sm">
-                    <span className="hidden sm:inline">
-                      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                      {Math.min(
-                        currentPage * itemsPerPage,
-                        filteredCategories.length,
-                      )}{" "}
-                      of {filteredCategories.length} entries
-                    </span>
-                    <span className="sm:hidden">
-                      {(currentPage - 1) * itemsPerPage + 1}–
-                      {Math.min(
-                        currentPage * itemsPerPage,
-                        filteredCategories.length,
-                      )}{" "}
-                      of {filteredCategories.length}
-                    </span>
-                  </p>
-                  <div className="flex max-w-full items-center gap-1 overflow-x-auto sm:gap-2">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      aria-label="Previous page"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10 sm:rounded-xl md:h-auto md:w-auto md:p-2"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <div className="flex shrink-0 gap-1">
-                      {Array.from(
-                        { length: Math.min(5, totalPages) },
-                        (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) pageNum = i + 1;
-                          else if (currentPage <= 3) pageNum = i + 1;
-                          else if (currentPage >= totalPages - 2)
-                            pageNum = totalPages - 4 + i;
-                          else pageNum = currentPage - 2 + i;
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => setCurrentPage(pageNum)}
-                              className={`flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-medium transition-all sm:h-10 sm:min-w-10 sm:px-3 sm:text-sm md:min-h-0 md:min-w-0 ${
-                                currentPage === pageNum
-                                  ? "bg-blue-600 text-white border border-blue-600"
-                                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-                              }`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        },
-                      )}
-                    </div>
-                    <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPages, p + 1))
-                      }
-                      disabled={currentPage === totalPages}
-                      aria-label="Next page"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10 sm:rounded-xl md:h-auto md:w-auto md:p-2"
-                    >
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+                      <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
+                        <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                          Actions
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(category)}
+                            aria-label={`Edit ${category.name}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors active:scale-95"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDeleteModal(category)}
+                            aria-label={`Delete ${category.name}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors active:scale-95"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Table>
           </>
         )}
+
+        <Pagination
+          pagination={{
+            page: currentPage,
+            limit: itemsPerPage,
+            total: filteredCategories.length,
+            pages: totalPages,
+          }}
+          currentPage={currentPage}
+          loading={loading}
+          recordLabel="categories"
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Create/Edit Modal */}

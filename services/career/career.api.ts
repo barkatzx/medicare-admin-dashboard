@@ -35,8 +35,19 @@ const request = async <T>(
   }
   const response = await fetch(`${CAREER_ROOT}${path}`, { ...init, headers });
   const body = (await response.json().catch(() => null)) as ApiResponse<T> | null;
+  if (response.status === 401) {
+    apiClient.clearToken();
+    if (typeof window !== "undefined") {
+      window.location.assign("/login");
+    }
+    throw new Error("Session expired. Please login again.");
+  }
   if (!response.ok || !body?.success) {
-    throw new Error(body?.error || `Career API request failed (${response.status})`);
+    throw new Error(
+      response.status >= 500
+        ? "The career service could not complete the request. Please try again."
+        : body?.error || `Career API request failed (${response.status})`,
+    );
   }
   return body;
 };

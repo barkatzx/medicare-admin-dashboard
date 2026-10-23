@@ -18,22 +18,47 @@ export async function getAllProducts(
     if (categoryId) url += `&categoryId=${categoryId}`;
   }
 
-  const result = await apiClient.request(url);
+  const result = await apiClient.request<unknown>(url);
 
-  const data = result?.data ?? result;
+  const data =
+    result && typeof result === "object" && "data" in result
+      ? result.data
+      : result;
 
-  if (data && data.products && Array.isArray(data.products)) {
-    const p = data.pagination || {};
+  if (
+    data &&
+    typeof data === "object" &&
+    "products" in data &&
+    Array.isArray(data.products)
+  ) {
+    const products = data.products as Product[];
+    const pagination =
+      "pagination" in data &&
+      data.pagination &&
+      typeof data.pagination === "object"
+        ? data.pagination
+        : {};
     return {
-      products: data.products,
+      products,
       pagination: {
-        page: p.page ?? page,
-        limit: p.limit ?? limit,
-        total: p.total ?? data.products.length,
+        page: "page" in pagination ? (pagination.page as number) : page,
+        limit: "limit" in pagination ? (pagination.limit as number) : limit,
+        total:
+          "total" in pagination
+            ? (pagination.total as number)
+            : products.length,
         pages:
-          p.totalPages ??
-          p.pages ??
-          Math.ceil((p.total ?? data.products.length) / limit),
+          ("totalPages" in pagination
+            ? pagination.totalPages
+            : "pages" in pagination
+              ? pagination.pages
+              : undefined) ??
+          Math.ceil(
+            ((("total" in pagination
+              ? pagination.total
+              : undefined) as number | undefined) ?? products.length) /
+              limit,
+          ),
       },
     };
   }
@@ -41,7 +66,7 @@ export async function getAllProducts(
   // Some search endpoints return the array directly
   if (Array.isArray(data)) {
     return {
-      products: data,
+      products: data as Product[],
       pagination: {
         page: 1,
         limit: data.length,
@@ -58,11 +83,11 @@ export async function getAllProducts(
 }
 
 export async function getProductById(id: string): Promise<Product> {
-  return apiClient.request(`/products/${id}`);
+  return apiClient.request<Product>(`/products/${id}`);
 }
 
 export async function createProduct(productData: Partial<Product>): Promise<Product> {
-  return apiClient.request("/products/", {
+  return apiClient.request<Product>("/products/", {
     method: "POST",
     body: JSON.stringify(productData),
   });
@@ -72,7 +97,7 @@ export async function updateProduct(
   productId: string,
   productData: Partial<Product>,
 ): Promise<Product> {
-  return apiClient.request(`/products/${productId}`, {
+  return apiClient.request<Product>(`/products/${productId}`, {
     method: "PUT",
     body: JSON.stringify(productData),
   });
@@ -89,7 +114,7 @@ export async function getLowStockProducts(
   limit: number = 20,
 ): Promise<ProductPage> {
   const endpoint = `/products/admin/low-stock?page=${page}&limit=${limit}`;
-  const response = await apiClient.request(endpoint);
+  const response = await apiClient.request<unknown>(endpoint);
   return normalizeProductPage(response, page, endpoint);
 }
 
@@ -98,20 +123,23 @@ export async function getOutOfStockProducts(
   limit: number = 20,
 ): Promise<ProductPage> {
   const endpoint = `/products/admin/out-of-stock?page=${page}&limit=${limit}`;
-  const response = await apiClient.request(endpoint);
+  const response = await apiClient.request<unknown>(endpoint);
   return normalizeProductPage(response, page, endpoint);
 }
 
 function normalizeProductPage(
-  response: any,
+  response: unknown,
   page: number,
   endpoint: string,
 ): ProductPage {
-  const data = response?.data ?? response;
+  const data =
+    response && typeof response === "object" && "data" in response
+      ? response.data
+      : response;
 
   if (Array.isArray(data)) {
     return {
-      products: data,
+      products: data as Product[],
       pagination: {
         total: data.length,
         totalPages: data.length ? 1 : 0,
@@ -121,13 +149,26 @@ function normalizeProductPage(
     };
   }
 
-  if (data?.products && Array.isArray(data.products)) {
-    const metadata = data.pagination ?? data;
+  if (
+    data &&
+    typeof data === "object" &&
+    "products" in data &&
+    Array.isArray(data.products)
+  ) {
+    const metadata =
+      "pagination" in data &&
+      data.pagination &&
+      typeof data.pagination === "object"
+        ? data.pagination
+        : data;
+    if (!("total" in metadata && "totalPages" in metadata)) {
+      throw new Error(`Invalid pagination metadata from ${endpoint}`);
+    }
     const pagination: ProductPagination = {
       total: Number(metadata.total),
       totalPages: Number(metadata.totalPages),
-      hasNextPage: metadata.hasNextPage,
-      hasPrevPage: metadata.hasPrevPage,
+      hasNextPage: "hasNextPage" in metadata && metadata.hasNextPage === true,
+      hasPrevPage: "hasPrevPage" in metadata && metadata.hasPrevPage === true,
     };
 
     if (
@@ -135,16 +176,18 @@ function normalizeProductPage(
       pagination.total < 0 ||
       !Number.isInteger(pagination.totalPages) ||
       pagination.totalPages < 0 ||
-      typeof pagination.hasNextPage !== "boolean" ||
-      typeof pagination.hasPrevPage !== "boolean"
+      !("hasNextPage" in metadata) ||
+      typeof metadata.hasNextPage !== "boolean" ||
+      !("hasPrevPage" in metadata) ||
+      typeof metadata.hasPrevPage !== "boolean"
     ) {
       throw new Error(`Invalid pagination metadata from ${endpoint}`);
     }
 
-    return { products: data.products, pagination };
+    return { products: data.products as Product[], pagination };
   }
 
-  console.warn(`Unexpected response structure from ${endpoint}:`, response);
+  console.warn(`Unexpected response structure from ${endpoint}.`);
   throw new Error(`Invalid product response from ${endpoint} for page ${page}`);
 }
 
@@ -162,7 +205,7 @@ export async function updateProductFeaturedStatus(
   productId: string,
   featured: boolean,
 ): Promise<Product> {
-  return apiClient.request(`/products/${productId}/featured`, {
+  return apiClient.request<Product>(`/products/${productId}/featured`, {
     method: "PATCH",
     body: JSON.stringify({ featured }),
   });
@@ -183,7 +226,7 @@ export async function updateProductTrendingStatus(
   trending: boolean,
 ): Promise<Product> {
   // Only send the 'trending' boolean since 'trendingOrder' is no longer required
-  return apiClient.request(`/products/${productId}/trending`, {
+  return apiClient.request<Product>(`/products/${productId}/trending`, {
     method: "PATCH",
     body: JSON.stringify({ trending }),
   });
@@ -194,10 +237,6 @@ export async function setDefaultProductImage(
   imageId: string,
 ): Promise<any> {
   const token = apiClient.getToken();
-
-  console.log(
-    `Setting default image: Product ${productId}, Image ${imageId}`,
-  );
 
   const response = await fetch(
     `${API_BASE_URL}/products/${productId}/images/${imageId}/default`,
@@ -211,8 +250,6 @@ export async function setDefaultProductImage(
   );
 
   const result = await response.json();
-  console.log("Set default image response:", result);
-
   if (!response.ok) {
     throw new Error(
       result.message || result.error || "Failed to set default image",
@@ -230,8 +267,6 @@ export async function addProductImages(productId: string, images: File[]): Promi
     formData.append("images", image); // Use 'images', not 'files'
   });
 
-  console.log(`Uploading ${images.length} images for product ${productId}`);
-
   const token = apiClient.getToken();
   const response = await fetch(
     `${API_BASE_URL}/products/${productId}/images`,
@@ -245,8 +280,6 @@ export async function addProductImages(productId: string, images: File[]): Promi
   );
 
   const result = await response.json();
-  console.log("Upload response:", result);
-
   if (!response.ok) {
     throw new Error(
       result.message || result.error || "Failed to upload images",
@@ -297,8 +330,6 @@ export async function deleteProductImage(productId: string, imageId: string): Pr
   );
 
   const result = await response.json();
-  console.log("Delete image response:", result);
-
   if (!response.ok) {
     throw new Error(
       result.message || result.error || "Failed to delete image",
@@ -391,6 +422,8 @@ export async function updateProductStock(productId: string, stock: number): Prom
 }
 
 export async function getProductCountsByCategory(): Promise<Record<string, number>> {
-  const result = await apiClient.request("/products/counts-by-category");
+  const result = await apiClient.request<Record<string, number>>(
+    "/products/counts-by-category",
+  );
   return result;
 }

@@ -2,18 +2,18 @@
 
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
+import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
+import Loading from "@/components/ui/loading";
 import type { User, UserRole } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { deleteUser, fetchUsers } from "@/store/slices/userSlice";
 import {
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Mail,
   MapPin,
   Phone,
   RefreshCw,
-  Search,
   Trash2,
   Users as UsersIcon,
 } from "lucide-react";
@@ -123,20 +123,16 @@ const TSR = () => {
           </div>
 
           <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center md:gap-3">
-            <div className="relative w-full md:w-64">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={15}
-              />
-              <input
-                type="search"
-                aria-label="Search TSR and admin users"
-                placeholder="Search by email or phone…"
-                value={searchTerm}
-                onChange={(event) => handleSearchChange(event.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-4 md:focus:ring-4 md:focus:ring-emerald-50"
-              />
-            </div>
+            <SearchInput
+              label="Search TSR and admin users"
+              placeholder="Search by email or phone…"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              loading={loading}
+              containerClassName="relative w-full md:w-64"
+              inputClassName="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-10 md:focus:ring-4 md:focus:ring-emerald-50"
+              iconClassName="text-gray-400"
+            />
             <button
               type="button"
               onClick={handleRefresh}
@@ -159,12 +155,7 @@ const TSR = () => {
         )}
 
         {!hasLoaded || (loading && users.length === 0) ? (
-          <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center md:min-h-[280px]">
-            <div className="mb-3 h-9 w-9 animate-spin rounded-full border-[3px] border-emerald-500 border-t-transparent md:mb-4 md:h-10 md:w-10" />
-            <p className="text-xs font-medium text-gray-500 md:text-sm">
-              Loading users…
-            </p>
-          </div>
+          <Loading message="Loading users…" variant="section" />
         ) : pageUsers.length === 0 ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center md:min-h-[280px]">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
@@ -351,99 +342,18 @@ const TSR = () => {
           </>
         )}
 
-        {/* Pagination – compact on mobile */}
-        {pageUsers.length > 0 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-3 py-3 sm:px-6 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-medium tabular-nums text-gray-500 sm:text-xs">
-                <span className="hidden sm:inline">
-                  Showing{" "}
-                  <span className="font-semibold text-gray-700">
-                    {(page - 1) * PAGE_SIZE + 1}–
-                    {Math.min(page * PAGE_SIZE, matchingUsers.length)}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-gray-700">
-                    {matchingUsers.length}
-                  </span>{" "}
-                  users
-                </span>
-                <span className="sm:hidden">
-                  {(page - 1) * PAGE_SIZE + 1}–
-                  {Math.min(page * PAGE_SIZE, matchingUsers.length)} of{" "}
-                  {matchingUsers.length}
-                </span>
-              </p>
-              {totalPages > 1 && (
-                <div className="flex max-w-full items-center gap-1 overflow-x-auto sm:gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((value) => value - 1)}
-                    disabled={page <= 1 || loading}
-                    aria-label="Previous page"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                  >
-                    <ChevronLeft size={14} />
-                  </button>
-                  {Array.from({ length: totalPages }, (_, index) => index + 1)
-                    .filter(
-                      (number) =>
-                        number === 1 ||
-                        number === totalPages ||
-                        Math.abs(number - page) <= 1,
-                    )
-                    .reduce<(number | "...")[]>(
-                      (result, number, index, pages) => {
-                        if (
-                          index > 0 &&
-                          number - (pages[index - 1] as number) > 1
-                        ) {
-                          result.push("...");
-                        }
-                        result.push(number);
-                        return result;
-                      },
-                      [],
-                    )
-                    .map((number, index) =>
-                      number === "..." ? (
-                        <span
-                          key={`ellipsis-${index}`}
-                          className="shrink-0 px-1 text-xs font-medium text-gray-400"
-                        >
-                          …
-                        </span>
-                      ) : (
-                        <button
-                          key={number}
-                          type="button"
-                          onClick={() => setCurrentPage(number)}
-                          disabled={loading}
-                          aria-current={page === number ? "page" : undefined}
-                          className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
-                            page === number
-                              ? "bg-emerald-500 text-white"
-                              : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                          }`}
-                        >
-                          {number}
-                        </button>
-                      ),
-                    )}
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage((value) => value + 1)}
-                    disabled={page >= totalPages || loading}
-                    aria-label="Next page"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                  >
-                    <ChevronRight size={14} />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        <Pagination
+          pagination={{
+            page,
+            limit: PAGE_SIZE,
+            total: matchingUsers.length,
+            pages: totalPages,
+          }}
+          currentPage={page}
+          loading={loading}
+          recordLabel="users"
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       <Modal

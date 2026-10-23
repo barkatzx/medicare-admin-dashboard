@@ -11,14 +11,16 @@ import {
 import {
   Calendar,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   CreditCard,
   Package,
-  Search,
   Truck,
   XCircle,
 } from "lucide-react";
+import Loading from "@/components/ui/loading";
+import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
+import Table from "@/components/ui/Table";
+import { useDebouncedValue } from "@/components/utils/useDebouncedValue";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import InvoicePDF from "../../../../components/orders/InvoicePDF";
@@ -33,7 +35,7 @@ export default function PendingOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const apiStatus = statusFilter === "all" ? ACTIVE_STATUS : statusFilter;
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 200);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [activeOrderTotal, setActiveOrderTotal] = useState<number | null>(null);
   const [countRefresh, setCountRefresh] = useState(0);
@@ -42,6 +44,9 @@ export default function PendingOrdersPage() {
   );
   const normalizedSearch = debouncedSearchTerm.trim();
   const isSearchDebouncing = searchTerm.trim() !== normalizedSearch;
+  const effectivePage = pagination
+    ? Math.min(currentPage, Math.max(1, pagination.totalPages))
+    : currentPage;
 
   useEffect(() => {
     let isCurrent = true;
@@ -77,28 +82,15 @@ export default function PendingOrdersPage() {
   }, [countRefresh]);
 
   useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 200);
-    return () => clearTimeout(debounceTimer);
-  }, [searchTerm]);
-
-  useEffect(() => {
     dispatch(
       fetchOrders({
-        page: currentPage,
+        page: effectivePage,
         limit: 20,
         status: apiStatus,
         search: normalizedSearch || undefined,
       }),
     );
-  }, [dispatch, currentPage, normalizedSearch, apiStatus]);
-
-  useEffect(() => {
-    if (pagination && currentPage > pagination.totalPages) {
-      setCurrentPage(Math.max(1, pagination.totalPages));
-    }
-  }, [currentPage, pagination]);
+  }, [dispatch, effectivePage, normalizedSearch, apiStatus]);
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     setUpdatingStatus(orderId);
@@ -110,7 +102,7 @@ export default function PendingOrdersPage() {
       setCountRefresh((count) => count + 1);
       dispatch(
         fetchOrders({
-          page: currentPage,
+          page: effectivePage,
           limit: 20,
           status: apiStatus,
           search: normalizedSearch || undefined,
@@ -190,21 +182,12 @@ export default function PendingOrdersPage() {
   });
 
   const queryMatches =
-    query?.page === currentPage &&
+    query?.page === effectivePage &&
     query.status === apiStatus &&
     query.search === (normalizedSearch || undefined);
 
   if (fetching || isSearchDebouncing || !queryMatches) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-blue-500 border-t-transparent" />
-          <p className="text-sm font-medium text-gray-500">
-            Loading pending orders…
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading message="Loading pending orders…" />;
   }
 
   const statusTabs = ["all", "pending", "confirmed", "processing", "shipped"];
@@ -236,22 +219,17 @@ export default function PendingOrdersPage() {
             </div>
           </div>
           <div className="flex w-full min-w-0 flex-col gap-2 md:w-auto md:flex-row md:items-center md:gap-3">
-            <div className="relative w-full md:w-64">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={15}
-              />
-              <input
-                type="text"
-                placeholder="Search order ID…"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-4 md:focus:ring-4 md:focus:ring-blue-50"
-              />
-            </div>
+            <SearchInput
+              label="Search orders by order ID"
+              placeholder="Search order ID…"
+              value={searchTerm}
+              onChange={(value) => {
+                setSearchTerm(value);
+                setCurrentPage(1);
+              }}
+              containerClassName="relative w-full md:w-64"
+              inputClassName="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-10 md:focus:ring-4 md:focus:ring-blue-50"
+            />
             <div
               role="tablist"
               aria-label="Filter by status"
@@ -307,109 +285,111 @@ export default function PendingOrdersPage() {
         ) : (
           <>
             {/* Mobile list – redesigned */}
-            <ul className="divide-y divide-gray-100 md:hidden">
-              {filteredOrders.map((order) => {
-                const paymentStatus = order.payment?.status;
-                const paymentTone =
-                  paymentStatus === "paid"
-                    ? "bg-emerald-50 text-emerald-600"
-                    : paymentStatus === "pending"
-                      ? "bg-amber-50 text-amber-600"
-                      : "bg-rose-50 text-rose-600";
-                const paymentDot =
-                  paymentStatus === "paid"
-                    ? "bg-emerald-500"
-                    : paymentStatus === "pending"
-                      ? "bg-amber-500"
-                      : "bg-rose-500";
+            <Table view="mobile">
+              <ul className="divide-y divide-gray-100">
+                {filteredOrders.map((order) => {
+                  const paymentStatus = order.payment?.status;
+                  const paymentTone =
+                    paymentStatus === "paid"
+                      ? "bg-emerald-50 text-emerald-600"
+                      : paymentStatus === "pending"
+                        ? "bg-amber-50 text-amber-600"
+                        : "bg-rose-50 text-rose-600";
+                  const paymentDot =
+                    paymentStatus === "paid"
+                      ? "bg-emerald-500"
+                      : paymentStatus === "pending"
+                        ? "bg-amber-500"
+                        : "bg-rose-500";
 
-                return (
-                  <li
-                    key={order.id}
-                    className="min-w-0 px-3 py-3 active:bg-gray-50"
-                  >
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold uppercase text-blue-600">
-                        {order.user.name?.charAt(0) ?? "?"}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <p className="truncate text-sm font-medium text-gray-900">
-                            {order.user.name}
+                  return (
+                    <li
+                      key={order.id}
+                      className="min-w-0 px-3 py-3 active:bg-gray-50"
+                    >
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold uppercase text-blue-600">
+                          {order.user.name?.charAt(0) ?? "?"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <p className="truncate text-sm font-medium text-gray-900">
+                              {order.user.name}
+                            </p>
+                            <code className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-gray-500">
+                              #{order.id.slice(-6)}
+                            </code>
+                          </div>
+                          <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                            {order.user.phone_number}
                           </p>
-                          <code className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-gray-500">
-                            #{order.id.slice(-6)}
-                          </code>
+                          <div className="mt-0.5 flex items-center gap-2">
+                            <span className="text-xs font-semibold tabular-nums text-gray-900">
+                              {parseFloat(order.totalAmount).toLocaleString()} ৳
+                            </span>
+                            <span className="flex items-center gap-1 text-[10px] tabular-nums text-gray-400">
+                              <Calendar size={9} className="shrink-0" />
+                              {new Date(order.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
-                        <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                          {order.user.phone_number}
-                        </p>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          <span className="text-xs font-semibold tabular-nums text-gray-900">
-                            {parseFloat(order.totalAmount).toLocaleString()} ৳
-                          </span>
-                          <span className="flex items-center gap-1 text-[10px] tabular-nums text-gray-400">
-                            <Calendar size={9} className="shrink-0" />
-                            {new Date(order.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </div>
-                      <span
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${getStatusColor(order.status)}`}
-                      >
-                        {getStatusIcon(order.status)}
-                        {order.status}
-                      </span>
-                    </div>
-
-                    <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-gray-50 pt-2.5">
-                      <span
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${paymentTone}`}
-                      >
                         <span
-                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${paymentDot}`}
-                        />
-                        {paymentStatus ?? "N/A"}
-                      </span>
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <InvoiceView order={order} />
-                        <InvoicePDF order={order} />
-                        {paymentStatus === "pending" &&
-                          order.payment?.method === "cod" && (
-                            <button
-                              onClick={() => handleConfirmPayment(order.id)}
-                              disabled={confirmingPayment === order.id}
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-pink-50 text-pink-600 transition-colors active:scale-95 disabled:opacity-50"
-                              aria-label="Confirm payment"
-                            >
-                              <CreditCard size={14} />
-                            </button>
-                          )}
-                        <select
-                          value={order.status.toLowerCase()}
-                          onChange={(e) =>
-                            handleStatusUpdate(order.id, e.target.value)
-                          }
-                          disabled={updatingStatus === order.id}
-                          aria-label={`Update order ${order.id.slice(-8)} status`}
-                          className="h-8 min-w-0 max-w-[110px] truncate rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-medium text-gray-700 transition-all focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${getStatusColor(order.status)}`}
                         >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
+                          {getStatusIcon(order.status)}
+                          {order.status}
+                        </span>
                       </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+
+                      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-gray-50 pt-2.5">
+                        <span
+                          className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${paymentTone}`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 shrink-0 rounded-full ${paymentDot}`}
+                          />
+                          {paymentStatus ?? "N/A"}
+                        </span>
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <InvoiceView order={order} />
+                          <InvoicePDF order={order} />
+                          {paymentStatus === "pending" &&
+                            order.payment?.method === "cod" && (
+                              <button
+                                onClick={() => handleConfirmPayment(order.id)}
+                                disabled={confirmingPayment === order.id}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-pink-50 text-pink-600 transition-colors active:scale-95 disabled:opacity-50"
+                                aria-label="Confirm payment"
+                              >
+                                <CreditCard size={14} />
+                              </button>
+                            )}
+                          <select
+                            value={order.status.toLowerCase()}
+                            onChange={(e) =>
+                              handleStatusUpdate(order.id, e.target.value)
+                            }
+                            disabled={updatingStatus === order.id}
+                            aria-label={`Update order ${order.id.slice(-8)} status`}
+                            className="h-8 min-w-0 max-w-[110px] truncate rounded-lg border border-gray-200 bg-white px-2 text-[11px] font-medium text-gray-700 transition-all focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Table>
 
             {/* Desktop table – unchanged */}
-            <div className="hidden overflow-x-auto md:block">
+            <Table view="desktop">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -535,92 +515,21 @@ export default function PendingOrdersPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Table>
           </>
         )}
 
-        {/* ─── Pagination – compact on mobile ──────────────────── */}
         {pagination && pagination.totalPages > 1 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-3 py-3 md:px-6 md:py-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-medium tabular-nums text-gray-500 sm:text-xs">
-                <span className="hidden sm:inline">
-                  Showing{" "}
-                  <span className="font-semibold text-gray-700">
-                    {(pagination.page - 1) * pagination.limit + 1}
-                  </span>{" "}
-                  to{" "}
-                  <span className="font-semibold text-gray-700">
-                    {Math.min(
-                      pagination.page * pagination.limit,
-                      pagination.total,
-                    )}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-gray-700">
-                    {pagination.total}
-                  </span>{" "}
-                  orders
-                </span>
-                <span className="sm:hidden">
-                  {(pagination.page - 1) * pagination.limit + 1}–
-                  {Math.min(
-                    pagination.page * pagination.limit,
-                    pagination.total,
-                  )}{" "}
-                  of {pagination.total}
-                </span>
-              </p>
-
-              <div className="flex items-center gap-1 sm:gap-1.5">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={fetching || currentPage === 1}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-
-                {Array.from(
-                  { length: Math.min(5, pagination.totalPages) },
-                  (_, i) => {
-                    const startPage = Math.max(
-                      1,
-                      Math.min(currentPage - 2, pagination.totalPages - 4),
-                    );
-                    const pageNum = startPage + i;
-                    const isActive = currentPage === pageNum;
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        disabled={fetching}
-                        className={`flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
-                          isActive
-                            ? "bg-blue-600 text-white shadow-[0_1px_2px_rgba(37,99,235,0.3)]"
-                            : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  },
-                )}
-
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) =>
-                      Math.min(pagination.totalPages, p + 1),
-                    )
-                  }
-                  disabled={fetching || currentPage === pagination.totalPages}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
+          <Pagination
+            pagination={{
+              ...pagination,
+              pages: pagination.totalPages,
+            }}
+            currentPage={effectivePage}
+            loading={fetching}
+            recordLabel="orders"
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
     </div>

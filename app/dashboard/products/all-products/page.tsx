@@ -4,7 +4,11 @@ import ProductForm from "@/components/products/ProductForm";
 import StockManagementModal from "@/components/products/StockManagementModal";
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
 import Button from "@/components/ui/Button";
+import Loading from "@/components/ui/loading";
 import Modal from "@/components/ui/Modal";
+import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
+import Table from "@/components/ui/Table";
 import { api, Product } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchCategories } from "@/store/slices/categorySlice";
@@ -23,8 +27,6 @@ import {
 } from "@/store/slices/trendingSlice";
 import {
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   Edit,
   Heart,
   Package,
@@ -34,7 +36,6 @@ import {
   Search,
   Star,
   Trash2,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -107,11 +108,6 @@ export default function ProductsPage() {
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setCurrentPage(1), 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -313,15 +309,6 @@ export default function ProductsPage() {
     </div>
   );
 
-  const getPageNumbers = (): number[] => {
-    if (!pagination?.pages) return [];
-    const maxVisible = 5;
-    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-    const end = Math.min(pagination.pages, start + maxVisible - 1);
-    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
-    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
-  };
-
   const totalValue =
     inventoryStats?.totalValue ??
     products.reduce(
@@ -367,14 +354,7 @@ export default function ProductsPage() {
   ];
 
   if (loading && products.length === 0 && currentPage === 1) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-500 font-medium">Loading products...</p>
-        </div>
-      </div>
-    );
+    return <Loading message="Loading products..." />;
   }
 
   return (
@@ -408,30 +388,18 @@ export default function ProductsPage() {
       {/* Filters – stacked & compact on mobile */}
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-4">
         <div className="flex min-w-0 flex-1 gap-2 sm:contents">
-          <div className="relative min-w-0 flex-1">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              size={16}
-            />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-9 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white md:pl-12 md:pr-10 md:py-3 md:rounded-xl"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setCurrentPage(1);
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+          <SearchInput
+            label="Search products"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(value) => {
+              setSearchTerm(value);
+              setCurrentPage(1);
+            }}
+            loading={loading}
+            containerClassName="relative min-w-0 flex-1"
+            inputClassName="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:pl-12 md:pr-10 md:py-3 md:rounded-xl"
+          />
 
           <select
             value={filterCategory}
@@ -519,12 +487,7 @@ export default function ProductsPage() {
         <div className="relative">
           {loading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-3">
-                <div className="h-9 w-9 animate-spin rounded-full border-4 border-blue-500 border-t-transparent md:h-10 md:w-10" />
-                <p className="text-xs font-medium text-gray-500 md:text-sm">
-                  Loading...
-                </p>
-              </div>
+              <Loading message="Loading..." variant="section" />
             </div>
           )}
 
@@ -543,7 +506,7 @@ export default function ProductsPage() {
           ) : (
             <>
               {/* Desktop table – unchanged */}
-              <div className="hidden overflow-x-auto md:block">
+              <Table view="desktop">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
@@ -646,10 +609,11 @@ export default function ProductsPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </Table>
 
               {/* Mobile list – redesigned */}
-              <ul className="divide-y divide-gray-100 md:hidden">
+              <Table view="mobile">
+                <ul className="divide-y divide-gray-100">
                 {visibleProducts.map((product) => {
                   const imageUrl = getProductImage(product);
                   const stockTone =
@@ -715,56 +679,22 @@ export default function ProductsPage() {
                     </li>
                   );
                 })}
-              </ul>
+                </ul>
+              </Table>
             </>
           )}
         </div>
 
         {/* Pagination – compact on mobile */}
-        {pagination && pagination.pages > 1 && (
-          <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50 px-3 py-3 sm:px-6 sm:py-4">
-            <p className="text-[11px] text-gray-500 sm:text-sm">
-              {(pagination.page - 1) * pagination.limit + 1}–
-              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-              of {pagination.total}
-            </p>
-            <div className="flex max-w-full items-center gap-1 overflow-x-auto sm:gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1 || loading}
-                aria-label="Previous page"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors disabled:opacity-40 sm:h-10 sm:w-10 sm:rounded-xl md:h-auto md:w-auto md:p-2"
-              >
-                <ChevronLeft size={16} />
-              </button>
-
-              {getPageNumbers().map((pageNum) => (
-                <button
-                  key={pageNum}
-                  onClick={() => setCurrentPage(pageNum)}
-                  disabled={loading}
-                  className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg px-2 text-xs font-medium transition-all sm:h-10 sm:min-w-10 sm:px-3 sm:text-sm md:min-h-0 md:min-w-0 ${
-                    currentPage === pageNum
-                      ? "bg-blue-600 text-white border border-blue-600"
-                      : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              ))}
-
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(pagination.pages, p + 1))
-                }
-                disabled={currentPage === pagination.pages || loading}
-                aria-label="Next page"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors disabled:opacity-40 sm:h-10 sm:w-10 sm:rounded-xl md:h-auto md:w-auto md:p-2"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+        {pagination && (
+          <Pagination
+            pagination={pagination}
+            currentPage={currentPage}
+            loading={loading}
+            recordLabel="products"
+            activeClassName="border border-blue-600 bg-blue-600 text-white"
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
 

@@ -35,39 +35,18 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { parseDeviceInfo, type DeviceInfo } from "@/components/utils/deviceInfo";
-
-interface Address {
-  id: string;
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  isDefault: boolean;
-}
-
-interface Profile {
-  id: string;
-  email: string;
-  phone_number: string;
-  name: string;
-  pharmacy_name: string | null;
-  role: string;
-  isApproved: boolean;
-  createdAt: string;
-  defaultAddressId: string | null;
-}
+import type { UserAddress, UserProfile } from "@/config/api/user/user.types";
 
 export default function SettingsPage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [editingAddress, setEditingAddress] = useState<UserAddress | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",

@@ -1,6 +1,11 @@
 import { apiClient } from "../client";
 import type { Order, OrderPagination, Payment } from "./orders.types";
 
+interface OrdersResponse {
+  orders?: Order[];
+  pagination?: Partial<OrderPagination>;
+}
+
 export async function getAllOrders(
   page: number = 1,
   limit: number = 20,
@@ -18,7 +23,9 @@ export async function getAllOrders(
   if (normalizedSearch) {
     params.set("search", normalizedSearch);
   }
-  const data = await apiClient.request(`/orders?${params.toString()}`);
+  const data = await apiClient.request<OrdersResponse>(
+    `/orders?${params.toString()}`,
+  );
   if (!Array.isArray(data?.orders)) {
     throw new Error("Orders response is missing the order list.");
   }
@@ -52,11 +59,11 @@ export async function getAllOrders(
 }
 
 export async function getOrderById(orderId: string): Promise<Order> {
-  return apiClient.request(`/orders/${encodeURIComponent(orderId)}`);
+  return apiClient.request<Order>(`/orders/${encodeURIComponent(orderId)}`);
 }
 
 export async function updateOrderStatus(orderId: string, status: string): Promise<Order> {
-  return apiClient.request(`/orders/${orderId}/status`, {
+  return apiClient.request<Order>(`/orders/${orderId}/status`, {
     method: "PUT",
     body: JSON.stringify({ status }),
   });
@@ -65,9 +72,12 @@ export async function updateOrderStatus(orderId: string, status: string): Promis
 export async function confirmPayment(
   orderId: string,
 ): Promise<{ orderId: string; payment: Payment }> {
-  const response = await apiClient.request(`/orders/${orderId}/payment/confirm`, {
-    method: "PUT",
-  });
+  const response = await apiClient.request<Payment>(
+    `/orders/${orderId}/payment/confirm`,
+    {
+      method: "PUT",
+    },
+  );
   // Return an object that includes the orderId
   return { orderId, payment: response };
 }

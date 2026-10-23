@@ -3,11 +3,11 @@
 
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
-import Button from "@/components/ui/Button";
 import { FileText } from "lucide-react";
+import type { Order, OrderItem } from "@/config/api/orders/orders.types";
 
 interface InvoiceViewProps {
-  order: any;
+  order: Order;
 }
 
 export default function InvoiceView({ order }: InvoiceViewProps) {
@@ -134,7 +134,7 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
           <div className="min-w-0 pt-3">
             {/* Mobile list – redesigned */}
             <div className="space-y-2 sm:hidden">
-              {order.items?.map((item: any, idx: number) => (
+              {order.items?.map((item: OrderItem, idx: number) => (
                 <article
                   key={item.id ?? idx}
                   className="min-w-0 rounded-lg border border-gray-100 px-3 py-2.5"
@@ -186,7 +186,7 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {order.items?.map((item: any, idx: number) => (
+                  {order.items?.map((item: OrderItem, idx: number) => (
                     <tr
                       key={item.id}
                       className={idx % 2 === 1 ? "bg-[#f7f7f7]" : "bg-white"}

@@ -21,8 +21,10 @@ A modern, light-themed admin dashboard for managing a medicine distribution busi
 ### 🔐 Authentication
 
 - Admin login with token-based sessions
-- Route protection through Next.js middleware
+- Client-side route protection for dashboard navigation
 - Session restored on reload
+
+The client-side route guard is a navigation aid, not an authorization boundary. The API must validate sessions and enforce admin permissions for protected data and actions.
 
 ### 📊 Dashboard & Reports
 
@@ -94,7 +96,6 @@ A modern, light-themed admin dashboard for managing a medicine distribution busi
 ```
 ├── app/
 │   ├── login/                 # Admin login
-│   ├── middleware.ts          # Route protection
 │   └── dashboard/
 │       ├── products/          # all, trending, featured, low-stock, out-of-stock, categories
 │       ├── orders/            # pending, delivered, cancelled
@@ -105,7 +106,7 @@ A modern, light-themed admin dashboard for managing a medicine distribution busi
 │       ├── today-shipments/
 │       ├── settings/
 │       └── documentation/
-├── components/                # Layout (Header, Sidebar), UI, providers
+├── components/                # Layout (Header, Sidebar, ProtectedRoute), UI, providers
 ├── config/api/                # API client and per-resource endpoints
 ├── store/                     # Redux store and slices
 └── public/                    # Static assets (logo, cover, fonts)

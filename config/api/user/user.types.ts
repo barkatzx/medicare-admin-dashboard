@@ -24,3 +24,25 @@ export interface User {
   district?: UserLocationArea | null;
   upazila?: UserLocationArea | null;
 }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  phone_number: string;
+  name: string | null;
+  pharmacy_name: string | null;
+  role: UserRole;
+  isApproved: boolean;
+  createdAt: string;
+  defaultAddressId: string | null;
+}
+
+export interface UserAddress {
+  id: string;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+}

@@ -34,6 +34,6 @@ export async function getSalesSummary(): Promise<SalesSummaryData> {
 }
 
 export async function getYearlySales(): Promise<YearlyResponse> {
-  const data = await apiClient.request("/sales/yearly");
+  const data = await apiClient.request<YearlyResponse>("/sales/yearly");
   return data;
 }

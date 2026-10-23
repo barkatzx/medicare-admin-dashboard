@@ -2,7 +2,9 @@
 
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
-import { api } from "@/config/api";
+import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
+import Loading from "@/components/ui/loading";
 import type { User } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -16,12 +18,9 @@ import {
   ArrowUpRight,
   Calendar,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   Clock,
   Phone,
   RefreshCw,
-  Search,
   Trash2,
 } from "lucide-react";
 import { useDebouncedValue } from "@/components/utils/useDebouncedValue";
@@ -30,18 +29,16 @@ import toast from "react-hot-toast";
 
 export default function PendingUsersPage() {
   const dispatch = useAppDispatch();
-  const { users, loading, pagination, promotionLoadingIds } = useAppSelector(
-    (state) => state.users,
-  );
+  const { users, loading, error, pagination, promotionLoadingIds } =
+    useAppSelector((state) => state.users);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [pendingUsersTotal, setPendingUsersTotal] = useState<number | null>(
     null,
   );
-  const [countRefresh, setCountRefresh] = useState(0);
 
   const [hasLoaded, setHasLoaded] = useState(false);
   const search = useDebouncedValue(searchTerm.trim());
@@ -55,62 +52,14 @@ export default function PendingUsersPage() {
   });
 
   useEffect(() => {
-    dispatch(fetchUsers(buildQuery(1, 20))).finally(() => setHasLoaded(true));
+    dispatch(fetchUsers(buildQuery(1, 20))).then((result) => {
+      setHasLoaded(true);
+      if (fetchUsers.fulfilled.match(result) && !search) {
+        setPendingUsersTotal(result.payload.pagination.total);
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, search]);
-
-  useEffect(() => {
-    let isCurrent = true;
-
-    const countPendingUsers = async () => {
-      try {
-        const pageSize = 100;
-        const firstPage = await api.getUsers(1, pageSize);
-        let pendingCount = firstPage.users.filter(
-          (user) => !user.isApproved && user.role === "customer",
-        ).length;
-
-        for (
-          let firstPageNumber = 2;
-          firstPageNumber <= firstPage.pagination.pages;
-          firstPageNumber += 5
-        ) {
-          const pageNumbers = Array.from(
-            {
-              length: Math.min(
-                5,
-                firstPage.pagination.pages - firstPageNumber + 1,
-              ),
-            },
-            (_, index) => firstPageNumber + index,
-          );
-          const pages = await Promise.all(
-            pageNumbers.map((page) => api.getUsers(page, pageSize)),
-          );
-          pendingCount += pages.reduce(
-            (total, page) =>
-              total +
-              page.users.filter(
-                (user) => !user.isApproved && user.role === "customer",
-              ).length,
-            0,
-          );
-        }
-
-        if (isCurrent) setPendingUsersTotal(pendingCount);
-      } catch (error) {
-        console.error("Failed to load total pending users:", error);
-        if (isCurrent) {
-          setPendingUsersTotal(null);
-        }
-      }
-    };
-
-    void countPendingUsers();
-    return () => {
-      isCurrent = false;
-    };
-  }, [countRefresh]);
 
   const handlePageChange = (newPage: number) => {
     dispatch(fetchUsers(buildQuery(newPage, pagination.limit)));
@@ -118,16 +67,24 @@ export default function PendingUsersPage() {
 
   const handleApprove = async (userId: string) => {
     setApprovingId(userId);
-    await dispatch(approveUser(userId));
-    setCountRefresh((count) => count + 1);
+    const result = await dispatch(approveUser(userId));
     setApprovingId(null);
-    window.dispatchEvent(new Event("usersUpdated"));
+    if (approveUser.fulfilled.match(result)) {
+      setPendingUsersTotal((total) =>
+        total === null ? null : Math.max(0, total - 1),
+      );
+      await dispatch(fetchUsers(buildQuery(pagination.page, pagination.limit)));
+      window.dispatchEvent(new Event("usersUpdated"));
+    }
   };
 
   const handlePromote = async (userId: string) => {
     try {
       await dispatch(promoteUserToTSR(userId)).unwrap();
-      setCountRefresh((count) => count + 1);
+      setPendingUsersTotal((total) =>
+        total === null ? null : Math.max(0, total - 1),
+      );
+      await dispatch(fetchUsers(buildQuery(pagination.page, pagination.limit)));
       window.dispatchEvent(new Event("usersUpdated"));
     } catch (error) {
       toast.error(
@@ -138,7 +95,7 @@ export default function PendingUsersPage() {
     }
   };
 
-  const handleDeleteClick = (user: any) => {
+  const handleDeleteClick = (user: User) => {
     setUserToDelete(user);
     setIsDeleteModalOpen(true);
   };
@@ -146,16 +103,17 @@ export default function PendingUsersPage() {
   const handleDelete = async () => {
     if (!userToDelete) return;
     setDeletingId(userToDelete.id);
-    try {
-      await dispatch(deleteUser(userToDelete.id)).unwrap();
+    const result = await dispatch(deleteUser(userToDelete.id));
+    if (deleteUser.fulfilled.match(result)) {
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
-      setCountRefresh((count) => count + 1);
+      setPendingUsersTotal((total) =>
+        total === null ? null : Math.max(0, total - 1),
+      );
+      await dispatch(fetchUsers(buildQuery(pagination.page, pagination.limit)));
       window.dispatchEvent(new Event("usersUpdated"));
-    } catch (error: any) {
-    } finally {
-      setDeletingId(null);
     }
+    setDeletingId(null);
   };
 
   const filteredUsers = users.filter(
@@ -164,7 +122,6 @@ export default function PendingUsersPage() {
 
   const handleRefresh = () => {
     dispatch(fetchUsers(buildQuery(pagination.page, pagination.limit)));
-    setCountRefresh((count) => count + 1);
   };
 
   const renderUserActions = (user: User) => (
@@ -248,16 +205,7 @@ export default function PendingUsersPage() {
   );
 
   if (loading && users.length === 0 && !hasLoaded) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-amber-500 border-t-transparent" />
-          <p className="text-sm font-medium text-gray-500">
-            Loading pending users…
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading message="Loading pending users…" />;
   }
 
   return (
@@ -280,7 +228,9 @@ export default function PendingUsersPage() {
                 </h2>
                 <p className="text-[11px] text-gray-500 md:text-xs">
                   {pendingUsersTotal === null
-                    ? "Total unavailable"
+                    ? hasLoaded && error
+                      ? "Total unavailable"
+                      : "Loading total…"
                     : `${pendingUsersTotal} ${
                         pendingUsersTotal === 1 ? "user" : "users"
                       }`}
@@ -297,19 +247,16 @@ export default function PendingUsersPage() {
             </button>
           </div>
           <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center md:gap-3">
-            <div className="relative w-full md:w-64">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={15}
-              />
-              <input
-                type="text"
-                placeholder="Search by email or phone…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-4 md:focus:ring-4 md:focus:ring-amber-50"
-              />
-            </div>
+            <SearchInput
+              label="Search users by email or phone"
+              placeholder="Search by email or phone…"
+              value={searchTerm}
+              onChange={setSearchTerm}
+              loading={loading}
+              containerClassName="relative w-full md:w-64"
+              inputClassName="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-10 md:focus:ring-4 md:focus:ring-amber-50"
+              iconClassName="text-gray-400"
+            />
             <button
               onClick={handleRefresh}
               className="hidden items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 md:inline-flex"
@@ -321,12 +268,7 @@ export default function PendingUsersPage() {
         </div>
 
         {loading && filteredUsers.length === 0 ? (
-          <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center md:min-h-[280px]">
-            <div className="mb-3 h-9 w-9 animate-spin rounded-full border-[3px] border-amber-500 border-t-transparent md:mb-4 md:h-10 md:w-10" />
-            <p className="text-xs font-medium text-gray-500 md:text-sm">
-              Loading users…
-            </p>
-          </div>
+          <Loading message="Loading users…" variant="section" />
         ) : filteredUsers.length === 0 ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center px-4 text-center md:min-h-[280px]">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
@@ -462,93 +404,13 @@ export default function PendingUsersPage() {
           </>
         )}
 
-        {/* ─── Pagination – compact on mobile ──────────────────── */}
-        {pagination.pages > 1 && (
-          <div className="border-t border-gray-100 bg-gray-50/60 px-3 py-3 sm:px-6 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] font-medium tabular-nums text-gray-500 sm:text-xs">
-                <span className="hidden sm:inline">
-                  Showing{" "}
-                  <span className="font-semibold text-gray-700">
-                    {(pagination.page - 1) * pagination.limit + 1}–
-                    {Math.min(
-                      pagination.page * pagination.limit,
-                      pagination.total,
-                    )}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-gray-700">
-                    {pagination.total}
-                  </span>{" "}
-                  users
-                </span>
-                <span className="sm:hidden">
-                  {(pagination.page - 1) * pagination.limit + 1}–
-                  {Math.min(
-                    pagination.page * pagination.limit,
-                    pagination.total,
-                  )}{" "}
-                  of {pagination.total}
-                </span>
-              </p>
-
-              <div className="flex max-w-full items-center gap-1 overflow-x-auto sm:gap-1.5">
-                <button
-                  onClick={() => handlePageChange(pagination.page - 1)}
-                  disabled={!pagination.hasPrevPage || loading}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-
-                {Array.from({ length: pagination.pages }, (_, i) => i + 1)
-                  .filter(
-                    (p) =>
-                      p === 1 ||
-                      p === pagination.pages ||
-                      Math.abs(p - pagination.page) <= 1,
-                  )
-                  .reduce<(number | "...")[]>((acc, p, idx, arr) => {
-                    if (idx > 0 && p - (arr[idx - 1] as number) > 1)
-                      acc.push("...");
-                    acc.push(p);
-                    return acc;
-                  }, [])
-                  .map((p, idx) =>
-                    p === "..." ? (
-                      <span
-                        key={`ellipsis-${idx}`}
-                        className="shrink-0 px-1 text-xs font-medium text-gray-400"
-                      >
-                        …
-                      </span>
-                    ) : (
-                      <button
-                        key={p}
-                        onClick={() => handlePageChange(p as number)}
-                        disabled={loading}
-                        className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg px-2 text-xs font-semibold tabular-nums transition-all md:h-8 md:min-w-8 ${
-                          pagination.page === p
-                            ? "bg-amber-500 text-white"
-                            : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    ),
-                  )}
-
-                <button
-                  onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={!pagination.hasNextPage || loading}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:h-8 md:w-8"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <Pagination
+          pagination={pagination}
+          currentPage={pagination.page}
+          loading={loading}
+          recordLabel="users"
+          onPageChange={handlePageChange}
+        />
       </div>
 
       {/* ─── Delete Confirmation Modal ───────────────────────────── */}
