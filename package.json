@@ -18,7 +18,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "tsx --test tests/*.test.ts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
@@ -30,6 +31,7 @@
     "eslint-config-next": "^16.4.2",
     "postcss": "^8.5.9",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.23.15",
     "typescript": "6.0.2"
   }
 }

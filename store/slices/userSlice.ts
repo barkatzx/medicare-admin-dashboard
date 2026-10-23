@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api } from "@/config/api";
 import type { User, UserRole } from "@/config/api";
+import { getApiErrorMessage } from "@/config/api/client";
 import toast from "react-hot-toast";
 
 interface Pagination {
@@ -20,6 +21,7 @@ interface UserState {
   pagination: Pagination;
   currentRequestId: string | null;
   activeSearch: string;
+  activeQueryKey: string | null;
 }
 
 const initialState: UserState = {
@@ -29,6 +31,7 @@ const initialState: UserState = {
   promotionLoadingIds: [],
   currentRequestId: null,
   activeSearch: "",
+  activeQueryKey: null,
   pagination: {
     page: 1,
     limit: 20,
@@ -41,34 +44,41 @@ const initialState: UserState = {
 
 export const fetchUsers = createAsyncThunk(
   "users/fetchAll",
-  async ({
-    page,
-    limit = 20,
-    role,
-    isApproved,
-    search,
-  }: {
-    page?: number;
-    limit?: number;
-    role?: UserRole | UserRole[];
-    isApproved?: boolean;
-    search?: string;
-  } = {}) => {
+  async (
+    {
+      page,
+      limit = 20,
+      role,
+      isApproved,
+      search,
+    }: {
+      page?: number;
+      limit?: number;
+      role?: UserRole | UserRole[];
+      isApproved?: boolean;
+      search?: string;
+    } = {},
+    { signal },
+  ) => {
     // The backend search is combined with the page's role/status filter by
     // loading every search match and applying that existing filter.
     if (role === undefined && isApproved === undefined) {
-      return api.getUsers(page ?? 1, limit, search);
+      return api.getUsers(page ?? 1, limit, search, signal);
     }
 
     const pageSize = 100;
-    const firstPage = await api.getUsers(1, pageSize, search);
+    const firstPage = await api.getUsers(1, pageSize, search, signal);
     const totalPages = Number(firstPage.pagination?.pages);
     if (!Number.isInteger(totalPages) || totalPages < 1) {
       throw new Error("Unable to load users because pagination data is invalid.");
     }
 
     const allUsers = [...firstPage.users];
-    for (let firstPageNumber = 2; firstPageNumber <= totalPages; firstPageNumber += 5) {
+    for (
+      let firstPageNumber = 2;
+      firstPageNumber <= totalPages;
+      firstPageNumber += 5
+    ) {
       const pageNumbers = Array.from(
         {
           length: Math.min(5, totalPages - firstPageNumber + 1),
@@ -77,7 +87,7 @@ export const fetchUsers = createAsyncThunk(
       );
       const pages = await Promise.all(
         pageNumbers.map((pageNumber) =>
-          api.getUsers(pageNumber, pageSize, search),
+          api.getUsers(pageNumber, pageSize, search, signal),
         ),
       );
       allUsers.push(...pages.flatMap((result) => result.users));
@@ -139,8 +149,10 @@ export const deleteUser = createAsyncThunk(
     try {
       await api.deleteUser(userId);
       return userId;
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Failed to delete user");
+    } catch (error: unknown) {
+      return rejectWithValue(
+        getApiErrorMessage(error, "Failed to delete user"),
+      );
     }
   },
 );
@@ -153,13 +165,21 @@ const userSlice = createSlice({
     builder
       .addCase(fetchUsers.pending, (state, action) => {
         const search = action.meta.arg?.search ?? "";
+        const role = action.meta.arg?.role;
+        const queryKey = JSON.stringify({
+          page: action.meta.arg?.page ?? 1,
+          limit: action.meta.arg?.limit ?? 20,
+          role: Array.isArray(role) ? [...role].sort() : role,
+          isApproved: action.meta.arg?.isApproved,
+          search: search.trim(),
+        });
         state.loading = true;
         state.error = null;
         state.currentRequestId = action.meta.requestId;
-        if (search !== state.activeSearch) {
-          // Do not keep showing results of a different query while loading.
+        if (queryKey !== state.activeQueryKey) {
           state.users = [];
           state.activeSearch = search;
+          state.activeQueryKey = queryKey;
         }
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
@@ -171,22 +191,21 @@ const userSlice = createSlice({
       .addCase(fetchUsers.rejected, (state, action) => {
         if (state.currentRequestId !== action.meta.requestId) return;
         state.loading = false;
-        state.error = action.error.message || "Failed to fetch users";
-        toast.error("Failed to fetch users");
+        if (!action.meta.aborted) {
+          state.error = action.error.message || "Failed to fetch users";
+          toast.error("Failed to fetch users");
+        }
       })
 
       .addCase(approveUser.pending, (state) => {
-        state.loading = true;
         state.error = null;
       })
       .addCase(approveUser.fulfilled, (state, action) => {
-        state.loading = false;
         const index = state.users.findIndex((u) => u.id === action.payload.id);
         if (index !== -1) state.users[index] = action.payload;
         toast.success("User approved successfully");
       })
       .addCase(approveUser.rejected, (state, action) => {
-        state.loading = false;
         state.error = action.error.message || "Failed to approve user";
         toast.error("Failed to approve user");
       })
@@ -209,19 +228,20 @@ const userSlice = createSlice({
       })
 
       .addCase(deleteUser.pending, (state) => {
-        state.loading = true;
         state.error = null;
       })
       .addCase(deleteUser.fulfilled, (state, action) => {
-        state.loading = false;
         state.users = state.users.filter((u) => u.id !== action.payload);
         state.pagination.total -= 1;
         toast.success("User deleted successfully");
       })
       .addCase(deleteUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = (action.payload as string) || "Failed to delete user";
-        toast.error((action.payload as string) || "Failed to delete user");
+        const message =
+          typeof action.payload === "string"
+            ? action.payload
+            : "Failed to delete user";
+        state.error = message;
+        toast.error(message);
       });
   },
 });

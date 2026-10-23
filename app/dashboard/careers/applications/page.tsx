@@ -2,11 +2,12 @@
 
 import { careerApi } from "@/services/career/career.api";
 import Pagination from "@/components/ui/Pagination";
+import { useDebouncedValue } from "@/components/utils/useDebouncedValue";
 import type {
   CareerApplication,
   CareerApplicationStatus,
 } from "@/services/career/career.types";
-import { CalendarDays, Eye, RefreshCw, Search } from "lucide-react";
+import { CalendarDays, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
@@ -23,6 +24,7 @@ const statuses: CareerApplicationStatus[] = [
 export default function CareerApplicationsPage() {
   const [applications, setApplications] = useState<CareerApplication[]>([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -31,35 +33,57 @@ export default function CareerApplicationsPage() {
     total: 0,
     pages: 1,
   });
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const requestKey = JSON.stringify([
+    page,
+    debouncedSearch,
+    status,
+    reloadVersion,
+  ]);
+  const [completedRequestKey, setCompletedRequestKey] = useState<string | null>(
+    null,
+  );
+  const isLoading =
+    completedRequestKey !== requestKey ||
+    search !== debouncedSearch;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const load = useCallback(async (signal: AbortSignal, activeRequestKey: string) => {
     const query = new URLSearchParams({ page: String(page), limit: "20" });
-    if (search.trim()) query.set("search", search.trim());
+    if (debouncedSearch.trim()) query.set("search", debouncedSearch.trim());
     if (status) query.set("status", status);
     try {
-      const result = await careerApi.listApplications(query);
+      const result = await careerApi.listApplications(query, signal);
+      if (signal.aborted) return;
       setApplications(result.data);
+      setError("");
       setPagination({
         ...result.pagination,
         pages: result.pagination.pages || 1,
       });
     } catch (error) {
+      if (signal.aborted) return;
       const message =
         error instanceof Error ? error.message : "Unable to load applications";
       setError(message);
       toast.error(message);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setCompletedRequestKey(activeRequestKey);
     }
-  }, [page, search, status]);
+  }, [page, debouncedSearch, status]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (search !== debouncedSearch) return;
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) {
+        return load(controller.signal, requestKey);
+      }
+    });
+    return () => controller.abort();
+  }, [load, search, debouncedSearch, requestKey]);
+
+  const refresh = () => setReloadVersion((version) => version + 1);
 
   const getStatusTone = (applicationStatus: CareerApplicationStatus) => {
     switch (applicationStatus) {
@@ -143,13 +167,13 @@ export default function CareerApplicationsPage() {
           </label>
           <button
             type="button"
-            onClick={() => void load()}
-            disabled={loading}
+            onClick={refresh}
+            disabled={isLoading}
             className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs font-medium text-gray-700 transition-colors active:bg-gray-50 disabled:opacity-50 md:w-auto md:rounded-xl md:border-gray-100 md:px-3.5 md:py-2.5 md:text-[13px] md:font-semibold md:text-gray-600 md:hover:text-gray-900"
           >
             <RefreshCw
               size={13}
-              className={`md:size-3.5 ${loading ? "animate-spin" : ""}`}
+              className={`md:size-3.5 ${isLoading ? "animate-spin" : ""}`}
             />
             Refresh
           </button>
@@ -181,7 +205,7 @@ export default function CareerApplicationsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {loading && (
+              {isLoading && (
                 <tr>
                   <td
                     colSpan={7}
@@ -196,7 +220,7 @@ export default function CareerApplicationsPage() {
                   </td>
                 </tr>
               )}
-              {!loading && error && (
+              {!isLoading && error && (
                 <tr>
                   <td
                     colSpan={7}
@@ -205,7 +229,7 @@ export default function CareerApplicationsPage() {
                     <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
                       <p className="text-sm font-medium">{error}</p>
                       <button
-                        onClick={() => void load()}
+                        onClick={refresh}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-gray-100 bg-white px-3 py-1.5 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
                       >
                         <RefreshCw size={14} />
@@ -215,7 +239,7 @@ export default function CareerApplicationsPage() {
                   </td>
                 </tr>
               )}
-              {!loading && !error && applications.length === 0 && (
+              {!isLoading && !error && applications.length === 0 && (
                 <tr>
                   <td
                     colSpan={7}
@@ -232,7 +256,7 @@ export default function CareerApplicationsPage() {
                   </td>
                 </tr>
               )}
-              {!loading &&
+              {!isLoading &&
                 applications.map((application) => {
                   const tone = getStatusTone(application.status);
                   return (
@@ -317,7 +341,7 @@ export default function CareerApplicationsPage() {
 
       {/* Mobile list – redesigned */}
       <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:hidden">
-        {loading && (
+        {isLoading && (
           <div className="flex min-h-[200px] flex-col items-center justify-center px-4 text-center">
             <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-blue-500 border-t-transparent" />
             <p className="mt-3 text-xs font-medium text-gray-500">
@@ -326,14 +350,14 @@ export default function CareerApplicationsPage() {
           </div>
         )}
 
-        {!loading && error && (
+        {!isLoading && error && (
           <div
             role="alert"
             className="flex min-h-[200px] flex-col items-center justify-center gap-2 px-4 text-center"
           >
             <p className="text-xs text-red-600">{error}</p>
             <button
-              onClick={() => void load()}
+              onClick={refresh}
               className="text-xs font-semibold text-blue-700 underline"
             >
               Retry
@@ -341,7 +365,7 @@ export default function CareerApplicationsPage() {
           </div>
         )}
 
-        {!loading && !error && applications.length === 0 && (
+        {!isLoading && !error && applications.length === 0 && (
           <div className="flex min-h-[200px] flex-col items-center justify-center px-4 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
               <Search size={22} className="text-gray-300" />
@@ -352,7 +376,7 @@ export default function CareerApplicationsPage() {
           </div>
         )}
 
-        {!loading && !error && applications.length > 0 && (
+        {!isLoading && !error && applications.length > 0 && (
           <ul className="divide-y divide-gray-100">
             {applications.map((application) => {
               const tone = getStatusTone(application.status);
@@ -427,7 +451,7 @@ export default function CareerApplicationsPage() {
       <Pagination
         pagination={pagination}
         currentPage={page}
-        loading={loading}
+        loading={isLoading}
         onPageChange={setPage}
       />
     </section>

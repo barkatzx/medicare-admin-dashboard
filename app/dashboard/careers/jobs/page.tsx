@@ -2,6 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import Pagination from "@/components/ui/Pagination";
+import { useDebouncedValue } from "@/components/utils/useDebouncedValue";
 import StatusBadge, {
   type StatusBadgeTone,
 } from "@/components/ui/StatusBadge";
@@ -34,6 +35,7 @@ const statuses: CareerJobStatus[] = [
 export default function CareerJobsPage() {
   const [jobs, setJobs] = useState<CareerJob[]>([]);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [status, setStatus] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
@@ -42,33 +44,55 @@ export default function CareerJobsPage() {
     total: 0,
     pages: 1,
   });
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionId, setActionId] = useState<string | null>(null);
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const requestKey = JSON.stringify([
+    page,
+    debouncedSearch,
+    status,
+    reloadVersion,
+  ]);
+  const [completedRequestKey, setCompletedRequestKey] = useState<string | null>(
+    null,
+  );
+  const isLoading =
+    completedRequestKey !== requestKey ||
+    search !== debouncedSearch;
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const load = useCallback(async (signal: AbortSignal, activeRequestKey: string) => {
     const query = new URLSearchParams({ page: String(page), limit: "20" });
-    if (search.trim()) query.set("search", search.trim());
+    if (debouncedSearch.trim()) query.set("search", debouncedSearch.trim());
     if (status) query.set("status", status);
     try {
-      const result = await careerApi.listJobs(query);
+      const result = await careerApi.listJobs(query, signal);
+      if (signal.aborted) return;
       setJobs(result.data);
+      setError("");
       setPagination({ ...result.pagination, pages: result.pagination.pages || 1 });
     } catch (error) {
+      if (signal.aborted) return;
       const message =
         error instanceof Error ? error.message : "Unable to load jobs";
       setError(message);
       toast.error(message);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setCompletedRequestKey(activeRequestKey);
     }
-  }, [page, search, status]);
+  }, [page, debouncedSearch, status]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (search !== debouncedSearch) return;
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) {
+        return load(controller.signal, requestKey);
+      }
+    });
+    return () => controller.abort();
+  }, [load, search, debouncedSearch, requestKey]);
+
+  const refresh = () => setReloadVersion((version) => version + 1);
 
   const transition = async (
     job: CareerJob,
@@ -80,7 +104,7 @@ export default function CareerJobsPage() {
     try {
       await careerApi.transitionJob(job.id, action);
       toast.success(`Job ${action}ed`);
-      await load();
+      refresh();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : `Unable to ${action} job`,
@@ -214,13 +238,13 @@ export default function CareerJobsPage() {
         <div className="flex w-full items-center justify-between gap-2 md:w-auto md:shrink-0 md:justify-end md:gap-2.5">
           <Button
             type="button"
-            onClick={() => void load()}
-            disabled={loading}
+            onClick={refresh}
+            disabled={isLoading}
             className="flex h-9 shrink-0 items-center gap-1 rounded-lg px-2.5 text-xs md:h-10 md:gap-0 md:rounded-xl md:px-4 md:text-sm"
           >
             <RefreshCw
               size={13}
-              className={`md:mr-2 md:size-4 ${loading ? "animate-spin" : ""}`}
+              className={`md:mr-2 md:size-4 ${isLoading ? "animate-spin" : ""}`}
             />
             <span>Refresh</span>
           </Button>
@@ -260,7 +284,7 @@ export default function CareerJobsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {loading && (
+              {isLoading && (
                 <tr>
                   <td
                     colSpan={8}
@@ -275,7 +299,7 @@ export default function CareerJobsPage() {
                   </td>
                 </tr>
               )}
-              {!loading && error && (
+              {!isLoading && error && (
                 <tr>
                   <td
                     colSpan={8}
@@ -287,7 +311,7 @@ export default function CareerJobsPage() {
                       </div>
                       <p className="text-sm font-medium">{error}</p>
                       <button
-                        onClick={() => void load()}
+                        onClick={refresh}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-gray-100 bg-white px-3 py-1.5 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
                       >
                         <RefreshCw size={14} />
@@ -297,7 +321,7 @@ export default function CareerJobsPage() {
                   </td>
                 </tr>
               )}
-              {!loading && !error && jobs.length === 0 && (
+              {!isLoading && !error && jobs.length === 0 && (
                 <tr>
                   <td
                     colSpan={8}
@@ -314,7 +338,7 @@ export default function CareerJobsPage() {
                   </td>
                 </tr>
               )}
-              {!loading &&
+              {!isLoading &&
                 jobs.map((job) => {
                   const tone = getDesktopStatus(job.status);
                   const applications = job._count?.applications ?? 0;
@@ -439,7 +463,7 @@ export default function CareerJobsPage() {
 
       {/* Mobile list – unchanged */}
       <div className="overflow-hidden rounded-xl border border-gray-100 bg-white md:hidden">
-        {loading && (
+        {isLoading && (
           <div className="flex min-h-[200px] flex-col items-center justify-center px-4 text-center">
             <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-blue-500 border-t-transparent" />
             <p className="mt-3 text-xs font-medium text-gray-500">
@@ -448,14 +472,14 @@ export default function CareerJobsPage() {
           </div>
         )}
 
-        {!loading && error && (
+        {!isLoading && error && (
           <div
             role="alert"
             className="flex min-h-[200px] flex-col items-center justify-center gap-2 px-4 text-center"
           >
             <p className="text-xs text-red-600">{error}</p>
             <button
-              onClick={() => void load()}
+              onClick={refresh}
               className="text-xs font-semibold text-blue-700 underline"
             >
               Retry
@@ -463,7 +487,7 @@ export default function CareerJobsPage() {
           </div>
         )}
 
-        {!loading && !error && jobs.length === 0 && (
+        {!isLoading && !error && jobs.length === 0 && (
           <div className="flex min-h-[200px] flex-col items-center justify-center px-4 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-50">
               <Search size={22} className="text-gray-300" />
@@ -474,7 +498,7 @@ export default function CareerJobsPage() {
           </div>
         )}
 
-        {!loading && !error && jobs.length > 0 && (
+        {!isLoading && !error && jobs.length > 0 && (
           <ul className="divide-y divide-gray-100">
             {jobs.map((job) => (
               <li key={job.id} className="min-w-0 px-3 py-3 active:bg-gray-50">
@@ -559,7 +583,7 @@ export default function CareerJobsPage() {
       <Pagination
         pagination={pagination}
         currentPage={page}
-        loading={loading}
+        loading={isLoading}
         onPageChange={setPage}
       />
     </section>

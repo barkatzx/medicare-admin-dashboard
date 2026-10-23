@@ -127,25 +127,47 @@ export default function TsrSalesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setTsrs(await api.getTsrSalesTsrs());
-    } catch (caughtError) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Unable to load TSR sales data.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadData = useCallback(
+    (signal?: AbortSignal) => api.getTsrSalesTsrs(signal),
+    [],
+  );
 
   useEffect(() => {
-    void loadData();
+    const controller = new AbortController();
+    loadData(controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setTsrs(data);
+        setError(null);
+      })
+      .catch((caughtError: unknown) => {
+        if (controller.signal.aborted) return;
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Unable to load TSR sales data.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [loadData]);
+
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    loadData()
+      .then((data) => setTsrs(data))
+      .catch((caughtError: unknown) => {
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Unable to load TSR sales data.",
+        );
+      })
+      .finally(() => setLoading(false));
+  };
 
   const query = search.trim().toLowerCase();
   const filteredTsrs = tsrs.filter((tsr) =>
@@ -164,7 +186,7 @@ export default function TsrSalesPage() {
   return (
     <div className="min-w-0 space-y-5 md:space-y-6">
       {error ? (
-        <ErrorState message={error} onRetry={() => void loadData()} />
+        <ErrorState message={error} onRetry={handleRetry} />
       ) : (
         <>
           {!loading && (
@@ -241,7 +263,7 @@ export default function TsrSalesPage() {
               </label>
               <button
                 type="button"
-                onClick={() => void loadData()}
+                onClick={handleRetry}
                 disabled={loading}
                 className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-50 disabled:opacity-60 md:min-h-0 md:self-auto md:px-4 md:py-2.5"
               >

@@ -1,7 +1,11 @@
 "use client";
 
 import Button from "@/components/ui/Button";
+import Loading from "@/components/ui/loading";
 import Modal from "@/components/ui/Modal";
+import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
+import Table from "@/components/ui/Table";
 import { api, type Distributor, type LocationArea } from "@/config/api";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -16,7 +20,6 @@ import {
   Eye,
   Plus,
   RefreshCw,
-  Search,
   Store,
   Trash2,
   Truck,
@@ -52,10 +55,10 @@ export default function DistributorsPage() {
     (state) => state.distributors,
   );
 
-  const [productCounts, setProductCounts] = useState<Record<string, number>>(
-    {},
-  );
-  const [productCountsLoading, setProductCountsLoading] = useState(true);
+  const [productCountSnapshot, setProductCountSnapshot] = useState<{
+    queryKey: string;
+    counts: Record<string, number | null>;
+  }>({ queryKey: "", counts: {} });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingDistributor, setEditingDistributor] =
@@ -71,6 +74,18 @@ export default function DistributorsPage() {
   const [districts, setDistricts] = useState<LocationArea[]>([]);
   const [upazilas, setUpazilas] = useState<LocationArea[]>([]);
   const itemsPerPage = 10;
+  const distributorQueryKey = distributors
+    .map((distributor) => distributor.id)
+    .sort()
+    .join("|");
+  const productCounts =
+    productCountSnapshot.queryKey === distributorQueryKey
+      ? productCountSnapshot.counts
+      : {};
+  const productCountsLoading =
+    loading ||
+    (distributors.length > 0 &&
+      productCountSnapshot.queryKey !== distributorQueryKey);
 
   useEffect(() => {
     api
@@ -80,30 +95,28 @@ export default function DistributorsPage() {
   }, []);
 
   useEffect(() => {
-    if (!form.divisionId) {
-      setDistricts([]);
-      return;
-    }
+    if (!form.divisionId) return;
     let active = true;
     api
       .getDistricts(form.divisionId)
       .then((data) => active && setDistricts(data))
-      .catch(() => toast.error("Failed to load districts"));
+      .catch(() => {
+        if (active) toast.error("Failed to load districts");
+      });
     return () => {
       active = false;
     };
   }, [form.divisionId]);
 
   useEffect(() => {
-    if (!form.districtId) {
-      setUpazilas([]);
-      return;
-    }
+    if (!form.districtId) return;
     let active = true;
     api
       .getUpazilas(form.districtId)
       .then((data) => active && setUpazilas(data))
-      .catch(() => toast.error("Failed to load upazilas"));
+      .catch(() => {
+        if (active) toast.error("Failed to load upazilas");
+      });
     return () => {
       active = false;
     };
@@ -114,26 +127,13 @@ export default function DistributorsPage() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (loading) {
-      setProductCountsLoading(true);
-      return;
-    }
-
-    if (distributors.length === 0) {
-      setProductCounts({});
-      setProductCountsLoading(false);
-      return;
-    }
-
+    if (loading || distributors.length === 0) return;
     let active = true;
-    setProductCounts({});
-    setProductCountsLoading(true);
 
     const loadProductCounts = async () => {
       const results = await Promise.allSettled(
         distributors.map(async (distributor) => ({
           distributorId: distributor.id,
-          distributorName: distributor.name,
           count: (await api.getDistributorProductsPage(distributor.id, 1, 1))
             .pagination.total,
         })),
@@ -141,11 +141,13 @@ export default function DistributorsPage() {
 
       if (!active) return;
 
-      const counts: Record<string, number> = {};
-      results.forEach((result) => {
+      const counts: Record<string, number | null> = {};
+      results.forEach((result, index) => {
+        const distributor = distributors[index];
         if (result.status === "fulfilled") {
           counts[result.value.distributorId] = result.value.count;
         } else {
+          counts[distributor.id] = null;
           toast.error(
             result.reason instanceof Error
               ? result.reason.message
@@ -154,8 +156,10 @@ export default function DistributorsPage() {
         }
       });
 
-      setProductCounts(counts);
-      setProductCountsLoading(false);
+      setProductCountSnapshot({
+        queryKey: distributorQueryKey,
+        counts,
+      });
     };
 
     void loadProductCounts();
@@ -163,7 +167,7 @@ export default function DistributorsPage() {
     return () => {
       active = false;
     };
-  }, [distributors, loading]);
+  }, [distributors, distributorQueryKey, loading]);
 
   const filteredDistributors = distributors.filter((distributor) =>
     `${distributor.name} ${formatAddress(distributor)}`
@@ -171,33 +175,28 @@ export default function DistributorsPage() {
       .includes(searchTerm.toLowerCase()),
   );
 
-  useEffect(() => {
-    const totalPages = Math.max(
-      1,
-      Math.ceil(filteredDistributors.length / itemsPerPage),
-    );
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, filteredDistributors.length]);
-
   const totalPages = Math.max(
     1,
     Math.ceil(filteredDistributors.length / itemsPerPage),
   );
+  const effectivePage = Math.min(currentPage, totalPages);
   const paginatedDistributors = filteredDistributors.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
+    (effectivePage - 1) * itemsPerPage,
+    effectivePage * itemsPerPage,
   );
 
   const handleOpenCreateModal = () => {
     setEditingDistributor(null);
     setForm(emptyForm);
+    setDistricts([]);
+    setUpazilas([]);
     setIsModalOpen(true);
   };
 
   const handleOpenEditModal = (distributor: DistributorRecord) => {
     setEditingDistributor(distributor);
+    setDistricts([]);
+    setUpazilas([]);
     setForm({
       name: distributor.name,
       fullAddress: distributor.fullAddress ?? "",
@@ -280,16 +279,7 @@ export default function DistributorsPage() {
   };
 
   if (loading && distributors.length === 0) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-blue-500 border-t-transparent" />
-          <p className="text-sm font-medium text-gray-500">
-            Loading distributors…
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading message="Loading distributors…" />;
   }
 
   return (
@@ -309,22 +299,17 @@ export default function DistributorsPage() {
           </div>
 
           <div className="flex w-full min-w-0 flex-col gap-2 md:max-w-xl md:flex-row md:items-center">
-            <label className="relative block flex-1">
-              <Search
-                size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
-              <input
-                value={searchTerm}
-                onChange={(event) => {
-                  setSearchTerm(event.target.value);
-                  setCurrentPage(1);
-                }}
-                type="text"
-                placeholder="Search distributor"
-                className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-4 md:focus:ring-4 md:focus:ring-blue-50"
-              />
-            </label>
+            <SearchInput
+              label="Search distributors"
+              placeholder="Search distributor"
+              value={searchTerm}
+              onChange={(value) => {
+                setSearchTerm(value);
+                setCurrentPage(1);
+              }}
+              containerClassName="relative block min-w-0 flex-1"
+              inputClassName="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 md:rounded-xl md:py-2.5 md:pl-10 md:pr-10 md:focus:ring-4 md:focus:ring-blue-50"
+            />
 
             <div className="grid grid-cols-2 gap-2 md:contents">
               <button
@@ -368,7 +353,7 @@ export default function DistributorsPage() {
         ) : (
           <>
             {/* Desktop table – unchanged */}
-            <div className="hidden overflow-x-auto md:block">
+            <Table view="desktop">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -443,134 +428,88 @@ export default function DistributorsPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Table>
 
             {/* Mobile list – redesigned */}
-            <ul className="divide-y divide-gray-100 md:hidden">
-              {paginatedDistributors.map((distributor) => (
-                <li
-                  key={distributor.id}
-                  className="min-w-0 px-3 py-3 active:bg-gray-50"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold uppercase text-blue-600">
-                      {distributor.name?.charAt(0) || "D"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">
-                        {distributor.name}
-                      </p>
-                      <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                        {formatAddress(distributor) || "No address"}
-                      </p>
+            <Table view="mobile">
+              <ul className="divide-y divide-gray-100">
+                {paginatedDistributors.map((distributor) => (
+                  <li
+                    key={distributor.id}
+                    className="min-w-0 px-3 py-3 active:bg-gray-50"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-xs font-bold uppercase text-blue-600">
+                        {distributor.name?.charAt(0) || "D"}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {distributor.name}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                          {formatAddress(distributor) || "No address"}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-gray-600">
+                        {productCountsLoading
+                          ? "…"
+                          : (productCounts[distributor.id] ?? "—")}
+                      </span>
                     </div>
-                    <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-gray-600">
-                      {productCountsLoading
-                        ? "…"
-                        : (productCounts[distributor.id] ?? "—")}
-                    </span>
-                  </div>
 
-                  <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
-                    <span className="text-[10px] uppercase tracking-wide text-gray-400">
-                      Actions
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <Link
-                        href={`/dashboard/distributors/${distributor.id}`}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition-colors active:scale-95"
-                        aria-label={`View ${distributor.name}`}
-                      >
-                        <Eye size={14} />
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditModal(distributor)}
-                        aria-label={`Edit ${distributor.name}`}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors active:scale-95"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDeleteModal(distributor)}
-                        disabled={
-                          isDeleting &&
-                          deletingDistributor?.id === distributor.id
-                        }
-                        aria-label={`Delete ${distributor.name}`}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 transition-colors active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                    <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
+                      <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                        Actions
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/dashboard/distributors/${distributor.id}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 transition-colors active:scale-95"
+                          aria-label={`View ${distributor.name}`}
+                        >
+                          <Eye size={14} />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(distributor)}
+                          aria-label={`Edit ${distributor.name}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600 transition-colors active:scale-95"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDeleteModal(distributor)}
+                          disabled={
+                            isDeleting &&
+                            deletingDistributor?.id === distributor.id
+                          }
+                          aria-label={`Delete ${distributor.name}`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600 transition-colors active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            </Table>
           </>
         )}
 
-        {/* Pagination – compact on mobile */}
-        {filteredDistributors.length > 0 && (
-          <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/60 px-3 py-3 sm:px-6 sm:py-4">
-            <p className="text-[11px] font-medium tabular-nums text-gray-500 sm:text-xs">
-              <span className="hidden sm:inline">
-                Showing{" "}
-                <span className="font-semibold text-gray-700">
-                  {(currentPage - 1) * itemsPerPage + 1}–
-                  {Math.min(
-                    currentPage * itemsPerPage,
-                    filteredDistributors.length,
-                  )}
-                </span>{" "}
-                of{" "}
-                <span className="font-semibold text-gray-700">
-                  {filteredDistributors.length}
-                </span>{" "}
-                distributors
-              </span>
-              <span className="sm:hidden">
-                {(currentPage - 1) * itemsPerPage + 1}–
-                {Math.min(
-                  currentPage * itemsPerPage,
-                  filteredDistributors.length,
-                )}{" "}
-                of {filteredDistributors.length}
-              </span>
-            </p>
-
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setCurrentPage((previous) => Math.max(1, previous - 1))
-                }
-                disabled={currentPage === 1}
-                className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:px-3 md:h-8"
-              >
-                Previous
-              </button>
-
-              <span className="min-w-[60px] text-center text-xs font-medium tabular-nums text-gray-500 sm:min-w-20">
-                {currentPage}/{totalPages}
-              </span>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setCurrentPage((previous) =>
-                    Math.min(totalPages, previous + 1),
-                  )
-                }
-                disabled={currentPage === totalPages}
-                className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-gray-600 transition-all hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:px-3 md:h-8"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          pagination={{
+            page: effectivePage,
+            limit: itemsPerPage,
+            total: filteredDistributors.length,
+            pages: totalPages,
+          }}
+          currentPage={effectivePage}
+          loading={loading}
+          recordLabel="distributors"
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* ─── Create / Edit Modal ─────────────────────────────────── */}
@@ -628,14 +567,16 @@ export default function DistributorsPage() {
             </label>
             <select
               value={form.divisionId}
-              onChange={(event) =>
+              onChange={(event) => {
+                setDistricts([]);
+                setUpazilas([]);
                 setForm((previous) => ({
                   ...previous,
                   divisionId: event.target.value,
                   districtId: "",
                   upazilaId: "",
-                }))
-              }
+                }));
+              }}
               className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50 disabled:text-gray-400"
               disabled={isSubmitting}
             >
@@ -654,13 +595,14 @@ export default function DistributorsPage() {
             </label>
             <select
               value={form.districtId}
-              onChange={(event) =>
+              onChange={(event) => {
+                setUpazilas([]);
                 setForm((previous) => ({
                   ...previous,
                   districtId: event.target.value,
                   upazilaId: "",
-                }))
-              }
+                }));
+              }}
               className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all focus:border-blue-300 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50 disabled:text-gray-400"
               disabled={isSubmitting || !form.divisionId}
             >

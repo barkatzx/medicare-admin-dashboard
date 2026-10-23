@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { api } from "@/config/api";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import {
   Shield,
   User,
-  Globe,
   Phone,
   MapPin,
-  Clock,
   Edit,
   Eye,
   EyeOff,
@@ -23,7 +26,6 @@ import {
   Save,
   Star,
   RefreshCw,
-  Settings,
   ChevronRight,
   Lock,
   Fingerprint,
@@ -34,13 +36,27 @@ import {
   Tablet,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { parseDeviceInfo, type DeviceInfo } from "@/components/utils/deviceInfo";
+import { parseDeviceInfo } from "@/components/utils/deviceInfo";
 import type { UserAddress, UserProfile } from "@/config/api/user/user.types";
+import { getApiErrorMessage } from "@/config/api/client";
+import { useRouter } from "next/navigation";
+
+const subscribeToNothing = () => () => {};
+const getServerDeviceSnapshot = () => "";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
-  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
+  const userAgent = useSyncExternalStore(
+    subscribeToNothing,
+    () => navigator.userAgent,
+    getServerDeviceSnapshot,
+  );
+  const deviceInfo = useMemo(
+    () => (userAgent ? parseDeviceInfo(userAgent) : null),
+    [userAgent],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -67,43 +83,10 @@ export default function SettingsPage() {
     isDefault: false,
   });
 
-  useEffect(() => {
-    setDeviceInfo(parseDeviceInfo(navigator.userAgent));
-  }, []);
-
-  useEffect(() => {
-    checkAuthAndFetchData();
-  }, []);
-
-  const checkAuthAndFetchData = async () => {
-    const token =
-      localStorage.getItem("adminToken") || localStorage.getItem("token");
-    if (!token) {
-      setError("No authentication token found. Please login again.");
-      setLoading(false);
-      return;
-    }
-    await fetchAllData();
-  };
-
-  const fetchAllData = async () => {
+  const fetchProfile = useCallback(async (signal?: AbortSignal) => {
     try {
-      setLoading(true);
-      setError(null);
-      await fetchProfile();
-      await fetchAddresses();
-    } catch (error: any) {
-      console.error("Failed to fetch data:", error);
-      setError(error?.message || "Failed to load data");
-      toast.error("Failed to load profile data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchProfile = async () => {
-    try {
-      const data = await api.getProfile();
+      const data = await api.getProfile(signal);
+      if (signal?.aborted) return;
       if (data) {
         setProfile(data);
         setEditForm({
@@ -112,20 +95,91 @@ export default function SettingsPage() {
           phone_number: data.phone_number || "",
         });
       }
-    } catch (error: any) {
-      console.error("Failed to fetch profile:", error);
+    } catch (error: unknown) {
+      if (!signal?.aborted) {
+        console.error("Failed to fetch profile:", error);
+      }
       throw error;
     }
-  };
+  }, []);
 
-  const fetchAddresses = async () => {
+  const fetchAddresses = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data = await api.getAddresses();
+      const data = await api.getAddresses(signal);
+      if (signal?.aborted) return;
       setAddresses(Array.isArray(data) ? data : []);
-    } catch (error) {
+    } catch (error: unknown) {
+      if (signal?.aborted) return;
       console.error("Failed to fetch addresses:", error);
       setAddresses([]);
+      toast.error(getApiErrorMessage(error, "Failed to load addresses"));
     }
+  }, []);
+
+  const fetchAllData = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        await Promise.all([fetchProfile(signal), fetchAddresses(signal)]);
+        if (!signal?.aborted) setError(null);
+      } catch (error: unknown) {
+        if (signal?.aborted) return;
+        console.error("Failed to fetch data:", error);
+        setError(getApiErrorMessage(error, "Failed to load data"));
+        toast.error("Failed to load profile data");
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [fetchAddresses, fetchProfile],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void Promise.allSettled([
+      api.getProfile(controller.signal),
+      api.getAddresses(controller.signal),
+    ]).then(([profileResult, addressesResult]) => {
+      if (controller.signal.aborted) return;
+
+      if (profileResult.status === "fulfilled") {
+        const data = profileResult.value;
+        setProfile(data);
+        setEditForm({
+          name: data.name || "",
+          pharmacy_name: data.pharmacy_name || "",
+          phone_number: data.phone_number || "",
+        });
+        setError(null);
+      } else {
+        const message = getApiErrorMessage(
+          profileResult.reason,
+          "Failed to load profile data",
+        );
+        setError(message);
+        toast.error(message);
+      }
+
+      if (addressesResult.status === "fulfilled") {
+        setAddresses(addressesResult.value);
+      } else {
+        setAddresses([]);
+        toast.error(
+          getApiErrorMessage(
+            addressesResult.reason,
+            "Failed to load addresses",
+          ),
+        );
+      }
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false);
+    });
+    return () => controller.abort();
+  }, []);
+
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    void fetchAllData();
   };
 
   const handleUpdateProfile = async () => {
@@ -134,8 +188,8 @@ export default function SettingsPage() {
       toast.success("Profile updated successfully");
       setIsEditing(false);
       await fetchProfile();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to update profile");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Failed to update profile"));
     }
   };
 
@@ -166,8 +220,8 @@ export default function SettingsPage() {
       });
       setIsPasswordModalOpen(false);
       setShowPassword(false);
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to change password");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Failed to change password"));
     }
   };
 
@@ -196,8 +250,8 @@ export default function SettingsPage() {
       });
       await fetchAddresses();
       await fetchProfile();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to save address");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Failed to save address"));
     }
   };
 
@@ -208,8 +262,8 @@ export default function SettingsPage() {
         toast.success("Address deleted successfully");
         await fetchAddresses();
         await fetchProfile();
-      } catch (error: any) {
-        toast.error(error?.message || "Failed to delete address");
+      } catch (error: unknown) {
+        toast.error(getApiErrorMessage(error, "Failed to delete address"));
       }
     }
   };
@@ -220,8 +274,8 @@ export default function SettingsPage() {
       toast.success("Default address updated");
       await fetchAddresses();
       await fetchProfile();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to set default address");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Failed to set default address"));
     }
   };
 
@@ -248,13 +302,13 @@ export default function SettingsPage() {
             Please try again or sign in again
           </p>
           <div className="flex justify-center gap-3">
-            <Button onClick={fetchAllData} className="gap-2">
+            <Button onClick={handleRetry} className="gap-2">
               <RefreshCw size={15} />
               Retry
             </Button>
             <Button
               variant="secondary"
-              onClick={() => (window.location.href = "/login")}
+              onClick={() => router.push("/login")}
             >
               Go to Login
             </Button>

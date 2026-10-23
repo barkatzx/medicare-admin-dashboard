@@ -1,13 +1,17 @@
 // src/store/slices/featuredSlice.ts
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { api, Product } from "@/config/api";
+import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
+import { api } from "@/config/api";
+import type { Product } from "@/config/api";
 import type { ProductPagination } from "@/config/api";
+import { getApiErrorMessage } from "@/config/api/client";
 import toast from "react-hot-toast";
 
 interface FeaturedState {
   featuredProducts: Product[];
   pagination: ProductPagination;
   loading: boolean;
+  activeFetchRequestId: string | null;
+  activeMutationRequestIds: string[];
   error: string | null;
 }
 
@@ -20,20 +24,21 @@ const initialState: FeaturedState = {
     hasPrevPage: false,
   },
   loading: false,
+  activeFetchRequestId: null,
+  activeMutationRequestIds: [],
   error: null,
 };
 
 // Fetch featured products
 export const fetchFeaturedProducts = createAsyncThunk(
   "featured/fetchAll",
-  async (page: number | undefined, { rejectWithValue }) => {
+  async (page: number | undefined, { rejectWithValue, signal }) => {
     try {
-      const response = await api.getFeaturedProducts(page ?? 1);
+      const response = await api.getFeaturedProducts(page ?? 1, signal);
       return response;
-    } catch (error: any) {
-      console.error("Fetch featured products error:", error);
+    } catch (error: unknown) {
       return rejectWithValue(
-        error.message || "Failed to fetch featured products",
+        getApiErrorMessage(error, "Failed to fetch featured products"),
       );
     }
   },
@@ -52,10 +57,9 @@ export const updateFeaturedStatus = createAsyncThunk(
         featured,
       );
       return { productId, featured, product: response };
-    } catch (error: any) {
-      console.error("Update featured status error:", error);
+    } catch (error: unknown) {
       return rejectWithValue(
-        error.message || "Failed to update featured status",
+        getApiErrorMessage(error, "Failed to update featured status"),
       );
     }
   },
@@ -69,7 +73,10 @@ const featuredSlice = createSlice({
       state.error = null;
     },
     // Optimistic update for adding/removing
-    optimisticUpdate: (state, action) => {
+    optimisticUpdate: (
+      state,
+      action: PayloadAction<{ product: Product; featured: boolean }>,
+    ) => {
       const { product, featured } = action.payload;
       if (featured) {
         if (!state.featuredProducts.find((p) => p.id === product.id)) {
@@ -85,32 +92,40 @@ const featuredSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch featured products
-      .addCase(fetchFeaturedProducts.pending, (state) => {
+      .addCase(fetchFeaturedProducts.pending, (state, action) => {
         state.loading = true;
         state.error = null;
+        state.activeFetchRequestId = action.meta.requestId;
       })
       .addCase(fetchFeaturedProducts.fulfilled, (state, action) => {
-        state.loading = false;
+        if (state.activeFetchRequestId !== action.meta.requestId) return;
+        state.activeFetchRequestId = null;
+        state.loading = state.activeMutationRequestIds.length > 0;
         state.featuredProducts = action.payload.products;
         state.pagination = action.payload.pagination;
-        if (action.payload.products.length === 0) {
-          console.log("No featured products found");
-        }
       })
       .addCase(fetchFeaturedProducts.rejected, (state, action) => {
-        state.loading = false;
+        if (state.activeFetchRequestId !== action.meta.requestId) return;
+        state.activeFetchRequestId = null;
+        state.loading = state.activeMutationRequestIds.length > 0;
+        if (action.meta.aborted) return;
         state.error =
           (action.payload as string) || "Failed to fetch featured products";
-        console.error("Featured fetch rejected:", state.error);
-        // Don't show toast here to avoid spamming
       })
 
       // Update featured status
-      .addCase(updateFeaturedStatus.pending, (state) => {
+      .addCase(updateFeaturedStatus.pending, (state, action) => {
+        state.activeMutationRequestIds.push(action.meta.requestId);
         state.loading = true;
       })
       .addCase(updateFeaturedStatus.fulfilled, (state, action) => {
-        state.loading = false;
+        state.activeMutationRequestIds =
+          state.activeMutationRequestIds.filter(
+            (requestId) => requestId !== action.meta.requestId,
+          );
+        state.loading =
+          state.activeFetchRequestId !== null ||
+          state.activeMutationRequestIds.length > 0;
         if (action.payload.featured) {
           // Add to featured products
           if (
@@ -130,7 +145,13 @@ const featuredSlice = createSlice({
         }
       })
       .addCase(updateFeaturedStatus.rejected, (state, action) => {
-        state.loading = false;
+        state.activeMutationRequestIds =
+          state.activeMutationRequestIds.filter(
+            (requestId) => requestId !== action.meta.requestId,
+          );
+        state.loading =
+          state.activeFetchRequestId !== null ||
+          state.activeMutationRequestIds.length > 0;
         const errorMsg =
           (action.payload as string) || "Failed to update featured status";
         state.error = errorMsg;

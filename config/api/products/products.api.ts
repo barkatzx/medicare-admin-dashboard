@@ -1,4 +1,4 @@
-import { apiClient, API_BASE_URL } from "../client";
+import { apiClient } from "../client";
 import type { Product, ProductPage, ProductPagination } from "./products.types";
 
 export async function getAllProducts(
@@ -6,7 +6,11 @@ export async function getAllProducts(
   limit: number = 20,
   search?: string,
   categoryId?: string,
-): Promise<{ products: Product[]; pagination: any }> {
+  signal?: AbortSignal,
+): Promise<{
+  products: Product[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+}> {
   let url: string;
 
   // Use dedicated search endpoint when search term is provided
@@ -18,7 +22,7 @@ export async function getAllProducts(
     if (categoryId) url += `&categoryId=${categoryId}`;
   }
 
-  const result = await apiClient.request<unknown>(url);
+  const result = await apiClient.request<unknown>(url, { signal });
 
   const data =
     result && typeof result === "object" && "data" in result
@@ -49,9 +53,9 @@ export async function getAllProducts(
             : products.length,
         pages:
           ("totalPages" in pagination
-            ? pagination.totalPages
+            ? (pagination.totalPages as number)
             : "pages" in pagination
-              ? pagination.pages
+              ? (pagination.pages as number)
               : undefined) ??
           Math.ceil(
             ((("total" in pagination
@@ -82,8 +86,11 @@ export async function getAllProducts(
   };
 }
 
-export async function getProductById(id: string): Promise<Product> {
-  return apiClient.request<Product>(`/products/${id}`);
+export async function getProductById(
+  id: string,
+  signal?: AbortSignal,
+): Promise<Product> {
+  return apiClient.request<Product>(`/products/${id}`, { signal });
 }
 
 export async function createProduct(productData: Partial<Product>): Promise<Product> {
@@ -112,18 +119,20 @@ export async function deleteProduct(productId: string): Promise<void> {
 export async function getLowStockProducts(
   page: number = 1,
   limit: number = 20,
+  signal?: AbortSignal,
 ): Promise<ProductPage> {
   const endpoint = `/products/admin/low-stock?page=${page}&limit=${limit}`;
-  const response = await apiClient.request<unknown>(endpoint);
+  const response = await apiClient.request<unknown>(endpoint, { signal });
   return normalizeProductPage(response, page, endpoint);
 }
 
 export async function getOutOfStockProducts(
   page: number = 1,
   limit: number = 20,
+  signal?: AbortSignal,
 ): Promise<ProductPage> {
   const endpoint = `/products/admin/out-of-stock?page=${page}&limit=${limit}`;
-  const response = await apiClient.request<unknown>(endpoint);
+  const response = await apiClient.request<unknown>(endpoint, { signal });
   return normalizeProductPage(response, page, endpoint);
 }
 
@@ -191,9 +200,15 @@ function normalizeProductPage(
   throw new Error(`Invalid product response from ${endpoint} for page ${page}`);
 }
 
-export async function getFeaturedProducts(page: number = 1): Promise<ProductPage> {
+export async function getFeaturedProducts(
+  page: number = 1,
+  signal?: AbortSignal,
+): Promise<ProductPage> {
   try {
-    const response = await apiClient.request(`/products/featured?page=${page}`);
+    const response = await apiClient.request(
+      `/products/featured?page=${page}`,
+      { signal },
+    );
     return normalizeProductPage(response, page, "featured products");
   } catch (error) {
     console.error("Error in getFeaturedProducts:", error);
@@ -211,9 +226,15 @@ export async function updateProductFeaturedStatus(
   });
 }
 
-export async function getTrendingProducts(page: number = 1): Promise<ProductPage> {
+export async function getTrendingProducts(
+  page: number = 1,
+  signal?: AbortSignal,
+): Promise<ProductPage> {
   try {
-    const response = await apiClient.request(`/products/trending?page=${page}`);
+    const response = await apiClient.request(
+      `/products/trending?page=${page}`,
+      { signal },
+    );
     return normalizeProductPage(response, page, "trending products");
   } catch (error) {
     console.error("Error in getTrendingProducts:", error);
@@ -235,31 +256,17 @@ export async function updateProductTrendingStatus(
 export async function setDefaultProductImage(
   productId: string,
   imageId: string,
-): Promise<any> {
-  const token = apiClient.getToken();
-
-  const response = await fetch(
-    `${API_BASE_URL}/products/${productId}/images/${imageId}/default`,
-    {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    },
+): Promise<unknown> {
+  return apiClient.request(
+    `/products/${productId}/images/${imageId}/default`,
+    { method: "PATCH" },
   );
-
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(
-      result.message || result.error || "Failed to set default image",
-    );
-  }
-
-  return result;
 }
 
-export async function addProductImages(productId: string, images: File[]): Promise<any> {
+export async function addProductImages(
+  productId: string,
+  images: File[],
+): Promise<unknown> {
   const formData = new FormData();
 
   // Backend expects 'images' as the field name for multiple file uploads
@@ -267,158 +274,50 @@ export async function addProductImages(productId: string, images: File[]): Promi
     formData.append("images", image); // Use 'images', not 'files'
   });
 
-  const token = apiClient.getToken();
-  const response = await fetch(
-    `${API_BASE_URL}/products/${productId}/images`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    },
-  );
-
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(
-      result.message || result.error || "Failed to upload images",
-    );
-  }
-
-  return result.data;
+  return apiClient.request(`/products/${productId}/images`, {
+    method: "POST",
+    body: formData,
+  });
 }
 
 export async function createProductWithImages(formData: FormData): Promise<Product> {
-  const token = apiClient.getToken();
-
-  // Make sure the form data uses 'images' field for files
-  // The formData should already have 'images' field when created
-
-  const response = await fetch(`${API_BASE_URL}/products`, {
+  return apiClient.request<Product>("/products", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
     body: formData,
   });
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      result.message || result.error || "Failed to create product",
-    );
-  }
-
-  if (result && result.success === true) {
-    return result.data;
-  }
-  return result;
 }
 
 export async function deleteProductImage(productId: string, imageId: string): Promise<void> {
-  const token = apiClient.getToken();
-  const response = await fetch(
-    `${API_BASE_URL}/products/${productId}/images/${imageId}`,
-    {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  );
-
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(
-      result.message || result.error || "Failed to delete image",
-    );
-  }
-
-  return result;
+  await apiClient.request(`/products/${productId}/images/${imageId}`, {
+    method: "DELETE",
+  });
 }
 
 export async function incrementProductStock(
   productId: string,
   stock: number,
 ): Promise<Product> {
-  const response = await fetch(
-    `${API_BASE_URL}/products/${productId}/stock`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiClient.getToken()}`,
-      },
-      body: JSON.stringify({ operation: "increment", stock }),
-    },
-  );
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || "Failed to increment stock");
-  }
-
-  // Handle response structure { success: true, data: ... }
-  if (result && result.success === true) {
-    return result.data;
-  }
-  return result;
+  return apiClient.request<Product>(`/products/${productId}/stock`, {
+    method: "PATCH",
+    body: JSON.stringify({ operation: "increment", stock }),
+  });
 }
 
 export async function decrementProductStock(
   productId: string,
   stock: number,
 ): Promise<Product> {
-  const response = await fetch(
-    `${API_BASE_URL}/products/${productId}/stock`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiClient.getToken()}`,
-      },
-      body: JSON.stringify({ operation: "decrement", stock }),
-    },
-  );
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || "Failed to decrement stock");
-  }
-
-  if (result && result.success === true) {
-    return result.data;
-  }
-  return result;
+  return apiClient.request<Product>(`/products/${productId}/stock`, {
+    method: "PATCH",
+    body: JSON.stringify({ operation: "decrement", stock }),
+  });
 }
 
 export async function updateProductStock(productId: string, stock: number): Promise<Product> {
-  const response = await fetch(
-    `${API_BASE_URL}/products/${productId}/stock`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiClient.getToken()}`,
-      },
-      body: JSON.stringify({ stock }),
-    },
-  );
-
-  const result = await response.json();
-
-  if (!response.ok) {
-    throw new Error(result.message || "Failed to update stock");
-  }
-
-  if (result && result.success === true) {
-    return result.data;
-  }
-  return result;
+  return apiClient.request<Product>(`/products/${productId}/stock`, {
+    method: "PATCH",
+    body: JSON.stringify({ stock }),
+  });
 }
 
 export async function getProductCountsByCategory(): Promise<Record<string, number>> {

@@ -8,9 +8,10 @@ import toast from "react-hot-toast";
 interface ProductState {
   products: Product[];
   topProducts: TopProduct[];
-  loading: boolean;
+  fetchingProducts: boolean;
   topProductsLoading: boolean;
   error: string | null;
+  activeFetchRequestId: string | null;
   pagination: {
     page: number;
     limit: number;
@@ -27,9 +28,10 @@ interface ProductState {
 const initialState: ProductState = {
   products: [],
   topProducts: [],
-  loading: false,
+  fetchingProducts: false,
   topProductsLoading: false,
   error: null,
+  activeFetchRequestId: null,
   pagination: {
     page: 1,
     limit: 20,
@@ -41,25 +43,34 @@ const initialState: ProductState = {
 
 export const fetchProducts = createAsyncThunk(
   "products/fetchAll",
-  async ({
-    page,
-    limit,
-    search,
-    categoryId,
-  }: {
-    page: number;
-    limit: number;
-    search?: string;
-    categoryId?: string;
-  }) => {
-    const response = await api.getAllProducts(page, limit, search, categoryId);
+  async (
+    {
+      page,
+      limit,
+      search,
+      categoryId,
+    }: {
+      page: number;
+      limit: number;
+      search?: string;
+      categoryId?: string;
+    },
+    { signal },
+  ) => {
+    const response = await api.getAllProducts(
+      page,
+      limit,
+      search,
+      categoryId,
+      signal,
+    );
     return response;
   },
 );
 export const fetchProductById = createAsyncThunk(
   "products/fetchById",
-  async (id: string) => {
-    const response = await api.getProductById(id);
+  async (id: string, { signal }) => {
+    const response = await api.getProductById(id, signal);
     return response;
   },
 );
@@ -108,8 +119,10 @@ export const updateProductStock = createAsyncThunk(
         response = await api.updateProductStock(id, stock);
       }
       return response;
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Failed to update stock");
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to update stock",
+      );
     }
   },
 );
@@ -131,8 +144,12 @@ export const setDefaultProductImage = createAsyncThunk(
     try {
       const response = await api.setDefaultProductImage(productId, imageId);
       return { productId, imageId, response };
-    } catch (error: any) {
-      return rejectWithValue(error.message || "Failed to set default image");
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error
+          ? error.message
+          : "Failed to set default image",
+      );
     }
   },
 );
@@ -179,9 +196,11 @@ export const fetchInventoryStats = createAsyncThunk(
       );
 
       return { lowStockCount, outOfStockCount, totalValue };
-    } catch (error: any) {
+    } catch (error) {
       return rejectWithValue(
-        error.message || "Failed to fetch inventory stats",
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch inventory stats",
       );
     }
   },
@@ -195,17 +214,23 @@ const productSlice = createSlice({
     builder
       // Fetch Products
       // Fetch Products
-      .addCase(fetchProducts.pending, (state) => {
-        state.loading = true;
+      .addCase(fetchProducts.pending, (state, action) => {
+        state.fetchingProducts = true;
+        state.activeFetchRequestId = action.meta.requestId;
         state.error = null;
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
-        state.loading = false;
+        if (state.activeFetchRequestId !== action.meta.requestId) return;
+        state.fetchingProducts = false;
+        state.activeFetchRequestId = null;
         state.products = action.payload.products;
         state.pagination = action.payload.pagination;
       })
       .addCase(fetchProducts.rejected, (state, action) => {
-        state.loading = false;
+        if (state.activeFetchRequestId !== action.meta.requestId) return;
+        state.fetchingProducts = false;
+        state.activeFetchRequestId = null;
+        if (action.meta.aborted) return;
         state.error = action.error.message || "Failed to fetch products";
         toast.error("Failed to load products");
       })
@@ -219,89 +244,31 @@ const productSlice = createSlice({
         }
       })
       // Create Product
-      .addCase(createProduct.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(createProduct.fulfilled, (state, action) => {
-        state.loading = false;
-        state.products.push(action.payload);
-        toast.success("Product created successfully");
-      })
-      .addCase(createProduct.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(action.error.message || "Failed to create product");
-      })
       // Update Product
-      .addCase(updateProduct.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(updateProduct.fulfilled, (state, action) => {
-        state.loading = false;
         const index = state.products.findIndex(
           (p) => p.id === action.payload.id,
         );
         if (index !== -1) {
           state.products[index] = action.payload;
         }
-        toast.success("Product updated successfully");
-      })
-      .addCase(updateProduct.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(action.error.message || "Failed to update product");
       })
       // Delete Product
-      .addCase(deleteProduct.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(deleteProduct.fulfilled, (state, action) => {
-        state.loading = false;
         state.products = state.products.filter((p) => p.id !== action.payload);
-        toast.success("Product deleted successfully");
-      })
-      .addCase(deleteProduct.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(action.error.message || "Failed to delete product");
       })
       // Update Product Stock
-      .addCase(updateProductStock.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(updateProductStock.fulfilled, (state, action) => {
-        state.loading = false;
         const index = state.products.findIndex(
           (p) => p.id === action.payload.id,
         );
         if (index !== -1) {
           state.products[index] = action.payload;
         }
-        toast.success("Stock updated successfully");
-      })
-      .addCase(updateProductStock.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(action.error.message || "Failed to update stock");
       })
       // Upload Product Images
-      .addCase(uploadProductImages.fulfilled, (state, action) => {
-        state.loading = false;
-        const index = state.products.findIndex(
-          (p) => p.id === action.payload.productId,
-        );
-        if (index !== -1) {
-          // Refresh the product to get updated images with isDefault flag
-          // You might need to fetch the product again
-          toast.success("Images uploaded successfully");
-        }
-      })
       // Set Default Product Image
-      // In productSlice.ts extraReducers
-
-      .addCase(setDefaultProductImage.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(setDefaultProductImage.fulfilled, (state, action) => {
-        state.loading = false;
-
-        // Find the product
         const productIndex = state.products.findIndex(
           (p) => p.id === action.payload.productId,
         );
@@ -321,20 +288,9 @@ const productSlice = createSlice({
           state.products[productIndex].primaryImageId = action.payload.imageId;
         }
 
-        toast.success("Default image updated successfully");
-      })
-      .addCase(setDefaultProductImage.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(
-          (action.payload as string) || "Failed to set default image",
-        );
       })
       // Delete Product Image
-      .addCase(deleteProductImage.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(deleteProductImage.fulfilled, (state, action) => {
-        state.loading = false;
         const index = state.products.findIndex(
           (p) => p.id === action.payload.productId,
         );
@@ -353,25 +309,10 @@ const productSlice = createSlice({
             state.products[index].primaryImageId = newPrimary?.id || undefined;
           }
         }
-        toast.success("Image deleted successfully");
       })
-      .addCase(deleteProductImage.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(action.error.message || "Failed to delete image");
-      })
-
       // Create Product With Images
-      .addCase(createProductWithImages.pending, (state) => {
-        state.loading = true;
-      })
       .addCase(createProductWithImages.fulfilled, (state, action) => {
-        state.loading = false;
         state.products.push(action.payload);
-        toast.success("Product created with images successfully");
-      })
-      .addCase(createProductWithImages.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(action.error.message || "Failed to create product");
       })
       // Fetch Top Products
       .addCase(fetchTopProducts.pending, (state) => {

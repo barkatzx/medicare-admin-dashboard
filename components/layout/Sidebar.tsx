@@ -36,7 +36,12 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 /* ----------------------------- Types & data ----------------------------- */
 
@@ -55,6 +60,27 @@ interface NavLinkItem {
 }
 
 type GroupKey = "tsr" | "customers" | "inventory" | "orders" | "careers";
+const SIDEBAR_COLLAPSE_EVENT = "sidebar:collapse-change";
+
+function subscribeToCollapsedState(onChange: () => void) {
+  window.addEventListener(SIDEBAR_COLLAPSE_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(SIDEBAR_COLLAPSE_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function getCollapsedSnapshot() {
+  try {
+    return localStorage.getItem("sidebarCollapsed") === "true";
+  } catch (error) {
+    console.warn("Unable to read the saved sidebar preference.", error);
+    return false;
+  }
+}
+
+const getExpandedServerSnapshot = () => false;
 
 const tsrItems: SubItem[] = [
   {
@@ -448,24 +474,42 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
   const { user } = useAppSelector((state) => state.auth);
 
   const sidebarRef = useRef<HTMLElement>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isCollapsed = useSyncExternalStore(
+    subscribeToCollapsedState,
+    getCollapsedSnapshot,
+    getExpandedServerSnapshot,
+  );
   const [isHovered, setIsHovered] = useState(false);
   const [isDesktopViewport, setIsDesktopViewport] = useState(true);
-  const [openGroups, setOpenGroups] = useState<Record<GroupKey, boolean>>(
-    () => ({
+  const [groupState, setGroupState] = useState(() => ({
+    pathname,
+    openGroups: {
       tsr: isGroupActive(pathname, tsrItems),
       customers: isGroupActive(pathname, customerItems),
       inventory: isGroupActive(pathname, inventoryItems),
       orders: isGroupActive(pathname, orderItems),
       careers: isGroupActive(pathname, careerItems),
-    }),
-  );
+    },
+  }));
+  const openGroups =
+    groupState.pathname === pathname
+      ? groupState.openGroups
+      : groups.reduce(
+          (next, group) => {
+            if (isGroupActive(pathname, group.items)) {
+              next[group.key] = true;
+            }
+            return next;
+          },
+          { ...groupState.openGroups },
+        );
 
-  const getPendingOrders = useCallback(countPendingOrders, []);
-  const getPendingCustomers = useCallback(countPendingCustomers, []);
-  const pendingOrdersCount = usePolledCount(getPendingOrders, "ordersUpdated");
+  const pendingOrdersCount = usePolledCount(
+    countPendingOrders,
+    "ordersUpdated",
+  );
   const pendingCustomersCount = usePolledCount(
-    getPendingCustomers,
+    countPendingCustomers,
     "usersUpdated",
   );
 
@@ -515,37 +559,21 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     };
   }, [isMobileOpen, isDesktopViewport, onMobileClose]);
 
-  // Auto-open the group that contains the current route
-  useEffect(() => {
-    setOpenGroups((prev) => {
-      const next = { ...prev };
-      groups.forEach((g) => {
-        if (isGroupActive(pathname, g.items)) next[g.key] = true;
-      });
-      return next;
-    });
-  }, [pathname]);
-
-  // Restore collapsed state
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("sidebarCollapsed");
-      if (saved !== null) setIsCollapsed(JSON.parse(saved));
-    } catch {}
-  }, []);
-
   const toggleCollapsed = () => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("sidebarCollapsed", JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+    try {
+      localStorage.setItem("sidebarCollapsed", JSON.stringify(!isCollapsed));
+      window.dispatchEvent(new Event(SIDEBAR_COLLAPSE_EVENT));
+    } catch (error) {
+      console.warn("Unable to save the sidebar preference.", error);
+    }
   };
 
-  const toggleGroup = (key: GroupKey) =>
-    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggleGroup = (key: GroupKey) => {
+    setGroupState({
+      pathname,
+      openGroups: { ...openGroups, [key]: !openGroups[key] },
+    });
+  };
 
   const handleLogout = async () => {
     if (isMobileOpen && !isDesktopViewport) onMobileClose();

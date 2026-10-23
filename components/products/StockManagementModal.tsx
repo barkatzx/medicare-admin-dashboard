@@ -4,6 +4,8 @@
 import { useState } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import { updateProductStock } from "@/store/slices/productSlice";
+import type { Product } from "@/config/api/products/products.types";
+import { getApiErrorMessage } from "@/config/api/client";
 import Button from "@/components/ui/Button";
 import { RefreshCw, AlertCircle, Package, X, Minus, Plus } from "lucide-react";
 import toast from "react-hot-toast";
@@ -11,7 +13,7 @@ import toast from "react-hot-toast";
 interface StockManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
-  product: any;
+  product: Product | null;
   onSuccess: () => void;
 }
 
@@ -36,49 +38,38 @@ export default function StockManagementModal({
       return;
     }
 
-    console.log("Updating stock with:", {
-      id: product.id,
-      operation,
-      stock: stockAmount,
-    });
-
     setLoading(true);
     try {
-      let result;
       if (operation === "set") {
-        result = await dispatch(
+        await dispatch(
           updateProductStock({ id: product.id, stock: stockAmount }),
         ).unwrap();
-        console.log("Set stock result:", result);
       } else if (operation === "increment") {
-        result = await dispatch(
+        await dispatch(
           updateProductStock({
             id: product.id,
             operation: "increment",
             stock: stockAmount,
           }),
         ).unwrap();
-        console.log("Increment result:", result);
       } else if (operation === "decrement") {
         if (product.stock - stockAmount < 0) {
           toast.error("Cannot decrement below 0");
           return;
         }
-        result = await dispatch(
+        await dispatch(
           updateProductStock({
             id: product.id,
             operation: "decrement",
             stock: stockAmount,
           }),
         ).unwrap();
-        console.log("Decrement result:", result);
       }
       toast.success("Stock updated successfully");
       onSuccess();
       onClose();
-    } catch (error: any) {
-      console.error("Stock update error details:", error);
-      toast.error(error.message || "Failed to update stock");
+    } catch (error: unknown) {
+      toast.error(getApiErrorMessage(error, "Failed to update stock"));
     } finally {
       setLoading(false);
     }

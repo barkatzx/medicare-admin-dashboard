@@ -36,15 +36,21 @@ const TSR = () => {
   const search = useDebouncedValue(searchTerm.trim());
 
   useEffect(() => {
-    dispatch(
+    let active = true;
+    const request = dispatch(
       fetchUsers({
         role: TSR_PAGE_ROLES,
         limit: PAGE_SIZE,
         ...(search && { search }),
       }),
-    ).finally(() => {
-      setHasLoaded(true);
+    );
+    void request.then(() => {
+      if (active) setHasLoaded(true);
     });
+    return () => {
+      active = false;
+      request.abort();
+    };
   }, [dispatch, search]);
 
   const tsrUsers = users.filter((user) => TSR_PAGE_ROLES.includes(user.role));
@@ -55,10 +61,6 @@ const TSR = () => {
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
   );
-
-  useEffect(() => {
-    setCurrentPage((current) => Math.min(current, Math.max(totalPages, 1)));
-  }, [totalPages]);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -417,20 +419,17 @@ const TSR = () => {
                   {
                     label: "Division",
                     area: userForLocation.division,
-                    id: userForLocation.divisionId,
                   },
                   {
                     label: "District",
                     area: userForLocation.district,
-                    id: userForLocation.districtId,
                   },
                   {
                     label: "Upazila",
                     area: userForLocation.upazila,
-                    id: userForLocation.upazilaId,
                   },
                 ] as const
-              ).map(({ label, area, id }) => (
+              ).map(({ label, area }) => (
                 <section
                   key={label}
                   className="min-w-0 rounded-xl border border-gray-100 p-4"

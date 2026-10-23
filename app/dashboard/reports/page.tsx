@@ -51,24 +51,43 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const loadSummary = useCallback(async () => {
-    setLoading(true);
-    setHasError(false);
-    try {
-      const response = await api.getSalesSummary();
-      setSummary(response);
-    } catch (error) {
-      console.error("Failed to load sales summary:", error);
-      setHasError(true);
-      toast.error("Unable to load sales analytics. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadSummary = useCallback(
+    (signal?: AbortSignal) => api.getSalesSummary(signal),
+    [],
+  );
 
   useEffect(() => {
-    void loadSummary();
+    const controller = new AbortController();
+    loadSummary(controller.signal)
+      .then((response) => {
+        if (controller.signal.aborted) return;
+        setSummary(response);
+        setHasError(false);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        console.error("Failed to load sales summary:", error);
+        setHasError(true);
+        toast.error("Unable to load sales analytics. Please try again.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [loadSummary]);
+
+  const handleRetry = () => {
+    setLoading(true);
+    setHasError(false);
+    loadSummary()
+      .then((response) => setSummary(response))
+      .catch((error: unknown) => {
+        console.error("Failed to load sales summary:", error);
+        setHasError(true);
+        toast.error("Unable to load sales analytics. Please try again.");
+      })
+      .finally(() => setLoading(false));
+  };
 
   if (loading) {
     return <SalesSummarySkeleton />;
@@ -90,7 +109,7 @@ export default function ReportsPage() {
           </p>
           <button
             type="button"
-            onClick={() => void loadSummary()}
+            onClick={handleRetry}
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             <RefreshCw size={15} />

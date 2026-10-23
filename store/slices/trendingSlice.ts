@@ -1,13 +1,17 @@
 // src/store/slices/trendingSlice.ts
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { api, Product } from "@/config/api";
+import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
+import { api } from "@/config/api";
+import type { Product } from "@/config/api";
 import type { ProductPagination } from "@/config/api";
+import { getApiErrorMessage } from "@/config/api/client";
 import toast from "react-hot-toast";
 
 interface TrendingState {
   trendingProducts: Product[];
   pagination: ProductPagination;
   loading: boolean;
+  activeFetchRequestId: string | null;
+  activeMutationRequestIds: string[];
   error: string | null;
 }
 
@@ -20,20 +24,21 @@ const initialState: TrendingState = {
     hasPrevPage: false,
   },
   loading: false,
+  activeFetchRequestId: null,
+  activeMutationRequestIds: [],
   error: null,
 };
 
 // Fetch trending products
 export const fetchTrendingProducts = createAsyncThunk(
   "trending/fetchAll",
-  async (page: number | undefined, { rejectWithValue }) => {
+  async (page: number | undefined, { rejectWithValue, signal }) => {
     try {
-      const response = await api.getTrendingProducts(page ?? 1);
+      const response = await api.getTrendingProducts(page ?? 1, signal);
       return response;
-    } catch (error: any) {
-      console.error("Fetch trending products error:", error);
+    } catch (error: unknown) {
       return rejectWithValue(
-        error.message || "Failed to fetch trending products",
+        getApiErrorMessage(error, "Failed to fetch trending products"),
       );
     }
   },
@@ -52,10 +57,9 @@ export const updateTrendingStatus = createAsyncThunk(
         trending,
       );
       return { productId, trending, product: response };
-    } catch (error: any) {
-      console.error("Update trending status error:", error);
+    } catch (error: unknown) {
       return rejectWithValue(
-        error.message || "Failed to update trending status",
+        getApiErrorMessage(error, "Failed to update trending status"),
       );
     }
   },
@@ -69,7 +73,10 @@ const trendingSlice = createSlice({
       state.error = null;
     },
     // Optimistic update for adding/removing
-    optimisticUpdate: (state, action) => {
+    optimisticUpdate: (
+      state,
+      action: PayloadAction<{ product: Product; trending: boolean }>,
+    ) => {
       const { product, trending } = action.payload;
       if (trending) {
         if (!state.trendingProducts.find((p) => p.id === product.id)) {
@@ -85,32 +92,40 @@ const trendingSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch trending products
-      .addCase(fetchTrendingProducts.pending, (state) => {
+      .addCase(fetchTrendingProducts.pending, (state, action) => {
         state.loading = true;
         state.error = null;
+        state.activeFetchRequestId = action.meta.requestId;
       })
       .addCase(fetchTrendingProducts.fulfilled, (state, action) => {
-        state.loading = false;
+        if (state.activeFetchRequestId !== action.meta.requestId) return;
+        state.activeFetchRequestId = null;
+        state.loading = state.activeMutationRequestIds.length > 0;
         state.trendingProducts = action.payload.products;
         state.pagination = action.payload.pagination;
-        if (action.payload.products.length === 0) {
-          console.log("No trending products found");
-        }
       })
       .addCase(fetchTrendingProducts.rejected, (state, action) => {
-        state.loading = false;
+        if (state.activeFetchRequestId !== action.meta.requestId) return;
+        state.activeFetchRequestId = null;
+        state.loading = state.activeMutationRequestIds.length > 0;
+        if (action.meta.aborted) return;
         state.error =
           (action.payload as string) || "Failed to fetch trending products";
-        console.error("Trending fetch rejected:", state.error);
-        // Don't show toast here to avoid spamming
       })
 
       // Update trending status
-      .addCase(updateTrendingStatus.pending, (state) => {
+      .addCase(updateTrendingStatus.pending, (state, action) => {
+        state.activeMutationRequestIds.push(action.meta.requestId);
         state.loading = true;
       })
       .addCase(updateTrendingStatus.fulfilled, (state, action) => {
-        state.loading = false;
+        state.activeMutationRequestIds =
+          state.activeMutationRequestIds.filter(
+            (requestId) => requestId !== action.meta.requestId,
+          );
+        state.loading =
+          state.activeFetchRequestId !== null ||
+          state.activeMutationRequestIds.length > 0;
         if (action.payload.trending) {
           // Add to trending products
           if (
@@ -130,7 +145,13 @@ const trendingSlice = createSlice({
         }
       })
       .addCase(updateTrendingStatus.rejected, (state, action) => {
-        state.loading = false;
+        state.activeMutationRequestIds =
+          state.activeMutationRequestIds.filter(
+            (requestId) => requestId !== action.meta.requestId,
+          );
+        state.loading =
+          state.activeFetchRequestId !== null ||
+          state.activeMutationRequestIds.length > 0;
         const errorMsg =
           (action.payload as string) || "Failed to update trending status";
         state.error = errorMsg;

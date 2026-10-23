@@ -1,6 +1,7 @@
 "use client";
 
 import { api } from "@/config/api";
+import { getApiErrorMessage } from "@/config/api/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   confirmPayment,
@@ -109,8 +110,8 @@ export default function PendingOrdersPage() {
         }),
       );
       window.dispatchEvent(new Event("ordersUpdated"));
-    } catch {
-      toast.error("Failed to update order status");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to update order status"));
     } finally {
       setUpdatingStatus(null);
     }
@@ -122,8 +123,8 @@ export default function PendingOrdersPage() {
       await dispatch(confirmPayment(orderId)).unwrap();
       toast.success("Payment confirmed successfully");
       window.dispatchEvent(new Event("ordersUpdated"));
-    } catch {
-      toast.error("Failed to confirm payment");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to confirm payment"));
     } finally {
       setConfirmingPayment(null);
     }

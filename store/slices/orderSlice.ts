@@ -11,6 +11,7 @@ interface OrderState {
   error: string | null;
   pagination: OrderPagination | null;
   activeFetchRequestId: string | null;
+  activeMutationRequestIds: string[];
   query: FetchOrdersArgs | null;
 }
 
@@ -37,6 +38,7 @@ const initialState: OrderState = {
   error: null,
   pagination: null,
   activeFetchRequestId: null,
+  activeMutationRequestIds: [],
   query: null,
 };
 
@@ -119,11 +121,16 @@ const orderSlice = createSlice({
         state.error = action.error.message || "Failed to fetch orders";
         toast.error(state.error);
       })
-      .addCase(updateOrderStatus.pending, (state) => {
+      .addCase(updateOrderStatus.pending, (state, action) => {
+        state.activeMutationRequestIds.push(action.meta.requestId);
         state.loading = true;
       })
       .addCase(updateOrderStatus.fulfilled, (state, action) => {
-        state.loading = false;
+        state.activeMutationRequestIds =
+          state.activeMutationRequestIds.filter(
+            (requestId) => requestId !== action.meta.requestId,
+          );
+        state.loading = state.activeMutationRequestIds.length > 0;
         const index = state.orders.findIndex((o) => o.id === action.payload.id);
         if (index !== -1) {
           state.orders[index] = {
@@ -131,17 +138,24 @@ const orderSlice = createSlice({
             ...action.payload,
           };
         }
-        toast.success("Order status updated successfully");
       })
       .addCase(updateOrderStatus.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(action.error.message || "Failed to update order status");
+        state.activeMutationRequestIds =
+          state.activeMutationRequestIds.filter(
+            (requestId) => requestId !== action.meta.requestId,
+          );
+        state.loading = state.activeMutationRequestIds.length > 0;
       })
-      .addCase(confirmPayment.pending, (state) => {
+      .addCase(confirmPayment.pending, (state, action) => {
+        state.activeMutationRequestIds.push(action.meta.requestId);
         state.loading = true;
       })
       .addCase(confirmPayment.fulfilled, (state, action) => {
-        state.loading = false;
+        state.activeMutationRequestIds =
+          state.activeMutationRequestIds.filter(
+            (requestId) => requestId !== action.meta.requestId,
+          );
+        state.loading = state.activeMutationRequestIds.length > 0;
         // Find the order and update its payment status
         const index = state.orders.findIndex(
           (o) => o.id === action.payload.orderId,
@@ -150,11 +164,13 @@ const orderSlice = createSlice({
           state.orders[index].payment.status = "paid";
           state.orders[index].payment.paidAt = new Date().toISOString();
         }
-        toast.success("Payment confirmed successfully");
       })
       .addCase(confirmPayment.rejected, (state, action) => {
-        state.loading = false;
-        toast.error(action.error.message || "Failed to confirm payment");
+        state.activeMutationRequestIds =
+          state.activeMutationRequestIds.filter(
+            (requestId) => requestId !== action.meta.requestId,
+          );
+        state.loading = state.activeMutationRequestIds.length > 0;
       });
   },
 });

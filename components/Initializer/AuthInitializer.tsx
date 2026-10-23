@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { checkAuthStatus } from "@/store/slices/authSlice";
+import {
+  checkAuthStatus,
+  clearCredentials,
+} from "@/store/slices/authSlice";
+import { SESSION_EXPIRED_EVENT } from "@/config/api/client";
 import Spinner from "../ui/Spinner";
+
+const subscribeToMount = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export default function AuthInitializer({
   children,
@@ -12,17 +20,24 @@ export default function AuthInitializer({
 }) {
   const dispatch = useAppDispatch();
   const { isInitialized } = useAppSelector((state) => state.auth);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    subscribeToMount,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
 
   useEffect(() => {
     if (mounted && !isInitialized) {
       dispatch(checkAuthStatus());
     }
   }, [dispatch, isInitialized, mounted]);
+
+  useEffect(() => {
+    const clearExpiredSession = () => dispatch(clearCredentials());
+    window.addEventListener(SESSION_EXPIRED_EVENT, clearExpiredSession);
+    return () =>
+      window.removeEventListener(SESSION_EXPIRED_EVENT, clearExpiredSession);
+  }, [dispatch]);
 
   // Ensure first client render matches server render (spinner)
   if (!mounted || !isInitialized) {

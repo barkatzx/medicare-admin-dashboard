@@ -14,6 +14,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  type TooltipProps,
 } from "recharts";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchSalesData } from "@/store/slices/salesSlice";
@@ -37,20 +38,20 @@ const CustomTooltip = ({
   active,
   payload,
   label,
-}: {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-}) => {
+}: TooltipProps<number, string>) => {
   if (!active || !payload?.length) return null;
+  const displayLabel =
+    typeof label === "string" || typeof label === "number"
+      ? String(label)
+      : "";
   return (
     <div className="min-w-[160px] rounded-lg border border-gray-100 bg-white p-3 shadow-xl md:min-w-[180px] md:rounded-xl md:p-4">
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 md:mb-3 md:text-xs">
-        {label}
+        {displayLabel}
       </p>
-      {payload.map((entry: any) => (
+      {payload.map((entry, index) => (
         <div
-          key={entry.dataKey}
+          key={String(entry.dataKey ?? entry.name ?? index)}
           className="mb-1.5 flex items-center justify-between gap-4 last:mb-0 md:gap-6"
         >
           <div className="flex items-center gap-1.5 md:gap-2">
@@ -129,23 +130,22 @@ const PeriodBtn = ({
 
 export default function SalesChart() {
   const dispatch = useAppDispatch();
-  const { salesData, loading } = useAppSelector((state) => state.sales);
+  const { salesData, loadingByPeriod, errorByPeriod } = useAppSelector(
+    (state) => state.sales,
+  );
 
   const [period, setPeriod] = useState<Period>("weekly");
   const [chartType, setChartType] = useState<ChartType>("area");
 
   useEffect(() => {
-    dispatch(fetchSalesData(period));
+    const request = dispatch(fetchSalesData(period));
+    return () => request.abort();
   }, [dispatch, period]);
 
-  // For daily, API returns a single object — wrap it so the chart always gets an array
-  const chartData: ChartDataItem[] = useMemo(() => {
-    const raw = salesData[period];
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw;
-    // daily: single object
-    return [raw as ChartDataItem];
-  }, [salesData, period]);
+  const chartData: ChartDataItem[] = useMemo(
+    () => salesData[period] ?? [],
+    [salesData, period],
+  );
 
   const totalRevenue = chartData.reduce((s, d) => s + d.sales, 0);
   const totalOrders = chartData.reduce((s, d) => s + d.orders, 0);
@@ -160,7 +160,7 @@ export default function SalesChart() {
     yearly: "This Year",
   }[period];
 
-  const isLoading = loading && !chartData.length;
+  const isLoading = loadingByPeriod[period] && !chartData.length;
 
   return (
     <div className="min-w-0 space-y-4 rounded-xl border border-gray-100 bg-white p-3 md:space-y-8 md:rounded-2xl md:p-6">
@@ -241,6 +241,22 @@ export default function SalesChart() {
         ))}
       </div>
 
+      {errorByPeriod[period] && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"
+        >
+          <span>{errorByPeriod[period]}</span>
+          <button
+            type="button"
+            onClick={() => dispatch(fetchSalesData(period))}
+            className="font-medium underline underline-offset-2"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Chart */}
       <div className="relative">
         {isLoading && (
@@ -254,6 +270,11 @@ export default function SalesChart() {
         )}
 
         <div className="h-[220px] w-full sm:h-[300px] md:h-[340px]">
+          {!isLoading && !chartData.length && !errorByPeriod[period] ? (
+            <div className="flex h-full items-center justify-center text-sm text-gray-500">
+              No sales data available.
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             {chartType === "area" ? (
               <AreaChart
@@ -392,6 +413,7 @@ export default function SalesChart() {
               </ComposedChart>
             )}
           </ResponsiveContainer>
+          )}
         </div>
       </div>
     </div>

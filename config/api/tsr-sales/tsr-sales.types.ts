@@ -61,7 +61,7 @@ export type TSRPerformance = TSR & {
   Partial<Record<`${TsrOrderStatus}Count`, number>> &
   Partial<Record<`${TsrOrderStatus}OrderValue`, number | string>>;
 
-export interface SummaryResponse extends TSRPerformance {}
+export type SummaryResponse = TSRPerformance;
 
 export interface TsrSalesSummaryEntry {
   tsrId: string;
@@ -106,7 +106,7 @@ export interface TsrSalesBestPerformance {
   yearly: TsrSalesBestPerformancePeriod;
 }
 
-export interface TSRDetail extends TSRPerformance {}
+export type TSRDetail = TSRPerformance;
 
 export type TSRDetailResponse =
   | TSRDetail

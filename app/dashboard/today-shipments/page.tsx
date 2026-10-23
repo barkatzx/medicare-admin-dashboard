@@ -147,7 +147,7 @@ function OrderProductsTable({
       ) : (
         <div>
           {distributorGroups.map(
-            ({ distributor, address, products: groupProducts }, groupIndex) => {
+            ({ distributor, address, products: groupProducts }) => {
               const orderedGroupProducts =
                 orderShipmentProductsByCompany(groupProducts);
               const quantityTotal = groupProducts.reduce(
@@ -373,27 +373,48 @@ export default function TodayShipmentsPage() {
   const [hasError, setHasError] = useState(false);
   const [addresses, setAddresses] = useState<Record<string, string>>({});
 
-  const loadOrderedProducts = useCallback(async () => {
-    setLoading(true);
-    setHasError(false);
-    try {
-      setOrderedProducts(await api.getTodayOrderedProducts());
-    } catch (error) {
-      console.error("Failed to load ordered products:", error);
-      setHasError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadOrderedProducts = useCallback(
+    (signal?: AbortSignal) => api.getTodayOrderedProducts(signal),
+    [],
+  );
 
   useEffect(() => {
-    void loadOrderedProducts();
+    const controller = new AbortController();
+    loadOrderedProducts(controller.signal)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setOrderedProducts(data);
+        setHasError(false);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        console.error("Failed to load ordered products:", error);
+        setHasError(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
   }, [loadOrderedProducts]);
 
+  const handleRetry = () => {
+    setLoading(true);
+    setHasError(false);
+    loadOrderedProducts()
+      .then((data) => setOrderedProducts(data))
+      .catch((error: unknown) => {
+        console.error("Failed to load ordered products:", error);
+        setHasError(true);
+      })
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
+    const controller = new AbortController();
     api
-      .getAllDistributor()
+      .getAllDistributor(controller.signal)
       .then((distributors) => {
+        if (controller.signal.aborted) return;
         const map: Record<string, string> = {};
         for (const distributor of distributors) {
           map[distributor.name] = formatDistributorAddress(distributor);
@@ -401,8 +422,10 @@ export default function TodayShipmentsPage() {
         setAddresses(map);
       })
       .catch((error) => {
+        if (controller.signal.aborted) return;
         console.error("Failed to load distributor addresses:", error);
       });
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -459,7 +482,7 @@ export default function TodayShipmentsPage() {
           </p>
           <button
             type="button"
-            onClick={() => void loadOrderedProducts()}
+            onClick={handleRetry}
             className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 md:mt-5 md:px-4 md:py-2.5 md:text-sm"
           >
             <RefreshCw size={14} className="md:size-[15px]" />

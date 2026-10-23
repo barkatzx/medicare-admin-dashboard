@@ -1,6 +1,5 @@
 "use client";
 
-import { RootState } from "@/store/index";
 import {
   fetchTrendingProducts,
   updateTrendingStatus,
@@ -11,38 +10,38 @@ import Table from "@/components/ui/Table";
 import { AlertCircle, Loader2, Package, RefreshCw, Star } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function TrendingProductsPage() {
-  const dispatch = useDispatch();
-  const { trendingProducts, pagination, loading, error } = useSelector(
-    (state: RootState) => state.trending,
+  const dispatch = useAppDispatch();
+  const { trendingProducts, pagination, loading, error } = useAppSelector(
+    (state) => state.trending,
   );
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    dispatch(fetchTrendingProducts(currentPage) as any);
+    const request = dispatch(fetchTrendingProducts(currentPage));
+    return () => request.abort();
   }, [dispatch, currentPage]);
 
   const handleRemoveTrending = async (productId: string) => {
     setUpdatingId(productId);
     try {
-      await dispatch(
-        updateTrendingStatus({ productId, trending: false }) as any,
+      const result = await dispatch(
+        updateTrendingStatus({ productId, trending: false }),
       );
-      toast.success("Product removed from trending");
-    } catch (err) {
-      console.error("Remove trending error:", err);
-      toast.error("Failed to remove from trending");
+      if (updateTrendingStatus.fulfilled.match(result)) {
+        const request = dispatch(fetchTrendingProducts(currentPage));
+        await request;
+      }
     } finally {
       setUpdatingId(null);
     }
   };
 
   const handleRefresh = () => {
-    dispatch(fetchTrendingProducts(currentPage) as any);
+    dispatch(fetchTrendingProducts(currentPage));
   };
 
   if (error && !loading) {
@@ -57,7 +56,7 @@ export default function TrendingProductsPage() {
           </p>
           <p className="mb-5 text-xs text-gray-400">{error}</p>
           <button
-            onClick={() => dispatch(fetchTrendingProducts(currentPage) as any)}
+            onClick={() => dispatch(fetchTrendingProducts(currentPage))}
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-blue-700"
           >
             <RefreshCw size={15} />
@@ -67,13 +66,6 @@ export default function TrendingProductsPage() {
       </div>
     );
   }
-
-  const totalValue = trendingProducts.reduce(
-    (sum, p) => sum + (p.finalPrice || p.price),
-    0,
-  );
-  const totalStock = trendingProducts.reduce((sum, p) => sum + p.stock, 0);
-  const categoryCount = new Set(trendingProducts.map((p) => p.categoryId)).size;
 
   return (
     <div className="min-w-0 space-y-4 md:space-y-6">
@@ -147,7 +139,6 @@ export default function TrendingProductsPage() {
                         product.images?.find((img) => img.isDefault) ||
                         product.images?.[0];
                       const isUpdating = updatingId === product.id;
-                      const isTop = index === 0;
                       const isLow = product.stock <= 20;
 
                       return (

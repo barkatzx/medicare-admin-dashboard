@@ -1,13 +1,71 @@
-import { apiClient } from "../client";
+import { ApiError, apiClient } from "../client";
 import type { Distributor, DistributorInput } from "./distributors.types";
+import type { Product } from "../products/products.types";
 
 const distributorRoutes = ["/dristributors", "/distributors"] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isDistributor(value: unknown): value is Distributor {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string"
+  );
+}
+
+function parseDistributor(value: unknown): Distributor {
+  if (!isDistributor(value)) {
+    throw new Error("Distributor response is missing its id or name.");
+  }
+  return value;
+}
+
+function isProduct(value: unknown): value is Product {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "string" ||
+    !(typeof value.name === "string" || value.name === null) ||
+    typeof value.description !== "string" ||
+    typeof value.price !== "number" ||
+    !(typeof value.discountedPrice === "number" ||
+      value.discountedPrice === null) ||
+    typeof value.discountPercent !== "number" ||
+    typeof value.stock !== "number" ||
+    !(typeof value.distributor === "string" || value.distributor === null) ||
+    !(typeof value.tp === "number" || value.tp === null) ||
+    typeof value.categoryId !== "string" ||
+    typeof value.createdAt !== "string"
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function parseProduct(value: unknown): Product {
+  if (!isProduct(value)) {
+    throw new Error(
+      "Distributor products response contains invalid product data.",
+    );
+  }
+  return value;
+}
+
+function unwrapList(value: unknown, key: string): unknown[] | null {
+  if (Array.isArray(value)) return value;
+  if (!isRecord(value)) return null;
+  const candidate = value[key] ?? value.data;
+  return Array.isArray(candidate) ? candidate : null;
+}
 
 async function requestDistributorRoute(
   method: "GET" | "POST" | "PATCH" | "DELETE",
   path: string,
   body?: Record<string, unknown>,
-): Promise<any> {
+  signal?: AbortSignal,
+): Promise<unknown> {
   let lastError: unknown;
 
   for (const route of distributorRoutes) {
@@ -16,8 +74,12 @@ async function requestDistributorRoute(
       if (body && (method === "POST" || method === "PATCH")) {
         options.body = JSON.stringify(body);
       }
-      return await apiClient.request(`${route}${path}`, options);
+      if (signal) options.signal = signal;
+      return await apiClient.request<unknown>(`${route}${path}`, options);
     } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
       lastError = error;
     }
   }
@@ -27,33 +89,34 @@ async function requestDistributorRoute(
     : new Error("Failed to complete distributor request");
 }
 
-export async function getAllDistributor(): Promise<Distributor[]> {
-  const result = await requestDistributorRoute("GET", "");
-
-  if (result && result.distributors && Array.isArray(result.distributors)) {
-    return result.distributors;
+export async function getAllDistributor(
+  signal?: AbortSignal,
+): Promise<Distributor[]> {
+  const result = await requestDistributorRoute("GET", "", undefined, signal);
+  const list = unwrapList(result, "distributors");
+  if (!list) {
+    throw new Error("Distributor response is missing the distributor list.");
   }
-
-  if (result && result.data && Array.isArray(result.data)) {
-    return result.data;
-  }
-
-  if (Array.isArray(result)) {
-    return result;
-  }
-
-  return [];
+  return list.map(parseDistributor);
 }
 
 export async function getDistributorById(id: string): Promise<Distributor> {
-  return requestDistributorRoute("GET", `/${id}`);
+  const result = await requestDistributorRoute(
+    "GET",
+    `/${encodeURIComponent(id)}`,
+  );
+  const distributor =
+    isRecord(result) && "distributor" in result ? result.distributor : result;
+  return parseDistributor(distributor);
 }
 
 export async function createDistributor(
   name: string,
   details: DistributorInput = {},
 ): Promise<Distributor> {
-  return requestDistributorRoute("POST", "", { name, ...details });
+  return parseDistributor(
+    await requestDistributorRoute("POST", "", { name, ...details }),
+  );
 }
 
 export async function updateDistributor(
@@ -61,15 +124,21 @@ export async function updateDistributor(
   name: string,
   details: DistributorInput = {},
 ): Promise<Distributor> {
-  return requestDistributorRoute("PATCH", `/${id}`, { name, ...details });
+  return parseDistributor(
+    await requestDistributorRoute(
+      "PATCH",
+      `/${encodeURIComponent(id)}`,
+      { name, ...details },
+    ),
+  );
 }
 
 export async function deleteDistributor(id: string): Promise<void> {
-  await requestDistributorRoute("DELETE", `/${id}`);
+  await requestDistributorRoute("DELETE", `/${encodeURIComponent(id)}`);
 }
 
 export interface DistributorProductsPage {
-  products: any[];
+  products: Product[];
   pagination: {
     page: number;
     limit: number;
@@ -85,17 +154,17 @@ export async function getDistributorProductsPage(
 ): Promise<DistributorProductsPage> {
   const result = await requestDistributorRoute(
     "GET",
-    `/${id}/products?page=${page}&limit=${limit}`,
+    `/${encodeURIComponent(id)}/products?page=${page}&limit=${limit}`,
   );
 
-  const products: any[] = Array.isArray(result)
-    ? result
-    : Array.isArray(result?.products)
-      ? result.products
-      : Array.isArray(result?.data)
-        ? result.data
-        : [];
-  const p = result?.pagination;
+  const productList = unwrapList(result, "products");
+  if (!productList) {
+    throw new Error("Distributor products response is missing the product list.");
+  }
+  const products = productList.map(parseProduct);
+  const p = isRecord(result) && isRecord(result.pagination)
+    ? result.pagination
+    : undefined;
   const total = typeof p?.total === "number" ? p.total : products.length;
   const pageLimit = typeof p?.limit === "number" ? p.limit : limit;
 
@@ -113,20 +182,14 @@ export async function getDistributorProductsPage(
   };
 }
 
-export async function getDistributorProducts(id: string): Promise<any[]> {
-  const result = await requestDistributorRoute("GET", `/${id}/products`);
-
-  if (result && result.products && Array.isArray(result.products)) {
-    return result.products;
+export async function getDistributorProducts(id: string): Promise<Product[]> {
+  const result = await requestDistributorRoute(
+    "GET",
+    `/${encodeURIComponent(id)}/products`,
+  );
+  const products = unwrapList(result, "products");
+  if (!products) {
+    throw new Error("Distributor products response is missing the product list.");
   }
-
-  if (result && result.data && Array.isArray(result.data)) {
-    return result.data;
-  }
-
-  if (Array.isArray(result)) {
-    return result;
-  }
-
-  return [];
+  return products.map(parseProduct);
 }

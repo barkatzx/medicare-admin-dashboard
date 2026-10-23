@@ -9,7 +9,9 @@ import Modal from "@/components/ui/Modal";
 import Pagination from "@/components/ui/Pagination";
 import SearchInput from "@/components/ui/SearchInput";
 import Table from "@/components/ui/Table";
+import { useDebouncedValue } from "@/components/utils/useDebouncedValue";
 import { api, Product } from "@/config/api";
+import { getApiErrorMessage } from "@/config/api/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchCategories } from "@/store/slices/categorySlice";
 import {
@@ -42,7 +44,7 @@ import toast from "react-hot-toast";
 
 export default function ProductsPage() {
   const dispatch = useAppDispatch();
-  const { products, loading, pagination, inventoryStats } = useAppSelector(
+  const { products, fetchingProducts, pagination, inventoryStats } = useAppSelector(
     (state) => state.products,
   );
   const { categories } = useAppSelector((state) => state.categories);
@@ -58,6 +60,9 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
+  const isLoadingProducts =
+    fetchingProducts || searchTerm !== debouncedSearchTerm;
   const [filterCategory, setFilterCategory] = useState("all");
   const [showLowStock, setShowLowStock] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -79,39 +84,58 @@ export default function ProductsPage() {
         outOfStock: outOfStock.pagination.total,
       });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to load stock counts",
-      );
+      toast.error(getApiErrorMessage(error, "Failed to load stock counts"));
     }
   }, []);
 
   const loadProducts = useCallback(() => {
+    if (searchTerm !== debouncedSearchTerm) return;
     dispatch(
       fetchProducts({
         page: currentPage,
         limit: 20,
-        search: searchTerm || undefined,
+        search: debouncedSearchTerm.trim() || undefined,
         categoryId: filterCategory !== "all" ? filterCategory : undefined,
       }),
     );
-    dispatch(fetchInventoryStats() as any);
+  }, [
+    dispatch,
+    currentPage,
+    searchTerm,
+    debouncedSearchTerm,
+    filterCategory,
+  ]);
+
+  const refreshInventoryOverview = useCallback(() => {
+    dispatch(fetchInventoryStats());
     void loadStockCounts();
-  }, [dispatch, currentPage, searchTerm, filterCategory, loadStockCounts]);
+  }, [dispatch, loadStockCounts]);
 
   useEffect(() => {
     dispatch(fetchCategories());
-    dispatch(fetchTrendingProducts() as any);
-    dispatch(fetchFeaturedProducts() as any);
-    dispatch(fetchInventoryStats() as any);
-  }, [dispatch]);
+    dispatch(fetchTrendingProducts());
+    dispatch(fetchFeaturedProducts());
+    void Promise.resolve().then(refreshInventoryOverview);
+  }, [dispatch, refreshInventoryOverview]);
 
   useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterCategory]);
+    if (searchTerm !== debouncedSearchTerm) return;
+    const request = dispatch(
+      fetchProducts({
+        page: currentPage,
+        limit: 20,
+        search: debouncedSearchTerm.trim() || undefined,
+        categoryId: filterCategory !== "all" ? filterCategory : undefined,
+      }),
+    );
+    return () => request.abort();
+  }, [
+    dispatch,
+    currentPage,
+    debouncedSearchTerm,
+    filterCategory,
+    searchTerm,
+  ]);
 
   const handleDelete = async () => {
     if (!productToDelete) return;
@@ -120,8 +144,9 @@ export default function ProductsPage() {
       await dispatch(deleteProduct(productToDelete)).unwrap();
       toast.success("Product deleted successfully");
       loadProducts();
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to delete product");
+      refreshInventoryOverview();
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to delete product"));
     } finally {
       setIsDeleting(false);
       setProductToDelete(null);
@@ -134,7 +159,7 @@ export default function ProductsPage() {
         updateFeaturedStatus({
           productId: product.id,
           featured: !product.featured,
-        }) as any,
+        }),
       );
       loadProducts();
     } catch (error) {
@@ -148,7 +173,7 @@ export default function ProductsPage() {
         updateTrendingStatus({
           productId: product.id,
           trending: !product.trending,
-        }) as any,
+        }),
       );
       loadProducts();
     } catch (error) {
@@ -353,7 +378,7 @@ export default function ProductsPage() {
     },
   ];
 
-  if (loading && products.length === 0 && currentPage === 1) {
+  if (isLoadingProducts && products.length === 0 && currentPage === 1) {
     return <Loading message="Loading products..." />;
   }
 
@@ -396,14 +421,17 @@ export default function ProductsPage() {
               setSearchTerm(value);
               setCurrentPage(1);
             }}
-            loading={loading}
+            loading={isLoadingProducts}
             containerClassName="relative min-w-0 flex-1"
             inputClassName="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:pl-12 md:pr-10 md:py-3 md:rounded-xl"
           />
 
           <select
             value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+            onChange={(e) => {
+              setCurrentPage(1);
+              setFilterCategory(e.target.value);
+            }}
             className="w-2/5 min-w-0 rounded-lg border border-gray-200 bg-white px-2 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:w-auto md:rounded-xl md:px-3 md:py-3"
           >
             <option value="all">All Categories</option>
@@ -446,7 +474,9 @@ export default function ProductsPage() {
           <Search size={14} className="text-blue-600" />
           <span>
             Results for:{" "}
-            <strong className="text-gray-700">"{searchTerm}"</strong>
+            <strong className="text-gray-700">
+              &quot;{searchTerm}&quot;
+            </strong>
           </span>
           <button
             onClick={() => {
@@ -478,20 +508,20 @@ export default function ProductsPage() {
             onClick={loadProducts}
             type="button"
             aria-label="Refresh products"
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 transition-colors hover:bg-gray-100 md:h-10 md:w-10 ${loading ? "animate-spin" : ""}`}
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 transition-colors hover:bg-gray-100 md:h-10 md:w-10 ${isLoadingProducts ? "animate-spin" : ""}`}
           >
             <RefreshCw size={16} className="text-gray-500" />
           </button>
         </div>
 
         <div className="relative">
-          {loading && (
+          {isLoadingProducts && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
               <Loading message="Loading..." variant="section" />
             </div>
           )}
 
-          {visibleProducts.length === 0 && !loading ? (
+          {visibleProducts.length === 0 && !isLoadingProducts ? (
             <div className="flex flex-col items-center justify-center py-12 md:py-16">
               <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 md:mb-4 md:h-20 md:w-20">
                 <Package size={28} className="text-gray-400 md:size-8" />
@@ -542,6 +572,7 @@ export default function ProductsPage() {
                                 {imageUrl ? (
                                   <img
                                     src={imageUrl}
+                                    alt={product.name ?? "Product"}
                                     className="w-full h-full object-cover rounded-full border border-gray-200"
                                     onError={(e) => {
                                       (
@@ -614,71 +645,71 @@ export default function ProductsPage() {
               {/* Mobile list – redesigned */}
               <Table view="mobile">
                 <ul className="divide-y divide-gray-100">
-                {visibleProducts.map((product) => {
-                  const imageUrl = getProductImage(product);
-                  const stockTone =
-                    product.stock > 20
-                      ? "bg-emerald-50 text-emerald-600"
-                      : product.stock > 0
-                        ? "bg-amber-50 text-amber-600"
-                        : "bg-red-50 text-red-600";
-                  return (
-                    <li
-                      key={product.id}
-                      className="min-w-0 px-3 py-3 active:bg-gray-50"
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50">
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={product.name || "Product"}
-                              className="h-full w-full object-cover"
-                              onError={(event) => {
-                                event.currentTarget.style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <Package size={18} className="text-gray-400" />
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-gray-900">
-                            {product.name}
-                          </p>
-                          <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                            {product.category?.name ?? "N/A"}
-                            {product.distributor
-                              ? ` · ${product.distributor}`
-                              : ""}
-                          </p>
-                          <div className="mt-0.5 flex items-center gap-2">
-                            <span className="text-xs font-semibold tabular-nums text-gray-900">
-                              {formatSalesCurrency(product.price)}
-                            </span>
-                            {product.tp != null && (
-                              <span className="text-[11px] tabular-nums text-gray-400">
-                                TP {formatSalesCurrency(product.tp)}
-                              </span>
+                  {visibleProducts.map((product) => {
+                    const imageUrl = getProductImage(product);
+                    const stockTone =
+                      product.stock > 20
+                        ? "bg-emerald-50 text-emerald-600"
+                        : product.stock > 0
+                          ? "bg-amber-50 text-amber-600"
+                          : "bg-red-50 text-red-600";
+                    return (
+                      <li
+                        key={product.id}
+                        className="min-w-0 px-3 py-3 active:bg-gray-50"
+                      >
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50">
+                            {imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={product.name || "Product"}
+                                className="h-full w-full object-cover"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <Package size={18} className="text-gray-400" />
                             )}
                           </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-gray-900">
+                              {product.name}
+                            </p>
+                            <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                              {product.category?.name ?? "N/A"}
+                              {product.distributor
+                                ? ` · ${product.distributor}`
+                                : ""}
+                            </p>
+                            <div className="mt-0.5 flex items-center gap-2">
+                              <span className="text-xs font-semibold tabular-nums text-gray-900">
+                                {formatSalesCurrency(product.price)}
+                              </span>
+                              {product.tp != null && (
+                                <span className="text-[11px] tabular-nums text-gray-400">
+                                  TP {formatSalesCurrency(product.tp)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${stockTone}`}
+                          >
+                            {product.stock}
+                          </span>
                         </div>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${stockTone}`}
-                        >
-                          {product.stock}
-                        </span>
-                      </div>
 
-                      <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
-                        <span className="text-[10px] uppercase tracking-wide text-gray-400">
-                          Actions
-                        </span>
-                        {renderMobileActions(product)}
-                      </div>
-                    </li>
-                  );
-                })}
+                        <div className="mt-2.5 flex items-center justify-between border-t border-gray-50 pt-2.5">
+                          <span className="text-[10px] uppercase tracking-wide text-gray-400">
+                            Actions
+                          </span>
+                          {renderMobileActions(product)}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               </Table>
             </>
@@ -690,9 +721,8 @@ export default function ProductsPage() {
           <Pagination
             pagination={pagination}
             currentPage={currentPage}
-            loading={loading}
+            loading={isLoadingProducts}
             recordLabel="products"
-            activeClassName="border border-blue-600 bg-blue-600 text-white"
             onPageChange={setCurrentPage}
           />
         )}
@@ -705,11 +735,13 @@ export default function ProductsPage() {
         title={editingProduct ? "Edit Product" : "Add New Product"}
       >
         <ProductForm
+          key={isModalOpen ? editingProduct?.id ?? "new-product" : "closed"}
           product={editingProduct}
           categories={categories}
           onSuccess={() => {
             setIsModalOpen(false);
             loadProducts();
+            refreshInventoryOverview();
           }}
           onCancel={() => setIsModalOpen(false)}
         />
@@ -719,7 +751,10 @@ export default function ProductsPage() {
         isOpen={isStockModalOpen}
         onClose={() => setIsStockModalOpen(false)}
         product={selectedProduct}
-        onSuccess={loadProducts}
+        onSuccess={() => {
+          loadProducts();
+          refreshInventoryOverview();
+        }}
       />
 
       <Modal

@@ -281,14 +281,11 @@ export default function TSRSummary() {
 
   useEffect(() => {
     let cancelled = false;
-    setTsrsLoading(true);
-    setBestPerformanceLoading(true);
-    setTsrsError(null);
-    setBestPerformanceError(null);
+    const controller = new AbortController();
 
     void Promise.allSettled([
-      api.getTsrSalesTsrs(),
-      api.getTsrSalesBestPerformance(),
+      api.getTsrSalesTsrs(controller.signal),
+      api.getTsrSalesBestPerformance(controller.signal),
     ]).then(([tsrResult, performanceResult]) => {
       if (cancelled) return;
 
@@ -325,24 +322,18 @@ export default function TSRSummary() {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [refreshKey]);
 
   useEffect(() => {
-    if (!selectedTsrId) {
-      setSummary(null);
-      setSummaryError(null);
-      setSummaryLoading(false);
-      return;
-    }
+    if (!selectedTsrId) return;
 
     let cancelled = false;
-    setSummary(null);
-    setSummaryLoading(true);
-    setSummaryError(null);
+    const controller = new AbortController();
 
     void api
-      .getTsrSalesAllSummary(selectedTsrId)
+      .getTsrSalesAllSummary(selectedTsrId, controller.signal)
       .then((data) => {
         if (!cancelled) setSummary(data);
       })
@@ -360,8 +351,26 @@ export default function TSRSummary() {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [selectedTsrId, refreshKey]);
+
+  const handleTsrSelect = (tsrId: string) => {
+    setSelectedTsrId(tsrId);
+    setSummary(null);
+    setSummaryError(null);
+    setSummaryLoading(Boolean(tsrId));
+  };
+
+  const handleRefresh = () => {
+    setTsrsLoading(true);
+    setBestPerformanceLoading(true);
+    setTsrsError(null);
+    setBestPerformanceError(null);
+    setSummaryLoading(Boolean(selectedTsrId));
+    setSummaryError(null);
+    setRefreshKey((key) => key + 1);
+  };
 
   const selectedTsr = tsrs.find((tsr) => tsr.id === selectedTsrId);
   const filteredTsrs = tsrs.filter((tsr) =>
@@ -444,7 +453,7 @@ export default function TSRSummary() {
                         role="option"
                         aria-selected={tsr.id === selectedTsrId}
                         onClick={() => {
-                          setSelectedTsrId(tsr.id);
+                          handleTsrSelect(tsr.id);
                           setTsrSearch("");
                           setTsrDropdownOpen(false);
                         }}
@@ -469,7 +478,7 @@ export default function TSRSummary() {
           </div>
           <button
             type="button"
-            onClick={() => setRefreshKey((key) => key + 1)}
+            onClick={handleRefresh}
             disabled={loading}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 sm:ml-auto sm:w-auto"
           >
@@ -497,7 +506,7 @@ export default function TSRSummary() {
             <p className="text-sm font-medium text-rose-700">{summaryError}</p>
             <button
               type="button"
-              onClick={() => setRefreshKey((key) => key + 1)}
+              onClick={handleRefresh}
               disabled={loading}
               className="inline-flex min-h-11 items-center justify-center gap-2 self-stretch rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100 disabled:opacity-60 sm:self-auto"
             >

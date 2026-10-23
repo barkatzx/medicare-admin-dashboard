@@ -1,6 +1,9 @@
 "use client";
 
 import { formatSalesCurrency } from "@/components/sales/salesFormatters";
+import Loading from "@/components/ui/loading";
+import Pagination from "@/components/ui/Pagination";
+import Table from "@/components/ui/Table";
 import { api, type Distributor, type Product } from "@/config/api";
 import { ArrowLeft, MapPin, Package, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
@@ -99,16 +102,7 @@ export default function DistributorProductsPage() {
   ].filter(Boolean);
 
   if (loading && !distributor) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-14 w-14 animate-spin rounded-full border-[3px] border-blue-500 border-t-transparent" />
-          <p className="text-sm font-medium text-gray-500">
-            Loading distributor products…
-          </p>
-        </div>
-      </div>
-    );
+    return <Loading message="Loading distributor products…" />;
   }
 
   return (
@@ -189,66 +183,67 @@ export default function DistributorProductsPage() {
             </div>
           </div>
 
-          {/* Mobile list – redesigned */}
-          <ul className="divide-y divide-gray-100 md:hidden">
-            {products.map((product) => {
-              const imageUrl = product.images?.[0]?.url;
-              const categoryName =
-                product.category?.name || product.categoryId || "—";
+          <Table view="mobile">
+            <ul className="divide-y divide-gray-100">
+              {products.map((product) => {
+                const imageUrl = product.images?.[0]?.url;
+                const categoryName =
+                  product.category?.name || product.categoryId || "—";
 
-              return (
-                <li
-                  key={product.id}
-                  className="min-w-0 px-3 py-3 active:bg-gray-50"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={product.name || "Product image"}
-                        className="h-10 w-10 shrink-0 rounded-lg border border-gray-100 object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-300">
-                        <Package size={18} />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-gray-900">
-                        {product.name || "Unnamed product"}
-                      </p>
-                      <p className="mt-0.5 truncate text-[11px] text-gray-500">
-                        {categoryName}
-                      </p>
-                      <div className="mt-0.5 flex items-center gap-2">
-                        <span className="text-xs font-semibold tabular-nums text-gray-900">
-                          {formatMoney(product.price)}
-                        </span>
-                        {product.tp != null && (
-                          <span className="text-[11px] tabular-nums text-gray-400">
-                            TP {formatMoney(product.tp)}
+                return (
+                  <li
+                    key={product.id}
+                    className="min-w-0 px-3 py-3 active:bg-gray-50"
+                  >
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={product.name || "Product image"}
+                          className="h-10 w-10 shrink-0 rounded-lg border border-gray-100 object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-300">
+                          <Package size={18} />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {product.name || "Unnamed product"}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px] text-gray-500">
+                          {categoryName}
+                        </p>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <span className="text-xs font-semibold tabular-nums text-gray-900">
+                            {formatMoney(product.price)}
                           </span>
-                        )}
+                          {product.tp != null && (
+                            <span className="text-[11px] tabular-nums text-gray-400">
+                              TP {formatMoney(product.tp)}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      {product.featured && (
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-pink-50 text-pink-600">
+                          <Star size={11} className="fill-current" />
+                        </span>
+                      )}
+                      {product.trending && (
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                          <TrendingUp size={11} />
+                        </span>
+                      )}
                     </div>
-                    {product.featured && (
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-pink-50 text-pink-600">
-                        <Star size={11} className="fill-current" />
-                      </span>
-                    )}
-                    {product.trending && (
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                        <TrendingUp size={11} />
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </Table>
 
           {/* Desktop table – unchanged */}
-          <div className="hidden overflow-x-auto md:block">
+          <Table view="desktop">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/80 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
@@ -333,37 +328,20 @@ export default function DistributorProductsPage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </Table>
 
-          {/* Pagination – compact on mobile */}
-          <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/60 px-3 py-3 md:px-6 md:py-3">
-            <p className="text-[11px] text-gray-500 md:text-xs">
-              <span className="hidden md:inline">
-                Page {page} of {totalPages} • {totalProducts} products
-              </span>
-              <span className="md:hidden">
-                {page}/{totalPages} • {totalProducts}
-              </span>
-            </p>
-            <div className="flex gap-1.5 md:gap-2">
-              <button
-                type="button"
-                disabled={page <= 1 || loading}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:px-3 md:text-xs"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                disabled={page >= totalPages || loading}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:px-3 md:text-xs"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+          <Pagination
+            pagination={{
+              page,
+              limit: PAGE_SIZE,
+              total: totalProducts,
+              pages: totalPages,
+            }}
+            currentPage={page}
+            loading={loading}
+            recordLabel="products"
+            onPageChange={setPage}
+          />
         </div>
       )}
     </div>

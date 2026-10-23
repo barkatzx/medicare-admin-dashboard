@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { useDebouncedValue } from "@/components/utils/useDebouncedValue";
 
 const PAGE_SIZE = 20;
 const ORDER_STATUSES: Array<TsrOrderStatus | "all"> = [
@@ -161,15 +162,15 @@ export default function TsrSalesDetailPage() {
   const [ordersReload, setOrdersReload] = useState(0);
   const [status, setStatus] = useState<TsrOrderStatus | "all">("all");
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search.trim(), 300);
   const [page, setPage] = useState(1);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    setProfileLoading(true);
-    setProfileError(null);
+    const controller = new AbortController();
     api
-      .getTsrSalesTsr(tsrId)
+      .getTsrSalesTsr(tsrId, controller.signal)
       .then((response) => {
         if (!active) return;
         const data = profileFromResponse(response);
@@ -189,20 +190,20 @@ export default function TsrSalesDetailPage() {
       });
     return () => {
       active = false;
+      controller.abort();
     };
   }, [tsrId, profileReload]);
 
   useEffect(() => {
     let active = true;
-    setOrdersLoading(true);
-    setOrdersError(null);
+    const controller = new AbortController();
     api
       .getTsrSalesOrders(tsrId, {
         page,
         limit: PAGE_SIZE,
         status,
-        search,
-      })
+        search: debouncedSearch,
+      }, controller.signal)
       .then((response) => {
         if (!active) return;
         setOrders(response.orders);
@@ -221,17 +222,22 @@ export default function TsrSalesDetailPage() {
       });
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [tsrId, page, status, search, ordersReload]);
+  }, [tsrId, page, status, debouncedSearch, ordersReload]);
 
-  useEffect(() => {
-    if (!pagination) return;
-    const lastPage = Math.max(1, pagination.totalPages);
-    if (page > lastPage) setPage(lastPage);
-  }, [page, pagination]);
+  const reloadProfile = () => {
+    setProfileLoading(true);
+    setProfileError(null);
+    setProfileReload((current) => current + 1);
+  };
 
   const reloadOrders = useCallback(
-    () => setOrdersReload((current) => current + 1),
+    () => {
+      setOrdersLoading(true);
+      setOrdersError(null);
+      setOrdersReload((current) => current + 1);
+    },
     [],
   );
   const territory = profile ? getTerritory(profile) : {};
@@ -253,7 +259,7 @@ export default function TsrSalesDetailPage() {
       {profileError ? (
         <ErrorPanel
           message={profileError}
-          onRetry={() => setProfileReload((current) => current + 1)}
+          onRetry={reloadProfile}
         />
       ) : profileLoading || !profile || !summary ? (
         <LoadingPanel label="Loading TSR profile…" />
@@ -340,6 +346,8 @@ export default function TsrSalesDetailPage() {
                 type="search"
                 value={search}
                 onChange={(event) => {
+                  setOrdersLoading(true);
+                  setOrdersError(null);
                   setSearch(event.target.value);
                   setPage(1);
                 }}
@@ -356,6 +364,8 @@ export default function TsrSalesDetailPage() {
                 value={status}
                 onChange={(event) => {
                   const value = event.target.value;
+                  setOrdersLoading(true);
+                  setOrdersError(null);
                   setStatus(
                     value === "all" || isTsrOrderStatus(value) ? value : "all",
                   );
@@ -565,7 +575,10 @@ export default function TsrSalesDetailPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                onClick={() => {
+                  setOrdersLoading(true);
+                  setPage(Math.max(1, currentPage - 1));
+                }}
                 disabled={currentPage <= 1}
                 className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0"
               >
@@ -577,7 +590,10 @@ export default function TsrSalesDetailPage() {
               </span>
               <button
                 type="button"
-                onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                onClick={() => {
+                  setOrdersLoading(true);
+                  setPage(Math.min(totalPages, currentPage + 1));
+                }}
                 disabled={currentPage >= totalPages}
                 className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 md:min-h-0"
               >

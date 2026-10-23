@@ -22,34 +22,53 @@ export default function LowStockPage() {
   });
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const loadProducts = useCallback(async (page: number) => {
-    setLoading(true);
-    try {
-      const result = await api.getLowStockProducts(page, PRODUCTS_PER_PAGE);
-      const totalPages = Math.max(1, result.pagination.totalPages);
-      if (page > totalPages) {
-        setCurrentPage(totalPages);
-        return;
-      }
-
-      setProducts(result.products);
-      setPagination(result.pagination);
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to load low-stock products",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loadProducts = useCallback(
+    (page: number, signal: AbortSignal) =>
+      api.getLowStockProducts(page, PRODUCTS_PER_PAGE, signal),
+    [],
+  );
 
   useEffect(() => {
-    void loadProducts(currentPage);
-  }, [currentPage, loadProducts]);
+    const controller = new AbortController();
+    loadProducts(currentPage, controller.signal)
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        const totalPages = Math.max(1, result.pagination.totalPages);
+        if (currentPage > totalPages) {
+          setCurrentPage(totalPages);
+          return;
+        }
+
+        setProducts(result.products);
+        setPagination(result.pagination);
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to load low-stock products",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [currentPage, loadProducts, refreshKey]);
+
+  const handleRefresh = () => {
+    setLoading(true);
+    setRefreshKey((key) => key + 1);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page === currentPage) return;
+    setLoading(true);
+    setCurrentPage(page);
+  };
 
   const getProductImage = (product: Product): string | null => {
     if (product.primaryImageId && product.images?.length) {
@@ -79,7 +98,7 @@ export default function LowStockPage() {
           </div>
           <button
             type="button"
-            onClick={() => void loadProducts(currentPage)}
+            onClick={handleRefresh}
             disabled={loading}
             title="Refresh products"
             aria-label="Refresh low-stock products"
@@ -308,7 +327,7 @@ export default function LowStockPage() {
           currentPage={currentPage}
           loading={loading}
           recordLabel="products"
-          onPageChange={setCurrentPage}
+          onPageChange={handlePageChange}
         />
       </div>
 
@@ -316,7 +335,7 @@ export default function LowStockPage() {
         isOpen={selectedProduct !== null}
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct}
-        onSuccess={() => void loadProducts(currentPage)}
+        onSuccess={handleRefresh}
       />
     </div>
   );

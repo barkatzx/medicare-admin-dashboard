@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { getApiErrorMessage } from "@/config/api/client";
 import { fetchOrders, updateOrderStatus } from "@/store/slices/orderSlice";
 import { Calendar, Package, XCircle } from "lucide-react";
 import Loading from "@/components/ui/loading";
@@ -54,8 +55,8 @@ export default function CancelOrdersPage() {
           search: normalizedSearch || undefined,
         }),
       );
-    } catch {
-      toast.error("Failed to update order status");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to update order status"));
     } finally {
       setUpdatingStatus(null);
     }

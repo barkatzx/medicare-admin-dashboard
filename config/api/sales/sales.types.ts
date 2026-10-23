@@ -38,6 +38,25 @@ export interface SalesGrowthData {
   yearly: number;
 }
 
+export interface SalesBreakdownEntry {
+  totalSales?: number;
+  totalOrders?: number;
+  averageOrderValue?: number;
+  totalItemsSold?: number;
+}
+
+export interface DailySalesResponse extends SalesBreakdownEntry {
+  date?: string;
+}
+
+export interface WeeklySalesResponse {
+  daily_breakdown?: SalesBreakdownEntry[];
+}
+
+export interface MonthlySalesResponse {
+  daily_breakdown?: SalesBreakdownEntry[];
+}
+
 export interface SalesStatus {
   status: string;
   totalSales: number;

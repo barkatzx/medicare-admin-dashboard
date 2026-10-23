@@ -1,6 +1,5 @@
 "use client";
 
-import { RootState } from "@/store/index";
 import {
   fetchFeaturedProducts,
   updateFeaturedStatus,
@@ -11,38 +10,38 @@ import Table from "@/components/ui/Table";
 import { AlertCircle, Heart, Loader2, Package, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function FeaturedProductsPage() {
-  const dispatch = useDispatch();
-  const { featuredProducts, pagination, loading, error } = useSelector(
-    (state: RootState) => state.featured,
+  const dispatch = useAppDispatch();
+  const { featuredProducts, pagination, loading, error } = useAppSelector(
+    (state) => state.featured,
   );
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    dispatch(fetchFeaturedProducts(currentPage) as any);
+    const request = dispatch(fetchFeaturedProducts(currentPage));
+    return () => request.abort();
   }, [dispatch, currentPage]);
 
   const handleRemoveFeatured = async (productId: string) => {
     setUpdatingId(productId);
     try {
-      await dispatch(
-        updateFeaturedStatus({ productId, featured: false }) as any,
+      const result = await dispatch(
+        updateFeaturedStatus({ productId, featured: false }),
       );
-      toast.success("Product removed from featured");
-    } catch (err) {
-      console.error("Remove featured error:", err);
-      toast.error("Failed to remove from featured");
+      if (updateFeaturedStatus.fulfilled.match(result)) {
+        const request = dispatch(fetchFeaturedProducts(currentPage));
+        await request;
+      }
     } finally {
       setUpdatingId(null);
     }
   };
 
   const handleRefresh = () => {
-    dispatch(fetchFeaturedProducts(currentPage) as any);
+    dispatch(fetchFeaturedProducts(currentPage));
   };
 
   if (error && !loading) {
@@ -57,7 +56,7 @@ export default function FeaturedProductsPage() {
           </p>
           <p className="mb-5 text-xs text-gray-400">{error}</p>
           <button
-            onClick={() => dispatch(fetchFeaturedProducts(currentPage) as any)}
+            onClick={() => dispatch(fetchFeaturedProducts(currentPage))}
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-blue-700"
           >
             <RefreshCw size={15} />
@@ -67,13 +66,6 @@ export default function FeaturedProductsPage() {
       </div>
     );
   }
-
-  const totalValue = featuredProducts.reduce(
-    (sum, p) => sum + (p.finalPrice || p.price),
-    0,
-  );
-  const totalStock = featuredProducts.reduce((sum, p) => sum + p.stock, 0);
-  const categoryCount = new Set(featuredProducts.map((p) => p.categoryId)).size;
 
   return (
     <div className="min-w-0 space-y-4 md:space-y-6">
@@ -147,7 +139,6 @@ export default function FeaturedProductsPage() {
                         product.images?.find((img) => img.isDefault) ||
                         product.images?.[0];
                       const isUpdating = updatingId === product.id;
-                      const isTop = index === 0;
                       const isLow = product.stock <= 20;
 
                       return (

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 const statuses: CareerApplicationStatus[] = [
@@ -35,25 +35,38 @@ export default function CareerApplicationDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadKey, setLoadKey] = useState(0);
 
-  const load = useCallback(async () => {
-    try {
-      setLoadError("");
-      const result = await careerApi.getApplication(params.id);
-      setApplication(result);
-      setNotes(result.adminNotes ?? "");
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to load application";
-      setLoadError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id]);
   useEffect(() => {
-    void load();
-  }, [load]);
+    const controller = new AbortController();
+    careerApi
+      .getApplication(params.id, controller.signal)
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        setApplication(result);
+        setNotes(result.adminNotes ?? "");
+        setLoadError("");
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Unable to load application";
+        setLoadError(message);
+        toast.error(message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [params.id, loadKey]);
+
+  const handleRetry = () => {
+    setLoading(true);
+    setLoadError("");
+    setLoadKey((key) => key + 1);
+  };
 
   const updateStatus = async (status: CareerApplicationStatus) => {
     if (!application) return;
@@ -158,7 +171,7 @@ export default function CareerApplicationDetailsPage() {
           {loadError || "Application not found."}
         </p>
         <button
-          onClick={() => void load()}
+          onClick={handleRetry}
           className="text-xs font-semibold text-blue-700 underline md:text-sm"
         >
           Retry

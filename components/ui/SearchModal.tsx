@@ -1,7 +1,7 @@
 // src/components/ui/SearchModal.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Search,
   X,
@@ -14,6 +14,7 @@ import {
   BarChart3,
   Settings,
   HelpCircle,
+  type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
@@ -21,7 +22,7 @@ import { createPortal } from "react-dom";
 interface SearchItem {
   name: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
   category: string;
   keywords: string[];
 }
@@ -92,9 +93,20 @@ interface SearchModalProps {
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const router = useRouter();
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+
+    const lowerQuery = searchQuery.toLowerCase();
+    return menuItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(lowerQuery) ||
+        item.keywords.some((keyword) =>
+          keyword.toLowerCase().includes(lowerQuery),
+        ),
+    );
+  }, [searchQuery]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -110,26 +122,6 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
-
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      setSelectedIndex(-1);
-      return;
-    }
-
-    const lowerQuery = searchQuery.toLowerCase();
-    const results = menuItems.filter(
-      (item) =>
-        item.name.toLowerCase().includes(lowerQuery) ||
-        item.keywords.some((keyword) =>
-          keyword.toLowerCase().includes(lowerQuery),
-        ),
-    );
-
-    setSearchResults(results);
-    setSelectedIndex(results.length > 0 ? 0 : -1);
-  }, [searchQuery]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
@@ -164,7 +156,10 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 type="text"
                 placeholder="Search pages, features, or settings..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSelectedIndex(e.target.value.trim() ? 0 : -1);
+                }}
                 onKeyDown={handleKeyDown}
                 className="w-full pl-10 pr-4 py-3 text-lg bg-transparent focus:outline-none"
                 autoFocus
@@ -213,7 +208,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                 <div className="px-4 py-8 text-center">
                   <Search size={32} className="mx-auto text-gray-300 mb-2" />
                   <p className="text-sm text-gray-500">
-                    No results found for "{searchQuery}"
+                    No results found for &quot;{searchQuery}&quot;
                   </p>
                 </div>
               )

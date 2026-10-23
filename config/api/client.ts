@@ -3,8 +3,26 @@ import type { User } from "./user/user.types";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export { API_BASE_URL };
+export const SESSION_EXPIRED_EVENT = "auth:session-expired";
 
-class ApiError extends Error {
+export function getApiErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message
+  ) {
+    return error.message;
+  }
+  return fallback;
+}
+
+export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
@@ -15,7 +33,10 @@ class ApiError extends Error {
 }
 
 function getResourceName(endpoint: string): string {
-  return endpoint.split("?")[0].split("/").filter(Boolean)[0] || "unknown";
+  const path = /^https?:\/\//i.test(endpoint)
+    ? new URL(endpoint).pathname
+    : endpoint.split("?")[0];
+  return path.split("/").filter(Boolean)[0] || "unknown";
 }
 
 function getErrorMessage(body: unknown, fallback: string): string {
@@ -121,6 +142,7 @@ class APIClient {
     options: RequestInit = {},
     retries = 3,
     backoff = 300,
+    preserveEnvelope = false,
   ): Promise<T> {
     const token = this.getToken();
     const method = (options.method || "GET").toUpperCase();
@@ -146,7 +168,10 @@ class APIClient {
     while (true) {
       let response: Response;
       try {
-        response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const requestUrl = /^https?:\/\//i.test(endpoint)
+          ? endpoint
+          : `${API_BASE_URL}${endpoint}`;
+        response = await fetch(requestUrl, {
           ...options,
           headers,
         });
@@ -155,7 +180,9 @@ class APIClient {
           options.signal?.aborted ||
           (error instanceof Error && error.name === "AbortError");
         if (!canRetry || attempt >= maxRetries || aborted) {
-          console.error("API network request failed.", { method, resource });
+          if (!aborted) {
+            console.error("API network request failed.", { method, resource });
+          }
           throw error;
         }
 
@@ -172,7 +199,7 @@ class APIClient {
       if (response.status === 401) {
         this.clearToken();
         if (typeof window !== "undefined") {
-          window.location.assign("/login");
+          window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
         }
         throw new ApiError("Session expired. Please login again.", 401);
       }
@@ -238,11 +265,19 @@ class APIClient {
         "success" in result &&
         result.success === true
       ) {
+        if (preserveEnvelope) return result as T;
         return ("data" in result ? result.data : null) as T;
       }
 
       return result as T;
     }
+  }
+
+  requestEnvelope<T>(
+    endpoint: string,
+    options: RequestInit = {},
+  ): Promise<T> {
+    return this.request<T>(endpoint, options, 3, 300, true);
   }
 }
 

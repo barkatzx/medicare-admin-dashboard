@@ -1,7 +1,7 @@
 "use client";
 
 import { Download, Share } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -9,35 +9,47 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const dismissedPromptKey = "medicare-install-prompt-dismissed";
+const subscribeToStandalone = (onChange: () => void) => {
+  const mediaQuery = window.matchMedia("(display-mode: standalone)");
+  mediaQuery.addEventListener("change", onChange);
+  window.addEventListener("appinstalled", onChange);
+  return () => {
+    mediaQuery.removeEventListener("change", onChange);
+    window.removeEventListener("appinstalled", onChange);
+  };
+};
+const getStandaloneSnapshot = () =>
+  window.matchMedia("(display-mode: standalone)").matches ||
+  ("standalone" in navigator &&
+    (navigator as Navigator & { standalone?: boolean }).standalone === true);
+const getIosSnapshot = () =>
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const getServerSnapshot = () => false;
 
 export default function InstallApp() {
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const isStandalone = useSyncExternalStore(
+    subscribeToStandalone,
+    getStandaloneSnapshot,
+    getServerSnapshot,
+  );
+  const isIOS = useSyncExternalStore(
+    () => () => {},
+    getIosSnapshot,
+    getServerSnapshot,
+  );
   const [showInstructions, setShowInstructions] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      ("standalone" in navigator &&
-        (navigator as Navigator & { standalone?: boolean }).standalone ===
-          true);
-    const isAppleMobile =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-    setIsStandalone(standalone);
-    setIsIOS(isAppleMobile);
-
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
       if (sessionStorage.getItem(dismissedPromptKey)) return;
       setInstallPrompt(event as BeforeInstallPromptEvent);
     };
     const handleInstalled = () => {
-      setIsStandalone(true);
       setInstallPrompt(null);
     };
 

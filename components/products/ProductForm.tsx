@@ -1,24 +1,27 @@
 // src/app/dashboard/products/ProductForm.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAppDispatch } from "@/store/hooks";
 import {
   updateProduct,
   uploadProductImages,
-  createProductWithImages,
   setDefaultProductImage,
   deleteProductImage,
-  fetchProducts,
+  fetchProductById,
   createProduct,
 } from "@/store/slices/productSlice";
 import { createCategory, fetchCategories } from "@/store/slices/categorySlice";
 import Button from "@/components/ui/Button";
+import { uploadImagesIndividually } from "@/components/products/productImageUpload";
+import { getApiErrorMessage } from "@/config/api/client";
 import {
   api,
+  type Category,
   type Distributor,
   type LocationArea,
   type Product,
+  type ProductImage,
 } from "@/config/api";
 import {
   Upload,
@@ -40,7 +43,7 @@ import toast from "react-hot-toast";
 
 interface ProductFormProps {
   product?: Product | null;
-  categories: any[];
+  categories: Category[];
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -52,11 +55,14 @@ export default function ProductForm({
   onCancel,
 }: ProductFormProps) {
   const dispatch = useAppDispatch();
+  const submissionInProgress = useRef(false);
   const [loading, setLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const [existingImages, setExistingImages] = useState<any[]>(
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
+  const [savedProductId, setSavedProductId] = useState<string | null>(null);
+  const [existingImages, setExistingImages] = useState<ProductImage[]>(
     product?.images || [],
   );
   const [primaryImageId, setPrimaryImageId] = useState<string | null>(
@@ -112,9 +118,7 @@ export default function ProductForm({
       } catch (error) {
         if (active) {
           toast.error(
-            error instanceof Error
-              ? error.message
-              : "Failed to load distributors",
+            getApiErrorMessage(error, "Failed to load distributors"),
           );
         }
       } finally {
@@ -128,59 +132,30 @@ export default function ProductForm({
     };
   }, []);
 
-  useEffect(() => {
-    if (product?.images) {
-      setExistingImages(product.images);
-      setPrimaryImageId(
-        product.primaryImageId || product.images[0]?.id || null,
-      );
-    }
-  }, [product]);
-
   const refreshProduct = async () => {
     if (!product?.id) return;
 
     setRefreshing(true);
     try {
-      const result = await dispatch(
-        fetchProducts({ page: 1, limit: 20 }),
+      const updatedProduct = await dispatch(
+        fetchProductById(product.id),
       ).unwrap();
-
-      // result is { products, pagination }, not an array
-      const updatedProduct = result.products.find(
-        (p: any) => p.id === product.id,
+      setExistingImages(updatedProduct.images || []);
+      const defaultImage = updatedProduct.images?.find(
+        (image) => image.isDefault,
       );
-
-      if (updatedProduct) {
-        setExistingImages(updatedProduct.images || []);
-        const defaultImage = updatedProduct.images?.find(
-          (img: any) => img.isDefault,
-        );
-        setPrimaryImageId(
-          defaultImage?.id || updatedProduct.images?.[0]?.id || null,
-        );
-      }
+      setPrimaryImageId(
+        defaultImage?.id ||
+          updatedProduct.primaryImageId ||
+          updatedProduct.images?.[0]?.id ||
+          null,
+      );
     } catch (error) {
-      console.error("Failed to refresh:", error);
+      toast.error(getApiErrorMessage(error, "Failed to refresh product"));
     } finally {
       setRefreshing(false);
     }
   };
-
-  // Add a refresh button in the UI
-  {
-    product && (
-      <button
-        type="button"
-        onClick={refreshProduct}
-        disabled={refreshing}
-        className="ml-2 p-1 text-gray-500 hover:text-blue-600 transition-colors"
-        title="Refresh images"
-      >
-        <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-      </button>
-    );
-  }
 
   const selectedCategory = categories.find(
     (cat) => cat.id === formData.categoryId,
@@ -197,10 +172,7 @@ export default function ProductForm({
   }, [isCreateDistributorModalOpen, divisions.length]);
 
   useEffect(() => {
-    if (!newDivisionId) {
-      setDistricts([]);
-      return;
-    }
+    if (!newDivisionId) return;
     let active = true;
     api
       .getDistricts(newDivisionId)
@@ -212,10 +184,7 @@ export default function ProductForm({
   }, [newDivisionId]);
 
   useEffect(() => {
-    if (!newDistrictId) {
-      setUpazilas([]);
-      return;
-    }
+    if (!newDistrictId) return;
     let active = true;
     api
       .getUpazilas(newDistrictId)
@@ -261,8 +230,8 @@ export default function ProductForm({
       setIsCreateCategoryModalOpen(false);
       setIsCategoryDropdownOpen(false);
       await dispatch(fetchCategories());
-    } catch (error: any) {
-      toast.error(error?.message || "Failed to create category");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to create category"));
     } finally {
       setCreatingCategory(false);
     }
@@ -308,12 +277,12 @@ export default function ProductForm({
       setNewDivisionId("");
       setNewDistrictId("");
       setNewUpazilaId("");
+      setDistricts([]);
+      setUpazilas([]);
       setIsCreateDistributorModalOpen(false);
       setIsDistributorDropdownOpen(false);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to create distributor",
-      );
+      toast.error(getApiErrorMessage(error, "Failed to create distributor"));
     } finally {
       setCreatingDistributor(false);
     }
@@ -364,11 +333,14 @@ export default function ProductForm({
     });
 
     if (validFiles.length > 0) {
-      setSelectedImages([...selectedImages, ...validFiles]);
+      setSelectedImages((current) => [...current, ...validFiles]);
       validFiles.forEach((file) => {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setImagePreviews((prev) => [...prev, reader.result as string]);
+          const preview = reader.result;
+          if (typeof preview === "string") {
+            setImagePreviews((previews) => [...previews, preview]);
+          }
         };
         reader.readAsDataURL(file);
       });
@@ -376,8 +348,12 @@ export default function ProductForm({
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages(selectedImages.filter((_, i) => i !== index));
-    setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+    if (uploadedImages.includes(selectedImages[index])) {
+      toast.error("This image is already uploaded and cannot be removed here");
+      return;
+    }
+    setSelectedImages((images) => images.filter((_, i) => i !== index));
+    setImagePreviews((previews) => previews.filter((_, i) => i !== index));
   };
 
   // src/app/dashboard/products/ProductForm.tsx - Update the functions
@@ -403,9 +379,8 @@ export default function ProductForm({
 
       // Refresh to ensure consistency
       await refreshProduct();
-    } catch (error: any) {
-      console.error("Delete image error:", error);
-      toast.error(error?.message || "Failed to delete image");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to delete image"));
     } finally {
       setLoading(false);
     }
@@ -442,9 +417,8 @@ export default function ProductForm({
       setTimeout(async () => {
         await refreshProduct();
       }, 500);
-    } catch (error: any) {
-      console.error("Set default image error:", error);
-      toast.error(error?.message || "Failed to set primary image");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to set primary image"));
     } finally {
       setLoading(false);
     }
@@ -453,104 +427,80 @@ export default function ProductForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (submissionInProgress.current || loading || uploadingImages) return;
+
     if (!formData.name || !formData.categoryId || formData.price <= 0) {
       toast.error("Please fill in all required fields");
       return;
     }
 
+    submissionInProgress.current = true;
     setLoading(true);
 
     try {
-      if (product) {
-        // Update existing product
-        const updateData: Partial<Product> = {
-          name: formData.name,
-          description: formData.description,
-          price: formData.price,
-          discountedPrice: formData.discountedPrice,
-          stock: formData.stock,
-          distributorId: formData.distributorId || null,
-          tp: formData.tp,
-          categoryId: formData.categoryId,
-        };
+      const updateData: Partial<Product> = {
+        name: formData.name,
+        description: formData.description,
+        price: formData.price,
+        discountedPrice: formData.discountedPrice,
+        stock: formData.stock,
+        distributorId: formData.distributorId || null,
+        tp: formData.tp,
+        categoryId: formData.categoryId,
+      };
+      if (primaryImageId) updateData.primaryImageId = primaryImageId;
 
-        if (primaryImageId) {
-          updateData.primaryImageId = primaryImageId;
-        }
-
-        await dispatch(
-          updateProduct({ id: product.id, data: updateData }),
-        ).unwrap();
-        toast.success("Product updated successfully");
-
-        // Upload new images if any - uses 'images' field name
-        if (selectedImages.length > 0) {
-          setUploadingImages(true);
-          try {
-            await dispatch(
-              uploadProductImages({
-                productId: product.id,
-                images: selectedImages,
-              }),
-            ).unwrap();
-            toast.success(
-              `${selectedImages.length} image(s) uploaded successfully`,
-            );
-
-            // Refresh to get updated images
-            await dispatch(fetchProducts({ page: 1, limit: 20 })).unwrap();
-            setSelectedImages([]);
-            setImagePreviews([]);
-          } catch (uploadError: any) {
-            console.error("Upload error:", uploadError);
-            toast.error(uploadError.message || "Failed to upload images");
-          } finally {
-            setUploadingImages(false);
-          }
-        }
+      let productId = savedProductId ?? product?.id ?? null;
+      if (productId) {
+        await dispatch(updateProduct({ id: productId, data: updateData })).unwrap();
       } else {
-        // Create product without images first (simpler approach)
-        const productData = {
-          name: formData.name,
-          description: formData.description,
-          price: formData.price,
-          discountedPrice: formData.discountedPrice,
-          stock: formData.stock,
-          distributorId: formData.distributorId || null,
-          tp: formData.tp,
-          categoryId: formData.categoryId,
-        };
-
-        const result = await dispatch(createProduct(productData)).unwrap();
-        toast.success("Product created successfully");
-
-        // Upload images after product creation - uses 'images' field name
-        if (selectedImages.length > 0 && result.id) {
-          setUploadingImages(true);
-          try {
-            await dispatch(
-              uploadProductImages({
-                productId: result.id,
-                images: selectedImages,
-              }),
-            ).unwrap();
-            toast.success(
-              `${selectedImages.length} image(s) uploaded successfully`,
-            );
-          } catch (uploadError: any) {
-            console.error("Upload error:", uploadError);
-            toast.error(uploadError.message || "Failed to upload images");
-          } finally {
-            setUploadingImages(false);
-          }
-        }
+        const result = await dispatch(createProduct(updateData)).unwrap();
+        productId = result.id;
       }
+      setSavedProductId(productId);
+
+      if (selectedImages.length > 0) {
+        setUploadingImages(true);
+        const { uploaded, failures } = await uploadImagesIndividually(
+          productId,
+          selectedImages,
+          uploadedImages,
+          async (id, image) => {
+            await dispatch(
+              uploadProductImages({ productId: id, images: [image] }),
+            ).unwrap();
+          },
+        );
+        setUploadedImages(uploaded);
+
+        if (failures.length > 0) {
+          const details = failures
+            .map(({ file, message }) => `${file.name}: ${message}`)
+            .join("; ");
+          toast.error(
+            `Product saved, but ${failures.length} image upload(s) failed. Retry to upload the remaining images. ${details}`,
+            { duration: 8000 },
+          );
+          return;
+        }
+
+        setSelectedImages([]);
+        setImagePreviews([]);
+        setUploadedImages([]);
+      }
+
+      toast.success(
+        product || savedProductId
+          ? "Product updated successfully"
+          : "Product created successfully",
+      );
       onSuccess();
-    } catch (error: any) {
-      console.error("Save error:", error);
-      toast.error(error?.message || "Failed to save product");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Failed to save product"));
     } finally {
+      setUploadingImages(false);
       setLoading(false);
+      submissionInProgress.current = false;
     }
   };
 
@@ -565,6 +515,8 @@ export default function ProductForm({
                 type="button"
                 onClick={refreshProduct}
                 disabled={refreshing}
+                aria-label="Refresh product images"
+                title="Refresh product images"
                 className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
               >
                 <RefreshCw
@@ -1058,24 +1010,34 @@ export default function ProductForm({
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                {imagePreviews.map((preview, index) => (
-                  <div key={index} className="relative group">
-                    <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm">
-                      <img
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
+                {imagePreviews.map((preview, index) => {
+                  const uploaded = uploadedImages.includes(
+                    selectedImages[index],
+                  );
+                  return (
+                    <div key={index} className="relative group">
+                      <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 border-2 border-gray-200 shadow-sm">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        disabled={uploaded}
+                        aria-label={`Remove image ${index + 1}`}
+                        title={
+                          uploaded ? "Image already uploaded" : "Remove image"
+                        }
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100 disabled:cursor-not-allowed disabled:bg-gray-400"
+                      >
+                        <X size={12} />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1088,8 +1050,8 @@ export default function ProductForm({
               className="text-blue-600 flex-shrink-0 mt-0.5"
             />
             <p className="text-xs text-blue-700">
-              You can add images after creating the product. Click "Create
-              Product" first, then upload images. The first image will be set as
+              You can add images after creating the product. Click &quot;Create
+              Product&quot; first, then upload images. The first image will be set as
               primary by default.
             </p>
           </div>
@@ -1107,6 +1069,8 @@ export default function ProductForm({
                 <Upload size={16} className="mr-2 animate-pulse" />
                 Uploading Images...
               </>
+            ) : savedProductId && selectedImages.length > uploadedImages.length ? (
+              "Retry Remaining Image Uploads"
             ) : product ? (
               "Update Product"
             ) : (
@@ -1246,6 +1210,8 @@ export default function ProductForm({
                     setNewDivisionId(e.target.value);
                     setNewDistrictId("");
                     setNewUpazilaId("");
+                    setDistricts([]);
+                    setUpazilas([]);
                   }}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
                   disabled={creatingDistributor}
@@ -1265,6 +1231,7 @@ export default function ProductForm({
                   onChange={(e) => {
                     setNewDistrictId(e.target.value);
                     setNewUpazilaId("");
+                    setUpazilas([]);
                   }}
                   className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
                   disabled={creatingDistributor || !newDivisionId}

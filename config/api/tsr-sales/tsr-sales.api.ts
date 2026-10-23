@@ -43,23 +43,30 @@ export async function getTsrSalesSummary(): Promise<SummaryResponse> {
 
 export async function getTsrSalesAllSummary(
   tsrId: string,
+  signal?: AbortSignal,
 ): Promise<TsrSalesAllSummary> {
   const params = new URLSearchParams({ tsrId });
   return apiClient.request<TsrSalesAllSummary>(
     `/admin/tsr-sales/allsummary?${params.toString()}`,
+    { signal },
   );
 }
 
-export async function getTsrSalesBestPerformance(): Promise<TsrSalesBestPerformance> {
+export async function getTsrSalesBestPerformance(
+  signal?: AbortSignal,
+): Promise<TsrSalesBestPerformance> {
   return apiClient.request<TsrSalesBestPerformance>(
     "/admin/tsr-sales/best-performance",
+    { signal },
   );
 }
 
-export async function getTsrSalesTsrs(): Promise<TSRPerformance[]> {
+export async function getTsrSalesTsrs(
+  signal?: AbortSignal,
+): Promise<TSRPerformance[]> {
   const response = await apiClient.request<
     TSRPerformance[] | { tsrs?: TSRPerformance[] }
-  >("/admin/tsr-sales/tsrs");
+  >("/admin/tsr-sales/tsrs", { signal });
   const tsrs = Array.isArray(response) ? response : response?.tsrs;
   if (!Array.isArray(tsrs)) {
     throw new Error("TSR performance response is missing the TSR list.");
@@ -69,9 +76,11 @@ export async function getTsrSalesTsrs(): Promise<TSRPerformance[]> {
 
 export async function getTsrSalesTsr(
   tsrId: string,
+  signal?: AbortSignal,
 ): Promise<TSRDetailResponse> {
   return apiClient.request<TSRDetailResponse>(
     `/admin/tsr-sales/tsrs/${encodeURIComponent(tsrId)}`,
+    { signal },
   );
 }
 
@@ -83,6 +92,7 @@ export async function getTsrSalesOrders(
     status?: TsrOrderStatus | "all";
     search?: string;
   },
+  signal?: AbortSignal,
 ): Promise<TSROrdersResponse> {
   const params = new URLSearchParams({
     page: String(options.page),
@@ -97,13 +107,14 @@ export async function getTsrSalesOrders(
 
   const response = await apiClient.request<TSROrdersResponse>(
     `/admin/tsr-sales/tsrs/${encodeURIComponent(tsrId)}/orders?${params.toString()}`,
+    { signal },
   );
   if (!Array.isArray(response?.orders)) {
     throw new Error("TSR orders response is missing the order list.");
   }
 
   return {
-    orders: response.orders as TsrSalesOrder[],
+    orders: response.orders,
     pagination: requirePagination(response.pagination),
   };
 }

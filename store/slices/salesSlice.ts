@@ -1,23 +1,13 @@
 // src/store/slices/salesSlice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { api } from "@/config/api";
+import type {
+  DailySalesResponse,
+  MonthlySalesResponse,
+  SalesBreakdownEntry,
+  YearlyResponse,
+} from "@/config/api/sales/sales.types";
 import toast from "react-hot-toast";
-
-interface DailyBreakdownItem {
-  period: string;
-  totalSales: number;
-  totalOrders: number;
-  averageOrderValue: number;
-  totalItemsSold: number;
-}
-
-interface MonthlyBreakdownItem {
-  period: string;
-  totalSales: number;
-  totalOrders: number;
-  averageOrderValue: number;
-  totalItemsSold: number;
-}
 
 interface ChartDataItem {
   label: string;
@@ -28,15 +18,15 @@ interface ChartDataItem {
 }
 
 interface SalesState {
-  salesData: {
-    daily: ChartDataItem | null;
-    weekly: ChartDataItem[] | null;
-    monthly: ChartDataItem[] | null;
-    yearly: ChartDataItem[] | null;
-  };
+  salesData: Record<SalesPeriod, ChartDataItem[] | null>;
   loading: boolean;
+  loadingByPeriod: Record<SalesPeriod, boolean>;
+  activeRequestIds: Partial<Record<SalesPeriod, string>>;
+  errorByPeriod: Partial<Record<SalesPeriod, string>>;
   error: string | null;
 }
+
+type SalesPeriod = "daily" | "weekly" | "monthly" | "yearly";
 
 const initialState: SalesState = {
   salesData: {
@@ -46,6 +36,14 @@ const initialState: SalesState = {
     yearly: null,
   },
   loading: false,
+  loadingByPeriod: {
+    daily: false,
+    weekly: false,
+    monthly: false,
+    yearly: false,
+  },
+  activeRequestIds: {},
+  errorByPeriod: {},
   error: null,
 };
 
@@ -65,73 +63,79 @@ const MONTH_NAMES = [
   "Dec",
 ];
 
-function transformDaily(data: any): ChartDataItem {
+function salesMetric(value: number | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function transformDaily(data: DailySalesResponse): ChartDataItem {
   return {
     label: data.date || "Today",
-    sales: data.totalSales || 0,
-    orders: data.totalOrders || 0,
-    avgOrderValue: data.averageOrderValue || 0,
-    itemsSold: data.totalItemsSold || 0,
+    sales: salesMetric(data.totalSales),
+    orders: salesMetric(data.totalOrders),
+    avgOrderValue: salesMetric(data.averageOrderValue),
+    itemsSold: salesMetric(data.totalItemsSold),
   };
 }
 
-function transformWeekly(data: any): ChartDataItem[] {
-  const breakdown: DailyBreakdownItem[] = data.daily_breakdown || [];
-  // Figure out which day of week today is to label correctly
-  const today = new Date();
-  const todayIndex = today.getDay(); // 0=Sun
-  return breakdown.map((item, i) => {
-    // breakdown[0] = start of week (Sun), up to [6] = Sat
-    const dayIndex = i % 7;
-    return {
-      label: DAY_NAMES[dayIndex],
-      sales: item.totalSales || 0,
-      orders: item.totalOrders || 0,
-      avgOrderValue: item.averageOrderValue || 0,
-      itemsSold: item.totalItemsSold || 0,
-    };
-  });
+function transformWeekly(data: {
+  daily_breakdown?: SalesBreakdownEntry[];
+}): ChartDataItem[] {
+  return (data.daily_breakdown ?? []).map((item, i) => ({
+    label: DAY_NAMES[i % DAY_NAMES.length],
+    sales: salesMetric(item.totalSales),
+    orders: salesMetric(item.totalOrders),
+    avgOrderValue: salesMetric(item.averageOrderValue),
+    itemsSold: salesMetric(item.totalItemsSold),
+  }));
 }
 
-function transformMonthly(data: any): ChartDataItem[] {
-  const breakdown: DailyBreakdownItem[] = data.daily_breakdown || [];
-  return breakdown.map((item, i) => ({
+function transformMonthly(data: MonthlySalesResponse): ChartDataItem[] {
+  return (data.daily_breakdown ?? []).map((item, i) => ({
     label: `${i + 1}`,
-    sales: item.totalSales || 0,
-    orders: item.totalOrders || 0,
-    avgOrderValue: item.averageOrderValue || 0,
-    itemsSold: item.totalItemsSold || 0,
+    sales: salesMetric(item.totalSales),
+    orders: salesMetric(item.totalOrders),
+    avgOrderValue: salesMetric(item.averageOrderValue),
+    itemsSold: salesMetric(item.totalItemsSold),
   }));
 }
 
-function transformYearly(data: any): ChartDataItem[] {
-  const breakdown: MonthlyBreakdownItem[] = data.monthly_breakdown || [];
-  return breakdown.map((item, i) => ({
+function transformYearly(data: YearlyResponse): ChartDataItem[] {
+  return data.monthly_breakdown.map((item, i) => ({
     label: MONTH_NAMES[i] || `M${i + 1}`,
-    sales: item.totalSales || 0,
-    orders: item.totalOrders || 0,
-    avgOrderValue: item.averageOrderValue || 0,
-    itemsSold: item.totalItemsSold || 0,
+    sales: salesMetric(item.totalSales),
+    orders: salesMetric(item.totalOrders),
+    avgOrderValue: salesMetric(item.averageOrderValue),
+    itemsSold: salesMetric(item.totalItemsSold),
   }));
 }
 
-export const fetchSalesData = createAsyncThunk(
+export const fetchSalesData = createAsyncThunk<
+  { period: SalesPeriod; data: ChartDataItem[] },
+  SalesPeriod
+>(
   "sales/fetchData",
-  async (period: "daily" | "weekly" | "monthly" | "yearly") => {
-    let raw: any;
+  async (period, { signal }) => {
     switch (period) {
       case "daily":
-        raw = await api.getDailySales();
-        return { period, data: transformDaily(raw?.data ?? raw) };
+        return {
+          period,
+          data: [transformDaily(await api.getDailySales(signal))],
+        };
       case "weekly":
-        raw = await api.getWeeklySales();
-        return { period, data: transformWeekly(raw?.data ?? raw) };
+        return {
+          period,
+          data: transformWeekly(await api.getWeeklySales(signal)),
+        };
       case "monthly":
-        raw = await api.getMonthlySales();
-        return { period, data: transformMonthly(raw?.data ?? raw) };
+        return {
+          period,
+          data: transformMonthly(await api.getMonthlySales(signal)),
+        };
       case "yearly":
-        raw = await api.getYearlySales();
-        return { period, data: transformYearly(raw?.data ?? raw) };
+        return {
+          period,
+          data: transformYearly(await api.getYearlySales(signal)),
+        };
     }
   },
 );
@@ -147,24 +151,46 @@ const salesSlice = createSlice({
         monthly: null,
         yearly: null,
       };
+      state.activeRequestIds = {};
+      state.loadingByPeriod = {
+        daily: false,
+        weekly: false,
+        monthly: false,
+        yearly: false,
+      };
+      state.errorByPeriod = {};
+      state.loading = false;
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchSalesData.pending, (state) => {
+      .addCase(fetchSalesData.pending, (state, action) => {
+        const period = action.meta.arg;
+        state.activeRequestIds[period] = action.meta.requestId;
+        state.loadingByPeriod[period] = true;
         state.loading = true;
+        delete state.errorByPeriod[period];
         state.error = null;
       })
       .addCase(fetchSalesData.fulfilled, (state, action) => {
-        state.loading = false;
-        if (action.payload) {
-          (state.salesData as any)[action.payload.period] = action.payload.data;
-        }
+        const period = action.meta.arg;
+        if (state.activeRequestIds[period] !== action.meta.requestId) return;
+        delete state.activeRequestIds[period];
+        state.loadingByPeriod[period] = false;
+        state.loading = Object.values(state.loadingByPeriod).some(Boolean);
+        state.salesData[period] = action.payload.data;
       })
       .addCase(fetchSalesData.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || "Failed to fetch sales data";
-        toast.error("Failed to load sales data");
+        const period = action.meta.arg;
+        if (state.activeRequestIds[period] !== action.meta.requestId) return;
+        delete state.activeRequestIds[period];
+        state.loadingByPeriod[period] = false;
+        state.loading = Object.values(state.loadingByPeriod).some(Boolean);
+        if (!action.meta.aborted) {
+          state.error = action.error.message || "Failed to fetch sales data";
+          state.errorByPeriod[period] = state.error;
+          toast.error("Failed to load sales data");
+        }
       });
   },
 });

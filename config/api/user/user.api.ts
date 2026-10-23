@@ -10,11 +10,35 @@ interface UserPagination {
   hasPrevPage: boolean;
 }
 
-interface UserListResponse {
-  data?: {
-    users?: User[];
-    pagination?: UserPagination;
-  };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isUser(value: unknown): value is User {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.email === "string" &&
+    typeof value.phone_number === "string" &&
+    (typeof value.name === "string" || value.name === null) &&
+    (typeof value.pharmacy_name === "string" || value.pharmacy_name === null) &&
+    (value.role === "admin" ||
+      value.role === "customer" ||
+      value.role === "TSR") &&
+    typeof value.isApproved === "boolean"
+  );
+}
+
+function isPagination(value: unknown): value is UserPagination {
+  return (
+    isRecord(value) &&
+    typeof value.page === "number" &&
+    typeof value.limit === "number" &&
+    typeof value.total === "number" &&
+    typeof value.pages === "number" &&
+    typeof value.hasNextPage === "boolean" &&
+    typeof value.hasPrevPage === "boolean"
+  );
 }
 
 function unwrapData<T>(response: T | { data?: T }): T {
@@ -33,6 +57,7 @@ export async function getUsers(
   page: number = 1,
   limit: number = 20,
   search?: string,
+  signal?: AbortSignal,
 ): Promise<{ users: User[]; pagination: UserPagination }> {
   const query = new URLSearchParams({
     page: String(page),
@@ -40,32 +65,44 @@ export async function getUsers(
   });
   if (search) query.set("search", search);
 
-  const response = await apiClient.request<UserListResponse | User[]>(
+  const response = await apiClient.request<unknown>(
     `/users/all?${query.toString()}`,
+    { signal },
   );
+  const payload =
+    isRecord(response) && "data" in response ? response.data : response;
 
-  if (
-    !Array.isArray(response) &&
-    response.data &&
-    Array.isArray(response.data.users) &&
-    response.data.pagination
-  ) {
+  if (Array.isArray(payload)) {
+    if (!payload.every(isUser)) {
+      throw new Error("Users response contains invalid user records.");
+    }
+    const pages = Math.max(1, Math.ceil(payload.length / limit));
     return {
-      users: response.data.users,
-      pagination: response.data.pagination,
+      users: payload,
+      pagination: {
+        page,
+        limit,
+        total: payload.length,
+        pages,
+        hasNextPage: page < pages,
+        hasPrevPage: page > 1,
+      },
     };
   }
-  // fallback
+
+  if (!isRecord(payload) || !Array.isArray(payload.users)) {
+    throw new Error("Users response is missing the user list.");
+  }
+  if (!payload.users.every(isUser)) {
+    throw new Error("Users response contains invalid user records.");
+  }
+  if (!isPagination(payload.pagination)) {
+    throw new Error("Users response is missing valid pagination metadata.");
+  }
+
   return {
-    users: Array.isArray(response) ? response : [],
-    pagination: {
-      page,
-      limit,
-      total: 0,
-      pages: 1,
-      hasNextPage: false,
-      hasPrevPage: false,
-    },
+    users: payload.users,
+    pagination: payload.pagination,
   };
 }
 
@@ -92,20 +129,21 @@ export async function deleteUser(userId: string): Promise<void> {
   });
 }
 
-export async function getProfile(): Promise<UserProfile> {
+export async function getProfile(signal?: AbortSignal): Promise<UserProfile> {
   const response = await apiClient.request<
     UserProfile | { data?: UserProfile }
   >(
     "/users/profile",
+    { signal },
   );
   return unwrapData(response);
 }
 
-export async function getAddresses(): Promise<UserAddress[]> {
+export async function getAddresses(signal?: AbortSignal): Promise<UserAddress[]> {
   const response =
     await apiClient.request<
       UserAddress[] | { data?: UserAddress[] }
-    >("/users/addresses");
+    >("/users/addresses", { signal });
   if (Array.isArray(response)) return response;
   const data = unwrapData(response);
   return Array.isArray(data) ? data : [];

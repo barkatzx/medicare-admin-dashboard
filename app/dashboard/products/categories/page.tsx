@@ -7,6 +7,8 @@ import Pagination from "@/components/ui/Pagination";
 import SearchInput from "@/components/ui/SearchInput";
 import Table from "@/components/ui/Table";
 import { api } from "@/config/api";
+import type { Category } from "@/config/api";
+import { getApiErrorMessage } from "@/config/api/client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   createCategory,
@@ -32,15 +34,16 @@ export default function CategoriesPage() {
   const dispatch = useAppDispatch();
   const { categories, loading } = useAppSelector((state) => state.categories);
 
-  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>(
-    {},
-  );
+  const [categoryCounts, setCategoryCounts] = useState<
+    Record<string, number | null>
+  >({});
   const [countsLoading, setCountsLoading] = useState(false);
+  const isCountsLoading = categories.length > 0 && countsLoading;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [deletingCategory, setDeletingCategory] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
   const [categoryName, setCategoryName] = useState("");
   const [categoryDesc, setCategoryDesc] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,33 +57,41 @@ export default function CategoriesPage() {
   useEffect(() => {
     if (categories.length === 0) return;
 
+    const controller = new AbortController();
     const fetchCounts = async () => {
       setCountsLoading(true);
-      const counts: Record<string, number> = {};
-      await Promise.all(
-        categories.map(async (category) => {
-          try {
-            const result = await api.getAllProducts(
-              1,
-              1,
-              undefined,
-              category.id,
-            );
-            counts[category.id] = result.pagination.total;
-          } catch {
-            counts[category.id] = 0;
-          }
-        }),
+      const results = await Promise.allSettled(
+        categories.map((category) =>
+          api.getAllProducts(1, 1, undefined, category.id, controller.signal),
+        ),
       );
+      if (controller.signal.aborted) return;
+
+      const counts: Record<string, number | null> = {};
+      results.forEach((result, index) => {
+        const category = categories[index];
+        if (result.status === "fulfilled") {
+          counts[category.id] = result.value.pagination.total;
+        } else {
+          counts[category.id] = null;
+          toast.error(
+            getApiErrorMessage(
+              result.reason,
+              `Failed to load ${category.name} product count`,
+            ),
+          );
+        }
+      });
       setCategoryCounts(counts);
       setCountsLoading(false);
     };
 
-    fetchCounts();
+    void fetchCounts();
+    return () => controller.abort();
   }, [categories]);
 
   const getProductCount = (categoryId: string) =>
-    categoryCounts[categoryId] ?? 0;
+    categoryCounts[categoryId];
 
   const handleRefresh = () => {
     dispatch(fetchCategories());
@@ -93,14 +104,14 @@ export default function CategoriesPage() {
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (category: any) => {
+  const handleOpenEditModal = (category: Category) => {
     setEditingCategory(category);
     setCategoryName(category.name);
     setCategoryDesc(category.description || "");
     setIsModalOpen(true);
   };
 
-  const handleOpenDeleteModal = (category: any) => {
+  const handleOpenDeleteModal = (category: Category) => {
     setDeletingCategory(category);
     setIsDeleteModalOpen(true);
   };
@@ -139,6 +150,12 @@ export default function CategoriesPage() {
   const handleDelete = async () => {
     if (!deletingCategory) return;
     const productCount = getProductCount(deletingCategory.id);
+    if (productCount === null || productCount === undefined) {
+      toast.error("Product count is unavailable. Refresh categories and try again.");
+      setIsDeleteModalOpen(false);
+      setDeletingCategory(null);
+      return;
+    }
     if (productCount > 0) {
       toast.error(
         `Cannot delete category with ${productCount} product(s). Please reassign or delete the products first.`,
@@ -171,14 +188,21 @@ export default function CategoriesPage() {
     currentPage * itemsPerPage,
   );
 
-  const totalProducts = Object.values(categoryCounts).reduce(
-    (a, b) => a + b,
+  const countsComplete = categories.every(
+    (category) => typeof categoryCounts[category.id] === "number",
+  );
+  const totalProducts = categories.reduce(
+    (total, category) => total + (categoryCounts[category.id] ?? 0),
     0,
   );
   const categoriesWithProducts = categories.filter(
-    (c) => (categoryCounts[c.id] ?? 0) > 0,
+    (category) => (categoryCounts[category.id] ?? 0) > 0,
   ).length;
   const emptyCategories = categories.length - categoriesWithProducts;
+  const canShowProductCounts = !isCountsLoading && countsComplete;
+  const deletingProductCount = deletingCategory
+    ? getProductCount(deletingCategory.id)
+    : null;
 
   if (loading && categories.length === 0) {
     return <Loading message="Loading categories..." />;
@@ -198,21 +222,33 @@ export default function CategoriesPage() {
           },
           {
             label: "Total Products",
-            value: countsLoading ? "..." : totalProducts,
+            value: isCountsLoading
+              ? "..."
+              : countsComplete
+                ? totalProducts
+                : "Unavailable",
             icon: Package,
             gradient: "from-emerald-500 to-teal-600",
             color: "text-emerald-600",
           },
           {
             label: "With Products",
-            value: countsLoading ? "..." : categoriesWithProducts,
+            value: isCountsLoading
+              ? "..."
+              : countsComplete
+                ? categoriesWithProducts
+                : "Unavailable",
             icon: Layers,
             gradient: "from-purple-500 to-pink-600",
             color: "text-purple-600",
           },
           {
             label: "Empty",
-            value: countsLoading ? "..." : emptyCategories,
+            value: isCountsLoading
+              ? "..."
+              : countsComplete
+                ? emptyCategories
+                : "Unavailable",
             icon: AlertCircle,
             gradient: "from-amber-500 to-orange-600",
             color: "text-amber-600",
@@ -366,14 +402,18 @@ export default function CategoriesPage() {
                           )}
                         </td>
                         <td className="py-3 px-6">
-                          {countsLoading ? (
+                          {isCountsLoading ? (
                             <div className="h-5 w-12 bg-gray-200 rounded animate-pulse" />
                           ) : (
                             <span
-                              className={`text-xs font-semibold px-2 py-1 rounded-full ${productCount > 0 ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-400"}`}
+                              className={`text-xs font-semibold px-2 py-1 rounded-full ${productCount == null ? "bg-amber-50 text-amber-700" : productCount > 0 ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-400"}`}
                             >
-                              {productCount}{" "}
-                              {productCount === 1 ? "product" : "products"}
+                              {productCount ?? "Unavailable"}
+                              {productCount === 1
+                                ? " product"
+                                : productCount == null
+                                  ? ""
+                                  : " products"}
                             </span>
                           )}
                         </td>
@@ -389,6 +429,7 @@ export default function CategoriesPage() {
                             </button>
                             <button
                               onClick={() => handleOpenDeleteModal(category)}
+                              disabled={!canShowProductCounts}
                               aria-label={`Delete ${category.name}`}
                               className="p-2 text-red-600 bg-red-50 hover:bg-red-200 rounded-lg transition-all duration-200"
                               title="Delete category"
@@ -431,17 +472,19 @@ export default function CategoriesPage() {
                             )}
                           </p>
                         </div>
-                        {countsLoading ? (
+                        {isCountsLoading ? (
                           <div className="h-6 w-14 shrink-0 animate-pulse rounded-full bg-gray-200" />
                         ) : (
                           <span
                             className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                              productCount > 0
-                                ? "bg-emerald-50 text-emerald-600"
-                                : "bg-gray-100 text-gray-500"
+                              productCount == null
+                                ? "bg-amber-50 text-amber-700"
+                                : productCount > 0
+                                  ? "bg-emerald-50 text-emerald-600"
+                                  : "bg-gray-100 text-gray-500"
                             }`}
                           >
-                            {productCount}
+                            {productCount ?? "Unavailable"}
                           </span>
                         )}
                       </div>
@@ -462,6 +505,7 @@ export default function CategoriesPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenDeleteModal(category)}
+                            disabled={!canShowProductCounts}
                             aria-label={`Delete ${category.name}`}
                             className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition-colors active:scale-95"
                           >
@@ -556,13 +600,18 @@ export default function CategoriesPage() {
               <p className="text-sm text-gray-700">
                 Are you sure you want to delete{" "}
                 <strong className="text-gray-900">
-                  "{deletingCategory?.name}"
+                  &quot;{deletingCategory?.name}&quot;
                 </strong>
                 ?
               </p>
-              {deletingCategory && getProductCount(deletingCategory.id) > 0 ? (
+              {deletingProductCount == null ? (
+                <p className="mt-2 text-xs text-amber-700">
+                  Product count is unavailable. Refresh categories before
+                  deleting this category.
+                </p>
+              ) : deletingProductCount > 0 ? (
                 <p className="text-xs text-red-600 mt-2">
-                  ⚠️ This category has {getProductCount(deletingCategory.id)}{" "}
+                  ⚠️ This category has {deletingProductCount}{" "}
                   product(s). Reassign or delete them first.
                 </p>
               ) : (
@@ -578,7 +627,7 @@ export default function CategoriesPage() {
               onClick={handleDelete}
               className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700"
               disabled={
-                !!(deletingCategory && getProductCount(deletingCategory.id) > 0)
+                deletingProductCount == null || deletingProductCount > 0
               }
             >
               Delete Category
