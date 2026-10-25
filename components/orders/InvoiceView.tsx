@@ -106,11 +106,9 @@ export default function InvoiceView({ order }: InvoiceViewProps) {
               {order.shippingAddress ? (
                 <>
                   <p className="text-xs font-semibold leading-tight sm:text-[13px]">
-                    {order.shippingAddress.city || "Delivery Address"}
+                    {order.shippingAddress.street || "Delivery Address"}
                   </p>
                   <div className="mt-0.5 text-[11px] leading-relaxed text-gray-500 sm:text-[11.5px]">
-                    {order.shippingAddress.street}
-                    <br />
                     {order.shippingAddress.city}
                     {order.shippingAddress.state
                       ? `, ${order.shippingAddress.state}`

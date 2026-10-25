@@ -296,9 +296,8 @@ function renderBilledTo(user: InvoiceOrder["user"]): string {
 function renderShippedTo(address?: ShippingAddress | null): string {
   const body = address
     ? `
-      <div class="name">${escapeHtml(address.city || "Delivery Address")}</div>
+      <div class="name">${escapeHtml(address.street || "Delivery Address")}</div>
       <div class="detail">
-        ${escapeHtml(address.street)}<br/>
         ${escapeHtml(address.city)}${address.state ? `, ${escapeHtml(address.state)}` : ""}<br/>
         ${escapeHtml(address.postalCode)}${address.country ? `, ${escapeHtml(address.country)}` : ""}
       </div>`
