@@ -7,6 +7,7 @@ import * as products from "./products";
 import * as categories from "./categories";
 import * as distributors from "./distributors";
 import * as locations from "./locations";
+import * as notifications from "./notifications";
 import { apiClient } from "./client";
 import type { User } from "./user/user.types";
 
@@ -19,6 +20,7 @@ export * from "./products";
 export * from "./categories";
 export * from "./distributors";
 export * from "./locations";
+export * from "./notifications";
 
 export const api = {
   ...auth,
@@ -30,6 +32,7 @@ export const api = {
   ...categories,
   ...distributors,
   ...locations,
+  ...notifications,
   setToken: (token: string) => apiClient.setToken(token),
   getToken: () => apiClient.getToken(),
   clearToken: () => apiClient.clearToken(),

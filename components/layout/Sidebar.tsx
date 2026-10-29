@@ -17,6 +17,7 @@ import {
   Clock,
   LayoutDashboard,
   LineChart,
+  Bell,
   LogOut,
   Package,
   PackageCheck,
@@ -243,6 +244,7 @@ const topLink: NavLinkItem = {
 const bottomLinks: NavLinkItem[] = [
   { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
   { name: "Shipments", href: "/dashboard/today-shipments", icon: Truck },
+  { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
 ];
 
 const footerLinks: NavLinkItem[] = [
