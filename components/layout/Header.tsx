@@ -1,8 +1,8 @@
 // src/components/layout/Header.tsx
 "use client";
 
+import NotificationBell from "@/components/layout/NotificationBell";
 import SearchModal from "@/components/ui/SearchModal";
-import { useAppSelector } from "@/store/hooks";
 import {
   ArrowRight,
   BarChart3,
@@ -142,17 +142,13 @@ export default function Header({
   isMobileNavOpen,
   menuButtonRef,
 }: HeaderProps) {
-  const { user } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const searchRef = useRef<HTMLDivElement>(null);
-  const profileRef = useRef<HTMLDivElement>(null);
-  const mobileProfileRef = useRef<HTMLDivElement>(null);
 
   const todayLabel = new Date().toLocaleDateString("en-US", {
     weekday: "short",
@@ -177,12 +173,6 @@ export default function Header({
       const target = event.target as Node;
       if (searchRef.current && !searchRef.current.contains(target)) {
         setShowResults(false);
-      }
-      if (
-        !profileRef.current?.contains(target) &&
-        !mobileProfileRef.current?.contains(target)
-      ) {
-        setIsProfileOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -328,8 +318,9 @@ export default function Header({
             )}
           </div>
 
-          {/* Right - Settings & profile */}
+          {/* Right - Notifications & settings */}
           <div className="flex-1 flex justify-end items-center gap-3">
+            <NotificationBell variant="desktop" />
             <Link
               href="/dashboard/settings"
               aria-label="Settings"
@@ -337,25 +328,6 @@ export default function Header({
             >
               <Settings size={18} />
             </Link>
-            <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => setIsProfileOpen((open) => !open)}
-                aria-label="Profile"
-                className="w-10 h-10 bg-white rounded-full flex items-center justify-center border border-gray-100 text-black font-semibold text-sm hover:text-blue-600 transition-colors"
-              >
-                {user?.name?.charAt(0)?.toUpperCase() || "A"}
-              </button>
-              {isProfileOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl border border-gray-100 px-4 py-3 z-50">
-                  <p className="text-sm font-semibold text-gray-800">
-                    {user?.name || "Admin User"}
-                  </p>
-                  <p className="text-xs text-gray-500 capitalize">
-                    {user?.role || "Administrator"}
-                  </p>
-                </div>
-              )}
-            </div>
           </div>
         </div>
         <div
@@ -399,6 +371,7 @@ export default function Header({
           </button>
 
           <div className="flex flex-none items-center gap-1">
+            <NotificationBell variant="mobile" />
             <Link
               href="/dashboard/settings"
               aria-label="Settings"
@@ -406,29 +379,6 @@ export default function Header({
             >
               <Settings size={18} />
             </Link>
-            <div className="relative" ref={mobileProfileRef}>
-              <button
-                type="button"
-                onClick={() => setIsProfileOpen((open) => !open)}
-                aria-label="Profile"
-                aria-expanded={isProfileOpen}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-100 bg-white text-sm font-semibold text-black transition-colors hover:text-blue-600"
-              >
-                {user?.name?.trim()?.charAt(0)?.toUpperCase() ||
-                  user?.email?.trim()?.charAt(0)?.toUpperCase() ||
-                  "A"}
-              </button>
-              {isProfileOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-gray-100 bg-white px-4 py-3">
-                  <p className="text-sm font-semibold text-gray-800">
-                    {user?.name || user?.email || "Admin User"}
-                  </p>
-                  <p className="text-xs capitalize text-gray-500">
-                    {user?.role || "Administrator"}
-                  </p>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </header>
