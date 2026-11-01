@@ -1,6 +1,7 @@
 // src/store/slices/authSlice.ts
 import { api, User } from "@/config/api";
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { removePushToken } from "@/config/push";
 import toast from "react-hot-toast";
 
 interface AuthState {
@@ -59,6 +60,7 @@ export const login = createAsyncThunk(
 );
 
 export const logout = createAsyncThunk("auth/logout", async () => {
+  await removePushToken();
   api.clearToken();
   return null;
 });

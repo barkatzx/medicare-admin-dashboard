@@ -3,6 +3,7 @@
 
 import NotificationBell from "@/components/layout/NotificationBell";
 import SearchModal from "@/components/ui/SearchModal";
+import { useAppSelector } from "@/store/hooks";
 import {
   ArrowRight,
   BarChart3,
@@ -142,7 +143,12 @@ export default function Header({
   isMobileNavOpen,
   menuButtonRef,
 }: HeaderProps) {
+  const { user } = useAppSelector((state) => state.auth);
   const router = useRouter();
+  const initial =
+    user?.name?.trim()?.charAt(0)?.toUpperCase() ||
+    user?.email?.trim()?.charAt(0)?.toUpperCase() ||
+    "A";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
@@ -326,7 +332,7 @@ export default function Header({
               aria-label="Settings"
               className="w-10 h-10 bg-white border border-gray-100 rounded-full flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors"
             >
-              <Settings size={18} />
+              <span className="text-sm font-semibold text-black">{initial}</span>
             </Link>
           </div>
         </div>
@@ -377,7 +383,7 @@ export default function Header({
               aria-label="Settings"
               className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-100 bg-white text-gray-600 transition-colors hover:text-blue-600"
             >
-              <Settings size={18} />
+              <span className="text-sm font-semibold text-black">{initial}</span>
             </Link>
           </div>
         </div>

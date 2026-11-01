@@ -3,6 +3,7 @@
     "@reduxjs/toolkit": "^2.2.0",
     "clsx": "^2.0.0",
     "date-fns": "^3.0.6",
+    "firebase": "^13.1.0",
     "lucide-react": "^0.303.0",
     "next": "^16.4.2",
     "next-redux-wrapper": "^8.1.0",

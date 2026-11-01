@@ -92,3 +92,20 @@ export async function markAdminNotificationRead(id: string): Promise<void> {
     { method: "PATCH" },
   );
 }
+
+export async function registerDeviceToken(
+  token: string,
+  platform: "web" = "web",
+): Promise<void> {
+  await apiClient.request("/notifications/device-token", {
+    method: "POST",
+    body: JSON.stringify({ token, platform }),
+  });
+}
+
+export async function unregisterDeviceToken(token: string): Promise<void> {
+  await apiClient.request("/notifications/device-token", {
+    method: "DELETE",
+    body: JSON.stringify({ token }),
+  });
+}
