@@ -169,8 +169,16 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
         // Audio unsupported; notifications still work silently.
       }
     };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    return () => window.removeEventListener("pointerdown", unlock);
+    // iOS/Android only treat click/touchend/keydown as audio-unlocking gestures.
+    const events = ["pointerdown", "click", "touchend", "keydown"] as const;
+    const handler = () => {
+      unlock();
+      if (audioRef.current?.state === "running") {
+        events.forEach((e) => window.removeEventListener(e, handler));
+      }
+    };
+    events.forEach((e) => window.addEventListener(e, handler));
+    return () => events.forEach((e) => window.removeEventListener(e, handler));
   }, [enabled]);
 
   const playSound = useCallback(() => {
@@ -219,6 +227,16 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
           seenIdsRef.current.add(id);
         }
         playSound();
+        // FCM only auto-displays in the background; cover a hidden-but-alive page.
+        if (document.visibilityState === "hidden" && payload.notification) {
+          void navigator.serviceWorker.ready.then((reg) =>
+            reg.showNotification(payload.notification?.title || "MediCarePLC", {
+              body: payload.notification?.body,
+              icon: "/icon-192x192.png",
+              data: payload.data,
+            }),
+          );
+        }
         void refreshUnreadCount();
         if (isOpenRef.current) void loadPage(1);
       });
