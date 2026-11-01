@@ -232,7 +232,8 @@ export default function NotificationBell({ variant }: NotificationBellProps) {
           void navigator.serviceWorker.ready.then((reg) =>
             reg.showNotification(payload.notification?.title || "MediCarePLC", {
               body: payload.notification?.body,
-              icon: "/icon-192x192.png",
+              icon: "/admin-logo.png",
+              badge: "/admin-badge.png",
               data: payload.data,
             }),
           );

@@ -65,8 +65,8 @@ if (config.apiKey && config.projectId && config.messagingSenderId && config.appI
     const data = payload.data || {};
     self.registration.showNotification(data.title || "MediCarePLC", {
       body: data.message || data.body || "",
-      icon: "/icon-192x192.png",
-      badge: "/icon-192x192.png",
+      icon: "/admin-logo.png",
+      badge: "/admin-badge.png",
       data,
     });
   });
